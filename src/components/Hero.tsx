@@ -12,21 +12,46 @@ export default function Hero() {
       <div className="absolute inset-0 bg-radial-gradient from-brand-mint/5 to-transparent pointer-events-none" />
 
       <div className="container mx-auto px-6 relative z-10 text-center">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-        >
-          <h1 className="text-5xl md:text-8xl font-bold tracking-tighter leading-tight mb-6">
-            <span className="block text-[var(--text-primary)]">{t('hero.title1')}</span>
-            <span className="block text-brand-mint">{t('hero.title2')}</span>
-          </h1>
+        <div className="flex flex-col items-center">
+          <motion.h1 
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+            className="text-5xl md:text-8xl font-bold tracking-tighter leading-tight mb-6"
+          >
+            <motion.span 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+              className="block text-[var(--text-primary)]"
+            >
+              {t('hero.title1')}
+            </motion.span>
+            <motion.span 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
+              className="block text-brand-mint"
+            >
+              {t('hero.title2')}
+            </motion.span>
+          </motion.h1>
           
-          <p className="text-brand-gray text-lg md:text-xl max-w-2xl mx-auto mb-12 leading-relaxed">
+          <motion.p 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            className="text-brand-gray text-lg md:text-xl max-w-2xl mx-auto mb-12 leading-relaxed"
+          >
             {t('hero.subtitle')}
-          </p>
+          </motion.p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            className="flex flex-col sm:flex-row items-center justify-center gap-4"
+          >
             <a
               href="#contact"
               className="w-full sm:w-auto bg-brand-mint text-[#0D1117] px-10 py-4 rounded-full text-lg font-bold hover:scale-105 transition-transform shadow-lg shadow-brand-mint/20"
@@ -39,8 +64,8 @@ export default function Hero() {
             >
               {t('hero.cta.secondary')}
             </a>
-          </div>
-        </motion.div>
+          </motion.div>
+        </div>
       </div>
 
       <motion.div

@@ -17,10 +17,11 @@ export default function Navbar() {
   }, []);
 
   const navLinks = [
-    { name: t('nav.method'), href: '#methode' },
-    { name: t('nav.talents'), href: '#talents' },
-    { name: t('nav.offers'), href: '#offres' },
-    { name: t('nav.contact'), href: '#contact' },
+    { name: t('nav.philosophy'), href: '/#philosophie' },
+    { name: t('nav.method'), href: '/#methode' },
+    { name: t('nav.talents'), href: '/#talents' },
+    { name: t('nav.offers'), href: '/#offres' },
+    { name: t('nav.contact'), href: '/#contact' },
   ];
 
   return (

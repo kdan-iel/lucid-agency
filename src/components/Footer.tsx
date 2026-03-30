@@ -22,6 +22,7 @@ export default function Footer() {
             <h4 className="text-white font-bold mb-6 uppercase tracking-widest text-xs">Navigation</h4>
             <ul className="space-y-4 text-sm">
               <li><a href="/" className="hover:text-brand-mint transition-colors">Accueil</a></li>
+              <li><a href="/#philosophie" className="hover:text-brand-mint transition-colors">{t('nav.philosophy')}</a></li>
               <li><a href="/#methode" className="hover:text-brand-mint transition-colors">{t('nav.method')}</a></li>
               <li><a href="/#talents" className="hover:text-brand-mint transition-colors">{t('nav.talents')}</a></li>
               <li><a href="/#resultats" className="hover:text-brand-mint transition-colors">Résultats</a></li>

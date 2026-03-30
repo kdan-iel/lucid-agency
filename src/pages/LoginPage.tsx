@@ -16,7 +16,7 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
     e.preventDefault();
     const success = login(username, password, role);
     if (!success) {
-      setError('Identifiants incorrects. Veuillez réessayer.');
+      setError(t('login.error'));
     }
   };
 
@@ -35,17 +35,17 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
               <Lock size={32} />
             </div>
             <h1 className="text-3xl font-bold mb-2">
-              {role === 'admin' ? 'Accès Admin' : 'Espace Freelance'}
+              {role === 'admin' ? t('login.title.admin') : t('login.title.freelancer')}
             </h1>
             <p className="text-brand-gray">
-              Veuillez vous connecter pour accéder à votre espace.
+              {t('login.subtitle')}
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label className="block text-sm font-bold mb-2 text-brand-gray uppercase tracking-wider">
-                Pseudo
+                {t('login.label.username')}
               </label>
               <div className="relative">
                 <User className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-gray" size={18} />
@@ -54,7 +54,7 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl py-4 pl-12 pr-4 focus:outline-none focus:border-brand-mint transition-all"
-                  placeholder="Votre pseudo"
+                  placeholder={t('login.placeholder.username')}
                   required
                 />
               </div>
@@ -62,7 +62,7 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
 
             <div>
               <label className="block text-sm font-bold mb-2 text-brand-gray uppercase tracking-wider">
-                Mot de passe
+                {t('login.label.password')}
               </label>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-gray" size={18} />
@@ -71,7 +71,7 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl py-4 pl-12 pr-4 focus:outline-none focus:border-brand-mint transition-all"
-                  placeholder="••••••••"
+                  placeholder={t('login.placeholder.password')}
                   required
                 />
               </div>
@@ -85,7 +85,7 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
               type="submit"
               className="w-full bg-brand-mint text-[#0D1117] py-4 rounded-xl font-bold text-lg hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg shadow-brand-mint/20"
             >
-              Se connecter
+              {t('login.button')}
             </button>
           </form>
 
@@ -95,7 +95,7 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
               className="inline-flex items-center gap-2 text-brand-gray hover:text-brand-mint transition-colors font-medium"
             >
               <ArrowLeft size={16} />
-              Retour à l'accueil
+              {t('login.back')}
             </a>
           </div>
         </motion.div>

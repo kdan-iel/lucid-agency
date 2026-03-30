@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLanguage } from '../context/LanguageContext';
+import { Search } from 'lucide-react';
 
 const talents = [
   { name: 'Thomas', category: 'Branding', expertise: 'Directeur Artistique', skills: ['Branding Minimaliste', 'UI Design', 'Motion'] },
@@ -20,13 +21,19 @@ const talents = [
 export default function Talents() {
   const { t } = useLanguage();
   const [filter, setFilter] = useState('All');
+  const [searchQuery, setSearchQuery] = useState('');
   const [visibleCount, setVisibleCount] = useState(6);
 
   const categories = ['All', 'Branding', 'Video', 'Web', 'Photo'];
 
-  const filteredTalents = talents.filter(talent => 
-    filter === 'All' || talent.category === filter
-  );
+  const filteredTalents = talents.filter(talent => {
+    const matchesFilter = filter === 'All' || talent.category === filter;
+    const matchesSearch = 
+      talent.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      talent.expertise.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      talent.name.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesFilter && matchesSearch;
+  });
 
   const displayedTalents = filteredTalents.slice(0, visibleCount);
 
@@ -37,24 +44,40 @@ export default function Talents() {
           {t('talents.title')}
         </h2>
 
-        {/* Filters */}
-        <div className="flex flex-wrap justify-center gap-4 mb-16">
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => {
-                setFilter(cat);
+        {/* Search & Filters */}
+        <div className="max-w-4xl mx-auto mb-16 space-y-8">
+          <div className="relative group">
+            <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-brand-gray group-focus-within:text-brand-mint transition-colors" size={20} />
+            <input
+              type="text"
+              placeholder="Rechercher une catégorie, un talent ou une expertise..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
                 setVisibleCount(6);
               }}
-              className={`px-6 py-2 rounded-full text-sm font-bold transition-all ${
-                filter === cat 
-                  ? 'bg-brand-mint text-[#0D1117]' 
-                  : 'border border-[var(--border-color)] text-[var(--text-primary)] hover:border-brand-mint'
-              }`}
-            >
-              {cat === 'All' ? t('talents.filters.all') : t(`talents.filters.${cat.toLowerCase()}`)}
-            </button>
-          ))}
+              className="w-full bg-[var(--bg-surface)] border border-[var(--border-color)] rounded-full py-4 pl-16 pr-8 text-[var(--text-primary)] focus:outline-none focus:border-brand-mint transition-all"
+            />
+          </div>
+
+          <div className="flex flex-wrap justify-center gap-4">
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => {
+                  setFilter(cat);
+                  setVisibleCount(6);
+                }}
+                className={`px-6 py-2 rounded-full text-sm font-bold transition-all ${
+                  filter === cat 
+                    ? 'bg-brand-mint text-[#0D1117]' 
+                    : 'border border-[var(--border-color)] text-[var(--text-primary)] hover:border-brand-mint'
+                }`}
+              >
+                {cat === 'All' ? t('talents.filters.all') : t(`talents.filters.${cat.toLowerCase()}`)}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
