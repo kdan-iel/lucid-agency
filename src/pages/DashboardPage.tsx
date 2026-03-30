@@ -67,6 +67,7 @@ export default function DashboardPage() {
   const { t } = useLanguage();
   const { logout } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedMission, setSelectedMission] = useState<Mission | null>(null);
   const [appliedMissions, setAppliedMissions] = useState<number[]>([]);
@@ -156,7 +157,7 @@ export default function DashboardPage() {
   const renderOverview = () => (
     <>
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-8 md:mb-12">
         {stats.map((stat, i) => (
           <motion.div
             key={i}
@@ -177,17 +178,17 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Missions Area */}
-        <div className="lg:col-span-2 bg-[var(--bg-surface)] rounded-3xl border border-[var(--border-color)] p-8">
-          <div className="flex justify-between items-center mb-8">
+        <div className="lg:col-span-2 bg-[var(--bg-surface)] rounded-2xl md:rounded-3xl border border-[var(--border-color)] p-4 md:p-8">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
             <h2 className="text-xl font-bold">{t('dashboard.missions.title')}</h2>
-            <div className="relative">
+            <div className="relative w-full sm:w-64">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-gray" size={18} />
               <input 
                 type="text" 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t('dashboard.missions.search')} 
-                className="bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-full py-2 pl-10 pr-4 text-sm focus:outline-none focus:border-brand-mint transition-all w-64"
+                className="bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-full py-2 pl-10 pr-4 text-sm focus:outline-none focus:border-brand-mint transition-all w-full"
               />
             </div>
           </div>
@@ -198,24 +199,24 @@ export default function DashboardPage() {
                 <div 
                   key={mission.id} 
                   onClick={() => setSelectedMission(mission)}
-                  className="flex items-center justify-between p-6 rounded-2xl border border-[var(--border-color)] hover:border-brand-mint/30 transition-all cursor-pointer group"
+                  className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 md:p-6 rounded-2xl border border-[var(--border-color)] hover:border-brand-mint/30 transition-all cursor-pointer group gap-4"
                 >
-                  <div className="flex items-center gap-6">
-                    <div className="w-12 h-12 rounded-xl bg-brand-mint/10 flex items-center justify-center text-brand-mint font-bold">
+                  <div className="flex items-center gap-4 md:gap-6">
+                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-brand-mint/10 flex-shrink-0 flex items-center justify-center text-brand-mint font-bold">
                       {mission.company.charAt(0)}
                     </div>
                     <div>
-                      <h3 className="font-bold mb-1 group-hover:text-brand-mint transition-colors">{mission.title}</h3>
-                      <p className="text-sm text-brand-gray">{mission.category} · {mission.duration} · {mission.budget}</p>
+                      <h3 className="font-bold mb-1 group-hover:text-brand-mint transition-colors text-sm md:text-base">{mission.title}</h3>
+                      <p className="text-xs md:text-sm text-brand-gray">{mission.category} · {mission.duration} · {mission.budget}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
                     {appliedMissions.includes(mission.id) ? (
                       <span className="text-brand-mint text-sm font-bold flex items-center gap-1">
                         <CheckCircle size={16} /> Postulé
                       </span>
                     ) : (
-                      <button className="px-6 py-2 rounded-full border border-brand-mint text-brand-mint text-sm font-bold hover:bg-brand-mint hover:text-[#0D1117] transition-all">
+                      <button className="w-full sm:w-auto px-6 py-2 rounded-full border border-brand-mint text-brand-mint text-sm font-bold hover:bg-brand-mint hover:text-[#0D1117] transition-all">
                         {t('dashboard.missions.view')}
                       </button>
                     )}
@@ -368,10 +369,10 @@ export default function DashboardPage() {
   );
 
   const renderMessages = () => (
-    <div className="bg-[var(--bg-surface)] rounded-3xl border border-[var(--border-color)] overflow-hidden flex h-[600px]">
-      <div className="w-1/3 border-r border-[var(--border-color)] p-6">
+    <div className="bg-[var(--bg-surface)] rounded-2xl md:rounded-3xl border border-[var(--border-color)] overflow-hidden flex flex-col md:flex-row h-[600px]">
+      <div className={`w-full md:w-1/3 border-r border-[var(--border-color)] p-4 md:p-6 flex flex-col ${activeChatId && 'hidden md:flex'}`}>
         <h2 className="text-xl font-bold mb-6">{t('dashboard.nav.messages')}</h2>
-        <div className="space-y-4">
+        <div className="space-y-4 overflow-y-auto">
           {[
             { id: 1, name: 'LUCID Agency', last: messages[1][messages[1].length - 1].text, time: messages[1][messages[1].length - 1].time },
             { id: 2, name: 'Client Alpha', last: messages[2][messages[2].length - 1].text, time: messages[2][messages[2].length - 1].time },
@@ -390,37 +391,43 @@ export default function DashboardPage() {
           ))}
         </div>
       </div>
-      <div className="flex-grow flex flex-col">
-        <div className="p-6 border-b border-[var(--border-color)] flex items-center justify-between">
+      <div className={`flex-grow flex flex-col ${!activeChatId && 'hidden md:flex'}`}>
+        <div className="p-4 md:p-6 border-b border-[var(--border-color)] flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-brand-mint/20 flex items-center justify-center text-brand-mint font-bold">
+            <button 
+              onClick={() => setActiveChatId(0)}
+              className="md:hidden p-2 -ml-2 text-brand-gray hover:text-brand-mint"
+            >
+              <X size={20} />
+            </button>
+            <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-brand-mint/20 flex items-center justify-center text-brand-mint font-bold">
               {activeChatId === 1 ? 'L' : 'C'}
             </div>
-            <span className="font-bold">{activeChatId === 1 ? 'LUCID Agency' : 'Client Alpha'}</span>
+            <span className="font-bold text-sm md:text-base">{activeChatId === 1 ? 'LUCID Agency' : 'Client Alpha'}</span>
           </div>
           <button className="p-2 rounded-full hover:bg-white/5 text-brand-gray">
             <Search size={20} />
           </button>
         </div>
-        <div className="flex-grow p-6 overflow-y-auto space-y-4">
-          {messages[activeChatId].map((msg, i) => (
+        <div className="flex-grow p-4 md:p-6 overflow-y-auto space-y-4">
+          {activeChatId !== 0 && messages[activeChatId].map((msg, i) => (
             <div key={i} className={`flex ${msg.isMe ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[70%] p-4 rounded-2xl ${msg.isMe ? 'bg-brand-mint text-[#0D1117] rounded-tr-none' : 'bg-white/5 border border-[var(--border-color)] rounded-tl-none'}`}>
+              <div className={`max-w-[85%] md:max-w-[70%] p-3 md:p-4 rounded-2xl ${msg.isMe ? 'bg-brand-mint text-[#0D1117] rounded-tr-none' : 'bg-white/5 border border-[var(--border-color)] rounded-tl-none'}`}>
                 <p className="text-sm">{msg.text}</p>
                 <span className={`text-[10px] mt-1 block ${msg.isMe ? 'text-[#0D1117]/60' : 'text-brand-gray'}`}>{msg.time}</span>
               </div>
             </div>
           ))}
         </div>
-        <form onSubmit={handleSendMessage} className="p-6 border-t border-[var(--border-color)] flex gap-4">
+        <form onSubmit={handleSendMessage} className="p-4 md:p-6 border-t border-[var(--border-color)] flex gap-2 md:gap-4">
           <input 
             type="text" 
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
-            placeholder="Écrivez votre message..." 
-            className="flex-grow bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-full px-6 py-3 text-sm focus:outline-none focus:border-brand-mint transition-all"
+            placeholder="Message..." 
+            className="flex-grow bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-full px-4 md:px-6 py-2 md:py-3 text-sm focus:outline-none focus:border-brand-mint transition-all"
           />
-          <button type="submit" className="bg-brand-mint text-[#0D1117] px-6 py-3 rounded-full font-bold hover:scale-105 transition-all">
+          <button type="submit" className="bg-brand-mint text-[#0D1117] px-4 md:px-6 py-2 md:py-3 rounded-full font-bold hover:scale-105 transition-all text-sm">
             Envoyer
           </button>
         </form>
@@ -598,15 +605,38 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
       <Navbar />
       
-      <div className="pt-24 flex min-h-screen">
+      <div className="pt-24 flex min-h-screen relative">
+        {/* Sidebar Overlay for Mobile */}
+        <AnimatePresence>
+          {isSidebarOpen && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsSidebarOpen(false)}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
+            />
+          )}
+        </AnimatePresence>
+
         {/* Sidebar */}
-        <aside className="w-64 border-r border-[var(--border-color)] hidden md:block p-6">
+        <aside className={`
+          fixed md:static inset-y-0 left-0 z-50 w-64 border-r border-[var(--border-color)] bg-[var(--bg-primary)] md:bg-transparent
+          transform transition-transform duration-300 ease-in-out p-6
+          ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+        `}>
+          <div className="flex justify-between items-center mb-8 md:hidden">
+            <div className="text-brand-mint font-bold text-xl">LUCID</div>
+            <button onClick={() => setIsSidebarOpen(false)} className="text-brand-gray">
+              <X size={24} />
+            </button>
+          </div>
           <nav className="space-y-2 h-full flex flex-col">
             <div className="flex-grow space-y-2">
               {sidebarItems.map((item) => (
                 <button
                   key={item.id}
-                  onClick={() => setActiveTab(item.id)}
+                  onClick={() => { setActiveTab(item.id); setIsSidebarOpen(false); }}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
                     activeTab === item.id 
                       ? 'bg-brand-mint text-[#0D1117]' 
@@ -629,15 +659,23 @@ export default function DashboardPage() {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-grow p-8">
-          <header className="flex justify-between items-center mb-12">
-            <div>
-              <h1 className="text-3xl font-bold mb-2">
-                {t('dashboard.welcome').replace('{{name}}', 'Thomas')}
-              </h1>
-              <p className="text-brand-gray">{t('dashboard.welcome.sub')}</p>
+        <main className="flex-grow p-4 md:p-8 w-full overflow-x-hidden">
+          <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 md:mb-12">
+            <div className="flex items-center gap-4 w-full sm:w-auto">
+              <button 
+                onClick={() => setIsSidebarOpen(true)}
+                className="md:hidden p-2 rounded-lg bg-white/5 border border-[var(--border-color)] text-brand-mint"
+              >
+                <LayoutDashboard size={20} />
+              </button>
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold mb-1 md:mb-2">
+                  {t('dashboard.welcome').replace('{{name}}', 'Thomas')}
+                </h1>
+                <p className="text-brand-gray text-sm md:text-base">{t('dashboard.welcome.sub')}</p>
+              </div>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 ml-auto sm:ml-0">
               <button className="p-2 rounded-full hover:bg-white/5 text-brand-gray relative">
                 <Bell size={24} />
                 <span className="absolute top-2 right-2 w-2 h-2 bg-brand-mint rounded-full"></span>

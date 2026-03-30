@@ -73,6 +73,7 @@ export default function AdminPage() {
   const { t } = useLanguage();
   const { logout } = useAuth();
   const [activeTab, setActiveTab] = useState('talents');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
   const [requests, setRequests] = useState<TalentRequest[]>(INITIAL_REQUESTS);
@@ -149,24 +150,24 @@ export default function AdminPage() {
   };
 
   const renderTalents = () => (
-    <div className="bg-[var(--bg-surface)] rounded-3xl border border-[var(--border-color)] p-8">
-      <div className="flex justify-between items-center mb-8">
+    <div className="bg-[var(--bg-surface)] rounded-2xl md:rounded-3xl border border-[var(--border-color)] p-4 md:p-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <h2 className="text-xl font-bold">{t('admin.talents.title')}</h2>
-        <div className="flex gap-4">
-          <div className="relative">
+        <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+          <div className="relative w-full sm:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-gray" size={18} />
             <input 
               type="text" 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Rechercher..." 
-              className="bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-full py-2 pl-10 pr-4 text-sm focus:outline-none focus:border-brand-mint transition-all w-64"
+              className="bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-full py-2 pl-10 pr-4 text-sm focus:outline-none focus:border-brand-mint transition-all w-full"
             />
           </div>
           <select 
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as any)}
-            className="bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-2 text-sm text-brand-gray focus:outline-none focus:border-brand-mint transition-all"
+            className="bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-2 text-sm text-brand-gray focus:outline-none focus:border-brand-mint transition-all w-full sm:w-auto"
           >
             <option value="all">Tous les statuts</option>
             <option value="pending">En attente</option>
@@ -176,7 +177,7 @@ export default function AdminPage() {
         </div>
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-left">
           <thead>
             <tr className="border-b border-[var(--border-color)] text-brand-gray text-sm">
@@ -226,6 +227,44 @@ export default function AdminPage() {
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile Talent List */}
+      <div className="md:hidden space-y-4">
+        {filteredRequests.map((row) => (
+          <div 
+            key={row.id} 
+            onClick={() => setSelectedTalent(row)}
+            className="p-4 rounded-2xl border border-[var(--border-color)] bg-white/5 space-y-3"
+          >
+            <div className="flex justify-between items-start">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-brand-mint/20 flex items-center justify-center text-brand-mint font-bold text-xs uppercase">
+                  {row.name.charAt(0)}
+                </div>
+                <div>
+                  <div className="font-bold">{row.name}</div>
+                  <div className="text-xs text-brand-gray">{row.specialty}</div>
+                </div>
+              </div>
+              <button className="p-1 text-brand-gray">
+                <MoreVertical size={16} />
+              </button>
+            </div>
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-brand-gray">{row.date}</span>
+              {row.status === 'approved' && (
+                <span className="text-green-400 font-bold uppercase">{t('admin.status.approved')}</span>
+              )}
+              {row.status === 'pending' && (
+                <span className="text-yellow-400 font-bold uppercase">{t('admin.status.pending')}</span>
+              )}
+              {row.status === 'rejected' && (
+                <span className="text-red-400 font-bold uppercase">{t('admin.status.rejected')}</span>
+              )}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -298,13 +337,13 @@ export default function AdminPage() {
   );
 
   const renderMessages = () => (
-    <div className="bg-[var(--bg-surface)] rounded-3xl border border-[var(--border-color)] overflow-hidden flex h-[600px]">
-      <div className="w-1/3 border-r border-[var(--border-color)] p-6">
+    <div className="bg-[var(--bg-surface)] rounded-2xl md:rounded-3xl border border-[var(--border-color)] overflow-hidden flex flex-col md:flex-row h-[600px]">
+      <div className={`w-full md:w-1/3 border-r border-[var(--border-color)] p-4 md:p-6 flex flex-col ${messages.length > 0 && 'hidden md:flex'}`}>
         <h2 className="text-xl font-bold mb-6">{t('admin.nav.messages')}</h2>
-        <div className="space-y-4">
+        <div className="space-y-4 overflow-y-auto">
           {[
-            { name: 'Thomas K.', last: 'Bonjour, j\'aimerais...', time: '09:00', active: true },
-            { name: 'Amina L.', last: 'Merci pour l\'invitation.', time: 'Hier', active: false },
+            { id: 1, name: 'Thomas K.', last: 'Bonjour, j\'aimerais...', time: '09:00', active: true },
+            { id: 2, name: 'Amina L.', last: 'Merci pour l\'invitation.', time: 'Hier', active: false },
           ].map((chat, i) => (
             <div key={i} className={`p-4 rounded-2xl cursor-pointer transition-all ${chat.active ? 'bg-brand-mint/10 border border-brand-mint/30' : 'hover:bg-white/5 border border-transparent'}`}>
               <div className="flex justify-between items-start mb-1">
@@ -317,34 +356,34 @@ export default function AdminPage() {
         </div>
       </div>
       <div className="flex-grow flex flex-col">
-        <div className="p-6 border-b border-[var(--border-color)] flex items-center justify-between">
+        <div className="p-4 md:p-6 border-b border-[var(--border-color)] flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-brand-mint/20 flex items-center justify-center text-brand-mint font-bold">T</div>
-            <span className="font-bold">Thomas K.</span>
+            <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-brand-mint/20 flex items-center justify-center text-brand-mint font-bold">T</div>
+            <span className="font-bold text-sm md:text-base">Thomas K.</span>
           </div>
           <button className="p-2 rounded-full hover:bg-white/5 text-brand-gray">
             <Search size={20} />
           </button>
         </div>
-        <div className="flex-grow p-6 overflow-y-auto space-y-4">
+        <div className="flex-grow p-4 md:p-6 overflow-y-auto space-y-4">
           {messages.map((msg) => (
             <div key={msg.id} className={`flex ${msg.isMe ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[70%] p-4 rounded-2xl ${msg.isMe ? 'bg-brand-mint text-[#0D1117] rounded-tr-none' : 'bg-white/5 border border-[var(--border-color)] rounded-tl-none'}`}>
+              <div className={`max-w-[85%] md:max-w-[70%] p-3 md:p-4 rounded-2xl ${msg.isMe ? 'bg-brand-mint text-[#0D1117] rounded-tr-none' : 'bg-white/5 border border-[var(--border-color)] rounded-tl-none'}`}>
                 <p className="text-sm">{msg.text}</p>
                 <span className={`text-[10px] mt-1 block ${msg.isMe ? 'text-[#0D1117]/60' : 'text-brand-gray'}`}>{msg.time}</span>
               </div>
             </div>
           ))}
         </div>
-        <form onSubmit={handleSendMessage} className="p-6 border-t border-[var(--border-color)] flex gap-4">
+        <form onSubmit={handleSendMessage} className="p-4 md:p-6 border-t border-[var(--border-color)] flex gap-2 md:gap-4">
           <input 
             type="text" 
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
-            placeholder="Écrivez votre message..." 
-            className="flex-grow bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-full px-6 py-3 text-sm focus:outline-none focus:border-brand-mint transition-all"
+            placeholder="Message..." 
+            className="flex-grow bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-full px-4 md:px-6 py-2 md:py-3 text-sm focus:outline-none focus:border-brand-mint transition-all"
           />
-          <button type="submit" className="bg-brand-mint text-[#0D1117] px-6 py-3 rounded-full font-bold hover:scale-105 transition-all">
+          <button type="submit" className="bg-brand-mint text-[#0D1117] px-4 md:px-6 py-2 md:py-3 rounded-full font-bold hover:scale-105 transition-all text-sm">
             Envoyer
           </button>
         </form>
@@ -522,15 +561,38 @@ export default function AdminPage() {
     <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
       <Navbar />
       
-      <div className="pt-24 flex min-h-screen">
+      <div className="pt-24 flex min-h-screen relative">
+        {/* Sidebar Overlay for Mobile */}
+        <AnimatePresence>
+          {isSidebarOpen && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsSidebarOpen(false)}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
+            />
+          )}
+        </AnimatePresence>
+
         {/* Sidebar */}
-        <aside className="w-64 border-r border-[var(--border-color)] hidden md:block p-6">
+        <aside className={`
+          fixed md:static inset-y-0 left-0 z-50 w-64 border-r border-[var(--border-color)] bg-[var(--bg-primary)] md:bg-transparent
+          transform transition-transform duration-300 ease-in-out p-6
+          ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+        `}>
+          <div className="flex justify-between items-center mb-8 md:hidden">
+            <div className="text-brand-mint font-bold text-xl">LUCID</div>
+            <button onClick={() => setIsSidebarOpen(false)} className="text-brand-gray">
+              <X size={24} />
+            </button>
+          </div>
           <nav className="space-y-2 h-full flex flex-col">
             <div className="flex-grow space-y-2">
               {sidebarItems.map((item) => (
                 <button
                   key={item.id}
-                  onClick={() => setActiveTab(item.id)}
+                  onClick={() => { setActiveTab(item.id); setIsSidebarOpen(false); }}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
                     activeTab === item.id 
                       ? 'bg-brand-mint text-[#0D1117]' 
@@ -553,13 +615,21 @@ export default function AdminPage() {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-grow p-8">
-          <header className="flex justify-between items-center mb-12">
-            <div>
-              <h1 className="text-3xl font-bold mb-2">{t('admin.welcome')}</h1>
-              <p className="text-brand-gray">{t('admin.welcome.sub')}</p>
+        <main className="flex-grow p-4 md:p-8 w-full overflow-x-hidden">
+          <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 md:mb-12">
+            <div className="flex items-center gap-4 w-full sm:w-auto">
+              <button 
+                onClick={() => setIsSidebarOpen(true)}
+                className="md:hidden p-2 rounded-lg bg-white/5 border border-[var(--border-color)] text-brand-mint"
+              >
+                <Users size={20} />
+              </button>
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold mb-1 md:mb-2">{t('admin.welcome')}</h1>
+                <p className="text-brand-gray text-sm md:text-base">{t('admin.welcome.sub')}</p>
+              </div>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 ml-auto sm:ml-0">
               <button className="p-2 rounded-full hover:bg-white/5 text-brand-gray relative">
                 <Bell size={24} />
                 <span className="absolute top-2 right-2 w-2 h-2 bg-brand-mint rounded-full"></span>
@@ -571,7 +641,7 @@ export default function AdminPage() {
           </header>
 
           {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-8 md:mb-12">
             {stats.map((stat, i) => (
               <motion.div
                 key={i}
