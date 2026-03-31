@@ -161,7 +161,8 @@ const translations: Record<Language, Record<string, string>> = {
     'login.placeholder.password': '••••••••',
     'login.button': 'Se connecter',
     'login.error': 'Identifiants incorrects. Veuillez réessayer.',
-    'login.back': 'Retour à l\'accueil'
+    'login.back': 'Retour à l\'accueil',
+    'common.clickToReveal': 'Cliquez pour découvrir...'
   },
   EN: {
     'nav.method': 'Method',
@@ -315,7 +316,8 @@ const translations: Record<Language, Record<string, string>> = {
     'login.placeholder.password': '••••••••',
     'login.button': 'Log In',
     'login.error': 'Incorrect credentials. Please try again.',
-    'login.back': 'Back to home'
+    'login.back': 'Back to home',
+    'common.clickToReveal': 'Click to reveal...'
   }
 };
 

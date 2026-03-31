@@ -1,4 +1,4 @@
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useLanguage } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
 import { Menu, X, Globe, Sun, Moon } from 'lucide-react';
@@ -85,43 +85,70 @@ export default function Navbar() {
       </div>
 
       {/* Mobile Menu */}
-      {isOpen && (
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="md:hidden bg-brand-anthracite border-t border-[var(--border-color)] px-6 py-8 flex flex-col gap-6"
-        >
-          {navLinks.map((link) => (
-            <a
-              key={link.name}
-              href={link.href}
-              onClick={() => setIsOpen(false)}
-              className="text-lg font-medium text-[var(--text-primary)]"
-            >
-              {link.name}
-            </a>
-          ))}
-          <div className="flex items-center justify-between pt-4 border-t border-[var(--border-color)]">
-            <button
-              onClick={() => {
-                setLang(lang === 'FR' ? 'EN' : 'FR');
-                setIsOpen(false);
-              }}
-              className="flex items-center gap-2 text-sm font-bold text-brand-mint"
-            >
-              <Globe size={18} />
-              {lang === 'FR' ? 'English' : 'Français'}
-            </button>
-            <a
-              href="#contact"
-              onClick={() => setIsOpen(false)}
-              className="bg-brand-mint text-[#1A1A2E] px-6 py-3 rounded-full text-sm font-bold"
-            >
-              {t('nav.cta')}
-            </a>
-          </div>
-        </motion.div>
-      )}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, x: '100%' }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="fixed inset-0 z-50 md:hidden bg-brand-darkest flex flex-col"
+          >
+            <div className="flex justify-between items-center p-6 border-b border-white/5">
+              <a href="/" className="flex items-center gap-2" onClick={() => setIsOpen(false)}>
+                <span className="text-2xl font-bold tracking-tighter text-white">LUCID</span>
+                <span className="text-xs font-semibold tracking-widest text-brand-mint uppercase">Agency</span>
+              </a>
+              <button className="text-white p-2" onClick={() => setIsOpen(false)}>
+                <X size={32} />
+              </button>
+            </div>
+
+            <div className="flex-grow flex flex-col justify-center px-10 gap-8">
+              {navLinks.map((link, i) => (
+                <motion.a
+                  key={link.name}
+                  href={link.href}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.1 }}
+                  onClick={() => setIsOpen(false)}
+                  className="text-4xl font-black uppercase tracking-tighter text-white hover:text-brand-mint transition-colors"
+                >
+                  {link.name}
+                </motion.a>
+              ))}
+            </div>
+
+            <div className="p-10 border-t border-white/5 space-y-6">
+              <div className="flex items-center justify-between">
+                <button
+                  onClick={() => {
+                    setLang(lang === 'FR' ? 'EN' : 'FR');
+                  }}
+                  className="flex items-center gap-2 text-lg font-bold text-brand-mint"
+                >
+                  <Globe size={24} />
+                  {lang === 'FR' ? 'English' : 'Français'}
+                </button>
+                <button
+                  onClick={toggleTheme}
+                  className="p-3 bg-white/5 rounded-full text-white"
+                >
+                  {theme === 'dark' ? <Sun size={24} /> : <Moon size={24} />}
+                </button>
+              </div>
+              <a
+                href="#contact"
+                onClick={() => setIsOpen(false)}
+                className="block w-full bg-brand-mint text-[#1A1A2E] py-5 rounded-2xl text-center font-black uppercase tracking-widest"
+              >
+                {t('nav.cta')}
+              </a>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </nav>
   );
 }

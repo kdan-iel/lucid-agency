@@ -31,7 +31,7 @@ export default function JoinPage() {
             ))}
           </div>
 
-          <div className="bg-brand-darkblue p-10 rounded-3xl border border-white/5 shadow-2xl">
+          <div className="bg-brand-darkblue p-6 md:p-10 rounded-3xl border border-white/5 shadow-2xl">
             <form className="space-y-6">
               <div className="grid md:grid-cols-2 gap-6">
                 <div className="space-y-2">
@@ -50,7 +50,7 @@ export default function JoinPage() {
                 </div>
                 <div className="space-y-2">
                   <label className="text-xs font-bold uppercase tracking-widest text-brand-gray ml-1">Lien portfolio</label>
-                  <input required type="url" className="w-full bg-brand-anthracite border border-white/10 rounded-xl px-4 py-4 text-white focus:border-brand-mint outline-none" />
+                  <input type="url" className="w-full bg-brand-anthracite border border-white/10 rounded-xl px-4 py-4 text-white focus:border-brand-mint outline-none" />
                 </div>
               </div>
               <div className="space-y-2">

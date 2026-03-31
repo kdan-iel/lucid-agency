@@ -14,10 +14,10 @@ export default function Hero() {
       <div className="container mx-auto px-6 relative z-10 text-center">
         <div className="flex flex-col items-center">
           <motion.h1 
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-            className="text-5xl md:text-8xl font-bold tracking-tighter leading-tight mb-6"
+            initial={{ opacity: 0, y: 40, filter: 'blur(10px)', scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, filter: 'blur(0px)', scale: 1 }}
+            transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
+            className="text-4xl sm:text-6xl md:text-8xl font-bold tracking-tighter leading-tight mb-6"
           >
             <motion.span 
               initial={{ opacity: 0, y: 20 }}
@@ -38,17 +38,17 @@ export default function Hero() {
           </motion.h1>
           
           <motion.p 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            initial={{ opacity: 0, y: 20, filter: 'blur(5px)' }}
+            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+            transition={{ duration: 1, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
             className="text-brand-gray text-lg md:text-xl max-w-2xl mx-auto mb-12 leading-relaxed"
           >
             {t('hero.subtitle')}
           </motion.p>
 
           <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0, y: 20, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ duration: 0.8, delay: 0.8, ease: [0.16, 1, 0.3, 1] }}
             className="flex flex-col sm:flex-row items-center justify-center gap-4"
           >
