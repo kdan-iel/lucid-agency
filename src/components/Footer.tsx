@@ -11,11 +11,7 @@ export default function Footer() {
           <div>
             <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 flex items-center justify-center">
-                <svg width="32" height="32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M50 10L15 85H85L50 10Z" stroke="#2DF5A0" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M50 10V85" stroke="#2DF5A0" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M50 45L85 85" stroke="#2DF5A0" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
+                <img src="/logo.png" alt="LUCID Agency Logo" />
               </div>
               <div className="flex items-baseline gap-2">
                 <span className="text-2xl font-bold tracking-tighter text-white font-ibm">LUCID</span>
@@ -54,15 +50,15 @@ export default function Footer() {
             <ul className="space-y-4 text-sm">
               <li className="flex items-center gap-3">
                 <Mail size={16} className="text-brand-mint" />
-                contact@lucid-agency.com
+                agencelucid@gmail.com
               </li>
               <li className="flex items-center gap-3">
                 <Phone size={16} className="text-brand-mint" />
                 +228 90 00 00 00
               </li>
               <li className="flex items-center gap-6 pt-4">
-                <a href="#" className="hover:text-brand-mint transition-colors"><Linkedin size={20} /></a>
-                <a href="#" className="hover:text-brand-mint transition-colors"><Instagram size={20} /></a>
+                <a href="#" className="hover:text-brand-mint transition-colors" title="LinkedIn" aria-label="LinkedIn"><Linkedin size={20} /></a>
+                <a href="https://www.instagram.com/lucid_agence?igsh=aTZtdjlleGdpN2ho&utm_source=qr" className="hover:text-brand-mint transition-colors" title="Instagram" aria-label="Instagram"><Instagram size={20} /></a>
               </li>
             </ul>
           </div>

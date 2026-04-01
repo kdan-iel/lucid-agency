@@ -22,23 +22,23 @@ interface TalentRequest {
 const INITIAL_REQUESTS: TalentRequest[] = [
   { 
     id: 1, 
-    name: 'Thomas K.', 
+    name: 'Jean David K.', 
     specialty: 'Branding', 
     date: '29/03/2026', 
     status: 'pending',
-    email: 'thomas.k@example.com',
-    phone: '+228 90 12 34 56',
+    email: 'jdaviel@gmail.com',
+    phone: '+228 70 51 67 69',
     portfolio: 'behance.net/thomask',
     experience: '5 ans'
   },
   { 
     id: 2, 
-    name: 'Amina L.', 
-    specialty: 'Web Design', 
+    name: 'Godwin A.', 
+    specialty: 'Graphiste', 
     date: '28/03/2026', 
     status: 'approved',
-    email: 'amina.l@example.com',
-    phone: '+228 91 23 45 67',
+    email: 'godwinakakpo@gmail.com',
+    phone: '+228 98 60 96 69',
     portfolio: 'amina.design',
     experience: '3 ans'
   },
@@ -133,19 +133,21 @@ export default function AdminPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <h2 className="text-xl font-bold">{t('admin.talents.title')}</h2>
         <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
-          <div className="relative w-full sm:w-64">
+            <div className="relative w-full sm:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-gray" size={18} />
             <input 
               type="text" 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Rechercher..." 
+              aria-label="Rechercher talents par nom ou spécialité"
               className="bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-full py-2 pl-10 pr-4 text-sm focus:outline-none focus:border-brand-mint transition-all w-full"
             />
           </div>
           <select 
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as any)}
+            aria-label="Filtrer les talents par statut"
             className="bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-2 text-sm text-brand-gray focus:outline-none focus:border-brand-mint transition-all w-full sm:w-auto"
           >
             <option value="all">Tous les statuts</option>
@@ -198,7 +200,7 @@ export default function AdminPage() {
                   )}
                 </td>
                 <td className="py-4 text-right">
-                  <button className="p-2 rounded-lg hover:bg-white/10 text-brand-gray" onClick={(e) => { e.stopPropagation(); setSelectedTalent(row); }}>
+                  <button className="p-2 rounded-lg hover:bg-white/10 text-brand-gray" onClick={(e) => { e.stopPropagation(); setSelectedTalent(row); }} title="Plus d'options">
                     <MoreVertical size={18} />
                   </button>
                 </td>
@@ -226,7 +228,7 @@ export default function AdminPage() {
                   <div className="text-xs text-brand-gray">{row.specialty}</div>
                 </div>
               </div>
-              <button className="p-1 text-brand-gray">
+              <button className="p-1 text-brand-gray" title="Plus d'options">
                 <MoreVertical size={16} />
               </button>
             </div>
@@ -292,6 +294,7 @@ export default function AdminPage() {
                   <select 
                     value={project.status}
                     onChange={(e) => handleUpdateProjectStatus(project.id, e.target.value as any)}
+                    aria-label={`Modifier le statut du projet ${project.title}`}
                     className={`text-xs font-bold uppercase px-2 py-1 rounded bg-transparent border border-transparent hover:border-[var(--border-color)] focus:outline-none ${
                       project.status === 'completed' ? 'text-green-400' : 
                       project.status === 'in-progress' ? 'text-blue-400' : 'text-yellow-400'
@@ -303,7 +306,7 @@ export default function AdminPage() {
                   </select>
                 </td>
                 <td className="py-4 text-right">
-                  <button className="p-2 rounded-lg hover:bg-white/10 text-brand-gray">
+                  <button className="p-2 rounded-lg hover:bg-white/10 text-brand-gray" title="Plus d'options">
                     <MoreVertical size={18} />
                   </button>
                 </td>
@@ -359,7 +362,7 @@ export default function AdminPage() {
                 </div>
 
                 <a 
-                  href={`https://wa.me/${freelancer.phone.replace(/\s+/g, '').replace('+', '')}`}
+                  href={`https://wa.me/22870516769?text=Bonjour%20${encodeURIComponent(freelancer.name)},%20je%20suis%20intéressé%20par%20votre%20profil%20pour%20un%20projet%20chez%20LUCID%20Agency.%20Pouvez-vous%20me%20dire%20quand%20vous%20êtes%20disponible%20pour%20en%20discuter?`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-full bg-brand-mint text-[#0D1117] py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:scale-[1.02] transition-all"
@@ -445,6 +448,7 @@ export default function AdminPage() {
             type="text" 
             value={agencyData.name}
             onChange={(e) => setAgencyData({...agencyData, name: e.target.value})}
+            aria-label="Nom de l'agence"
             className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all"
           />
         </div>
@@ -454,6 +458,8 @@ export default function AdminPage() {
             type="email" 
             value={agencyData.email}
             onChange={(e) => setAgencyData({...agencyData, email: e.target.value})}
+            aria-label="Email de contact"
+            placeholder="Email de contact"
             className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all"
           />
         </div>
@@ -463,6 +469,7 @@ export default function AdminPage() {
             value={agencyData.vision}
             onChange={(e) => setAgencyData({...agencyData, vision: e.target.value})}
             rows={3}
+            aria-label="Vision de l'agence"
             className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all resize-none"
           />
         </div>
@@ -472,6 +479,7 @@ export default function AdminPage() {
             value={agencyData.mission}
             onChange={(e) => setAgencyData({...agencyData, mission: e.target.value})}
             rows={3}
+            aria-label="Mission de l'agence"
             className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all resize-none"
           />
         </div>
@@ -495,6 +503,7 @@ export default function AdminPage() {
             type="password" 
             value={passwordForm.current}
             onChange={(e) => setPasswordForm({...passwordForm, current: e.target.value})}
+            placeholder={t('dashboard.settings.security.current')}
             className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all"
           />
         </div>
@@ -505,6 +514,7 @@ export default function AdminPage() {
             type="password" 
             value={passwordForm.new}
             onChange={(e) => setPasswordForm({...passwordForm, new: e.target.value})}
+            placeholder={t('dashboard.settings.security.new')}
             className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all"
           />
         </div>
@@ -515,6 +525,7 @@ export default function AdminPage() {
             type="password" 
             value={passwordForm.confirm}
             onChange={(e) => setPasswordForm({...passwordForm, confirm: e.target.value})}
+            placeholder={t('dashboard.settings.security.confirm')}
             className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all"
           />
         </div>
@@ -686,7 +697,7 @@ export default function AdminPage() {
         `}>
           <div className="flex justify-between items-center mb-8 md:hidden">
             <div className="text-brand-mint font-bold text-xl">LUCID</div>
-            <button onClick={() => setIsSidebarOpen(false)} className="text-brand-gray">
+            <button onClick={() => setIsSidebarOpen(false)} className="text-brand-gray" title="Fermer">
               <X size={24} />
             </button>
           </div>
@@ -724,6 +735,7 @@ export default function AdminPage() {
               <button 
                 onClick={() => setIsSidebarOpen(true)}
                 className="md:hidden p-2 rounded-lg bg-white/5 border border-[var(--border-color)] text-brand-mint"
+                title="Ouvrir le menu"
               >
                 <Users size={20} />
               </button>
@@ -733,7 +745,7 @@ export default function AdminPage() {
               </div>
             </div>
             <div className="flex items-center gap-4 ml-auto sm:ml-0">
-              <button className="p-2 rounded-full hover:bg-white/5 text-brand-gray relative">
+              <button className="p-2 rounded-full hover:bg-white/5 text-brand-gray relative" title="Notifications">
                 <Bell size={24} />
                 <span className="absolute top-2 right-2 w-2 h-2 bg-brand-mint rounded-full"></span>
               </button>
@@ -808,6 +820,7 @@ export default function AdminPage() {
                   <button 
                     onClick={() => setSelectedTalent(null)}
                     className="p-2 rounded-full hover:bg-white/5 text-brand-gray transition-colors"
+                    title="Fermer"
                   >
                     <X size={24} />
                   </button>
@@ -849,7 +862,7 @@ export default function AdminPage() {
                       </div>
                       <span className="text-sm font-medium">CV_Thomas_K.pdf</span>
                     </div>
-                    <button className="p-2 text-brand-gray hover:text-brand-mint transition-colors">
+                    <button className="p-2 text-brand-gray hover:text-brand-mint transition-colors" title="Télécharger">
                       <Download size={18} />
                     </button>
                   </div>
@@ -901,7 +914,7 @@ export default function AdminPage() {
             >
               <div className="flex justify-between items-center mb-8">
                 <h2 className="text-2xl font-bold">Nouveau Projet</h2>
-                <button onClick={() => setIsProjectModalOpen(false)} className="text-brand-gray hover:text-white">
+                <button onClick={() => setIsProjectModalOpen(false)} className="text-brand-gray hover:text-white" title="Fermer">
                   <X size={24} />
                 </button>
               </div>
@@ -913,6 +926,7 @@ export default function AdminPage() {
                     type="text" 
                     value={newProject.title}
                     onChange={(e) => setNewProject({...newProject, title: e.target.value})}
+                    placeholder="Entrez le titre du projet"
                     className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all"
                   />
                 </div>
@@ -923,6 +937,7 @@ export default function AdminPage() {
                     type="text" 
                     value={newProject.client}
                     onChange={(e) => setNewProject({...newProject, client: e.target.value})}
+                    placeholder="Entrez le nom du client"
                     className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all"
                   />
                 </div>
@@ -932,6 +947,7 @@ export default function AdminPage() {
                     required
                     value={newProject.talent}
                     onChange={(e) => setNewProject({...newProject, talent: e.target.value})}
+                    aria-label="Talent assigné"
                     className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all"
                   >
                     <option value="">Sélectionner un talent</option>
@@ -960,6 +976,7 @@ export default function AdminPage() {
                       placeholder="JJ/MM/AAAA"
                       value={newProject.deadline}
                       onChange={(e) => setNewProject({...newProject, deadline: e.target.value})}
+                      aria-label="Date limite du projet"
                       className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all"
                     />
                   </div>

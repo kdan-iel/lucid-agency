@@ -34,7 +34,7 @@ export default function Philosophy() {
           >
             <button
               onClick={() => setVisionExpanded(!visionExpanded)}
-              className="w-full p-6 md:p-8 flex items-center justify-between group"
+              className="w-full p-7 md:p-8 flex items-center justify-between group"
             >
               <div className="flex items-center gap-6">
                 <span className="text-brand-mint font-mono text-sm">/01</span>

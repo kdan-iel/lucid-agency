@@ -314,6 +314,8 @@ export default function DashboardPage() {
                 <button 
                   onClick={() => setSelectedMission(mission)}
                   className="p-2 rounded-lg hover:bg-white/10 text-brand-gray"
+                  title="Voir les détails"
+                  aria-label="Voir les détails de la mission"
                 >
                   <Search size={18} />
                 </button>
@@ -422,6 +424,8 @@ export default function DashboardPage() {
             type="text" 
             value={profileData.name}
             onChange={(e) => setProfileData({...profileData, name: e.target.value})}
+            placeholder="Entrez votre nom complet"
+            title="Nom complet"
             className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all"
           />
         </div>
@@ -431,6 +435,8 @@ export default function DashboardPage() {
             type="email" 
             value={profileData.email}
             onChange={(e) => setProfileData({...profileData, email: e.target.value})}
+            placeholder="Entrez votre adresse email"
+            title="Email"
             className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all"
           />
         </div>
@@ -440,6 +446,8 @@ export default function DashboardPage() {
             value={profileData.bio}
             onChange={(e) => setProfileData({...profileData, bio: e.target.value})}
             rows={4}
+            placeholder="Décrivez-vous"
+            title="Bio"
             className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all resize-none"
           />
         </div>
@@ -449,6 +457,8 @@ export default function DashboardPage() {
             type="text" 
             value={profileData.skills}
             onChange={(e) => setProfileData({...profileData, skills: e.target.value})}
+            placeholder="Ex: Figma, React, Tailwind CSS"
+            title="Compétences"
             className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all"
           />
         </div>
@@ -472,6 +482,8 @@ export default function DashboardPage() {
             type="password" 
             value={passwordForm.current}
             onChange={(e) => setPasswordForm({...passwordForm, current: e.target.value})}
+            placeholder={t('dashboard.settings.security.current')}
+            title={t('dashboard.settings.security.current')}
             className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all"
           />
         </div>
@@ -482,6 +494,8 @@ export default function DashboardPage() {
             type="password" 
             value={passwordForm.new}
             onChange={(e) => setPasswordForm({...passwordForm, new: e.target.value})}
+            placeholder={t('dashboard.settings.security.new')}
+            title={t('dashboard.settings.security.new')}
             className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all"
           />
         </div>
@@ -492,6 +506,8 @@ export default function DashboardPage() {
             type="password" 
             value={passwordForm.confirm}
             onChange={(e) => setPasswordForm({...passwordForm, confirm: e.target.value})}
+            placeholder={t('dashboard.settings.security.confirm')}
+            title={t('dashboard.settings.security.confirm')}
             className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all"
           />
         </div>
@@ -558,7 +574,7 @@ export default function DashboardPage() {
               <div className="flex items-center gap-6">
                 <span className="text-sm font-bold">{inv.amount}</span>
                 <span className="text-xs text-green-400 font-bold uppercase">{inv.status}</span>
-                <button className="text-brand-gray hover:text-brand-mint"><Download size={18} /></button>
+                <button className="text-brand-gray hover:text-brand-mint" title="Télécharger la facture" aria-label="Télécharger la facture"><Download size={18} /></button>
               </div>
             </div>
           ))}
@@ -643,7 +659,12 @@ export default function DashboardPage() {
         `}>
           <div className="flex justify-between items-center mb-8 md:hidden">
             <div className="text-brand-mint font-bold text-xl">LUCID</div>
-            <button onClick={() => setIsSidebarOpen(false)} className="text-brand-gray">
+            <button 
+              onClick={() => setIsSidebarOpen(false)} 
+              className="text-brand-gray"
+              title="Fermer le menu"
+              aria-label="Fermer le menu"
+            >
               <X size={24} />
             </button>
           </div>
@@ -681,6 +702,8 @@ export default function DashboardPage() {
               <button 
                 onClick={() => setIsSidebarOpen(true)}
                 className="md:hidden p-2 rounded-lg bg-white/5 border border-[var(--border-color)] text-brand-mint"
+                title="Ouvrir le menu"
+                aria-label="Ouvrir le menu"
               >
                 <LayoutDashboard size={20} />
               </button>
@@ -692,7 +715,11 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="flex items-center gap-4 ml-auto sm:ml-0">
-              <button className="p-2 rounded-full hover:bg-white/5 text-brand-gray relative">
+              <button 
+                className="p-2 rounded-full hover:bg-white/5 text-brand-gray relative"
+                title="Notifications"
+                aria-label="Notifications"
+              >
                 <Bell size={24} />
                 <span className="absolute top-2 right-2 w-2 h-2 bg-brand-mint rounded-full"></span>
               </button>
@@ -737,6 +764,8 @@ export default function DashboardPage() {
                   <button 
                     onClick={() => setSelectedMission(null)}
                     className="p-2 rounded-full hover:bg-white/5 text-brand-gray transition-colors"
+                    title="Fermer"
+                    aria-label="Fermer la fenêtre"
                   >
                     <X size={24} />
                   </button>

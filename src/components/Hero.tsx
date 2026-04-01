@@ -9,7 +9,7 @@ export default function Hero() {
     <section id="hero" className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
       {/* Animated Background */}
       <div className="absolute inset-0 dot-grid opacity-30" />
-      <div className="absolute inset-0 bg-radial-gradient from-brand-mint/5 to-transparent pointer-events-none" />
+      <div className="absolute inset-0 bg-radial-gradient from-brand-mint/6 to-transparent pointer-events-none" />
 
       <div className="container mx-auto px-6 relative z-10 text-center">
         <div className="flex flex-col items-center">

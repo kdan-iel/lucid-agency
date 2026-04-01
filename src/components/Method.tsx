@@ -27,7 +27,7 @@ export default function Method() {
     <section id="methode" className="py-24 bg-brand-anthracite">
       <div className="container mx-auto px-6">
         <div className="text-center mb-20">
-          <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-6 text-[var(--text-primary)]">{t('method.title')}</h2>
+          <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-7 text-[var(--text-primary)]">{t('method.title')}</h2>
           <div className="flex items-center justify-center gap-4 text-brand-mint font-bold tracking-widest text-sm uppercase">
             <span>DATA</span>
             <ArrowRight size={16} />

@@ -74,7 +74,7 @@ export default function Talents() {
                     : 'border border-[var(--border-color)] text-[var(--text-primary)] hover:border-brand-mint'
                 }`}
               >
-                {cat === 'All' ? t('talents.filters.all') : t(`talents.filters.${cat.toLowerCase()}`)}
+                {cat === 'All' ? t('Tous les talents') : t(`${cat.toLowerCase()}`)}
               </button>
             ))}
           </div>
@@ -95,7 +95,7 @@ export default function Talents() {
               >
                 <div className="aspect-[4/5] relative bg-brand-anthracite overflow-hidden">
                   <img
-                    src={`https://picsum.photos/seed/${talent.name}/800/1000?grayscale`}
+                    src="logo.png"
                     alt={talent.name}
                     className="w-full h-full object-cover opacity-80 hover:scale-105 transition-transform duration-500"
                     referrerPolicy="no-referrer"
@@ -133,7 +133,7 @@ export default function Talents() {
               onClick={() => setVisibleCount(prev => prev + 6)}
               className="px-10 py-4 border border-brand-mint text-brand-mint rounded-full text-lg font-bold hover:bg-brand-mint hover:text-[#0D1117] transition-all"
             >
-              {t('talents.viewMore')}
+              {t('Voir Plus')}
             </button>
           </div>
         )}

@@ -7,37 +7,37 @@ export default function Offers() {
 
   const packs = [
     {
-      id: 'audit',
-      name: t('offers.audit.name'),
-      type: t('offers.audit.type'),
-      features: t('offers.audit.features').split(' · '),
-      included: t('offers.audit.included'),
+      id: 'Audit',
+      name: t('Offers.audit'),
+      type: t('Offers.audit'),
+      features: t('Offers.audit').split(' · '),
+      included: t('Offers.audit'),
       recommended: false,
-      cta: t('offers.audit.cta'),
+      cta: t('Offers.audit'),
     },
     {
-      id: 'production',
-      name: t('offers.production.name'),
-      type: t('offers.production.type'),
-      features: t('offers.production.features').split(' · '),
-      included: t('offers.production.included'),
+      id: 'Production',
+      name: t('Offers.production'),
+      type: t('Offers.production'),
+      features: t('Offers.production').split(' · '),
+      included: t('Offers.production'),
       recommended: false,
-      cta: t('offers.production.cta'),
+      cta: t('Offers.production'),
     },
     {
-      id: 'growth',
-      name: t('offers.growth.name'),
-      type: t('offers.growth.type'),
-      features: t('offers.growth.features').split(' · '),
-      included: t('offers.growth.included'),
+      id: 'Growth',
+      name: t('Offers.growth'),
+      type: t('Offers.growth'),
+      features: t('Offers.growth').split(' · '),
+      included: t('Offers.growth'),
       recommended: true,
-      cta: t('offers.growth.cta'),
-      badge: t('offers.growth.badge'),
+      cta: t('Offers.growth'),
+      badge: t('Offers.growth'),
     },
   ];
 
   return (
-    <section id="offres" className="py-24 bg-[var(--bg-primary)]">
+    <section id="Offres" className="py-24 bg-[var(--bg-primary)]">
       <div className="container mx-auto px-6">
         <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-16 text-center text-[var(--text-primary)]">
           {t('offers.title')}
@@ -76,7 +76,7 @@ export default function Offers() {
                   ))}
                 </ul>
                 <div className="mt-8 pt-8 border-t border-[var(--border-color)] text-sm text-brand-gray italic">
-                  {t('offers.included')}: {pack.included}
+                  {t('Offers.included')}: {pack.included}
                 </div>
               </div>
 

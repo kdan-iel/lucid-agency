@@ -48,7 +48,7 @@ export default function ContactForm() {
           <div className="grid md:grid-cols-2 gap-6 mb-6">
             <div className="space-y-2">
               <label className="text-xs font-bold uppercase tracking-widest text-brand-gray ml-1">{t('contact.type')}</label>
-              <select className="w-full bg-brand-anthracite border border-white/10 rounded-xl px-4 py-4 text-white focus:border-brand-mint outline-none transition-colors appearance-none">
+              <select aria-label={t('contact.type')} className="w-full bg-brand-anthracite border border-white/10 rounded-xl px-4 py-4 text-white focus:border-brand-mint outline-none transition-colors appearance-none">
                 <option>Logo / Branding</option>
                 <option>Site Web</option>
                 <option>Vidéo</option>
@@ -58,7 +58,7 @@ export default function ContactForm() {
             </div>
             <div className="space-y-2">
               <label className="text-xs font-bold uppercase tracking-widest text-brand-gray ml-1">{t('contact.budget')}</label>
-              <select className="w-full bg-brand-anthracite border border-white/10 rounded-xl px-4 py-4 text-white focus:border-brand-mint outline-none transition-colors appearance-none">
+              <select aria-label={t('contact.budget')} className="w-full bg-brand-anthracite border border-white/10 rounded-xl px-4 py-4 text-white focus:border-brand-mint outline-none transition-colors appearance-none">
                 <option>&lt; 500K FCFA</option>
                 <option>500K – 1M FCFA</option>
                 <option>1M – 3M FCFA</option>

@@ -8,29 +8,29 @@ export default function Results() {
   const metrics = [
     {
       icon: <TrendingUp className="text-brand-mint" size={32} />,
-      value: '+140%',
-      label: t('results.metrics.roi'),
+      value: '+120%',
+      label: t('results.roi'),
     },
     {
       icon: <Users className="text-brand-mint" size={32} />,
       value: '2M+',
-      label: t('results.metrics.reach'),
+      label: t('results.reach'),
     },
     {
       icon: <Target className="text-brand-mint" size={32} />,
       value: '95%',
-      label: t('results.metrics.conversion'),
+      label: t('results.conversion'),
     },
   ];
 
   const testimonials = [
     {
-      quote: t('results.testimonials.1.quote'),
+      quote: t('Testimonials.1'),
       author: 'Jean Dupont',
       role: 'CEO, TechFlow',
     },
     {
-      quote: t('results.testimonials.2.quote'),
+      quote: t('Testimonials.2'),
       author: 'Marie Laurent',
       role: 'Marketing Director, LuxeStyle',
     },
