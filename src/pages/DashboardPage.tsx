@@ -1,10 +1,11 @@
 import { useState, useMemo, FormEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLanguage } from '../context/LanguageContext';
-import { LayoutDashboard, Briefcase, MessageSquare, Settings, LogOut, Bell, Search, X, CheckCircle, Clock, MapPin, Calendar, DollarSign } from 'lucide-react';
+import { LayoutDashboard, Briefcase, MessageSquare, Settings, LogOut, Bell, Search, X, CheckCircle, Clock, MapPin, Calendar, DollarSign, Download, ChevronRight } from 'lucide-react';
 import Navbar from '../components/Navbar';
 
 import { useAuth } from '../context/AuthContext';
+import { Phone as WhatsAppIcon } from 'lucide-react';
 
 interface Mission {
   id: number;
@@ -65,7 +66,7 @@ const INITIAL_CONTRACTS: Contract[] = [
 
 export default function DashboardPage() {
   const { t } = useLanguage();
-  const { logout } = useAuth();
+  const { logout, changePassword } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -77,36 +78,6 @@ export default function DashboardPage() {
     { id: 1, text: 'Nouvelle mission disponible en Branding !', time: 'Il y a 10 min', read: false },
     { id: 2, text: 'Votre candidature pour EcoShop a été consultée.', time: 'Il y a 2h', read: true },
   ]);
-  const [activeChatId, setActiveChatId] = useState(1);
-  const [messages, setMessages] = useState<Record<number, any[]>>({
-    1: [
-      { id: 1, sender: 'LUCID Agency', text: 'Bonjour Thomas, nous avons bien reçu votre candidature.', time: '10:30', isMe: false },
-      { id: 2, sender: 'Moi', text: 'Merci ! Quand pourrons-nous en discuter ?', time: '10:35', isMe: true },
-    ],
-    2: [
-      { id: 1, sender: 'Client Alpha', text: 'Le projet avance ?', time: 'Hier', isMe: false },
-    ]
-  });
-  const [newMessage, setNewMessage] = useState('');
-
-  const handleSendMessage = (e: FormEvent) => {
-    e.preventDefault();
-    if (!newMessage.trim()) return;
-    
-    const msg = {
-      id: messages[activeChatId].length + 1,
-      sender: 'Moi',
-      text: newMessage,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      isMe: true
-    };
-    
-    setMessages({
-      ...messages,
-      [activeChatId]: [...messages[activeChatId], msg]
-    });
-    setNewMessage('');
-  };
 
   const handleApply = (missionId: number) => {
     if (!appliedMissions.includes(missionId)) {
@@ -369,69 +340,23 @@ export default function DashboardPage() {
   );
 
   const renderMessages = () => (
-    <div className="bg-[var(--bg-surface)] rounded-2xl md:rounded-3xl border border-[var(--border-color)] overflow-hidden flex flex-col md:flex-row h-[600px]">
-      <div className={`w-full md:w-1/3 border-r border-[var(--border-color)] p-4 md:p-6 flex flex-col ${activeChatId && 'hidden md:flex'}`}>
-        <h2 className="text-xl font-bold mb-6">{t('dashboard.nav.messages')}</h2>
-        <div className="space-y-4 overflow-y-auto">
-          {[
-            { id: 1, name: 'LUCID Agency', last: messages[1][messages[1].length - 1].text, time: messages[1][messages[1].length - 1].time },
-            { id: 2, name: 'Client Alpha', last: messages[2][messages[2].length - 1].text, time: messages[2][messages[2].length - 1].time },
-          ].map((chat) => (
-            <div 
-              key={chat.id} 
-              onClick={() => setActiveChatId(chat.id)}
-              className={`p-4 rounded-2xl cursor-pointer transition-all ${activeChatId === chat.id ? 'bg-brand-mint/10 border border-brand-mint/30' : 'hover:bg-white/5 border border-transparent'}`}
-            >
-              <div className="flex justify-between items-start mb-1">
-                <span className="font-bold">{chat.name}</span>
-                <span className="text-xs text-brand-gray">{chat.time}</span>
-              </div>
-              <p className="text-sm text-brand-gray truncate">{chat.last}</p>
-            </div>
-          ))}
-        </div>
+    <div className="bg-[var(--bg-surface)] rounded-2xl md:rounded-3xl border border-[var(--border-color)] p-8 md:p-12 flex flex-col items-center justify-center text-center min-h-[500px]">
+      <div className="w-20 h-20 bg-brand-mint/10 rounded-full flex items-center justify-center text-brand-mint mb-8">
+        <WhatsAppIcon size={40} />
       </div>
-      <div className={`flex-grow flex flex-col ${!activeChatId && 'hidden md:flex'}`}>
-        <div className="p-4 md:p-6 border-b border-[var(--border-color)] flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button 
-              onClick={() => setActiveChatId(0)}
-              className="md:hidden p-2 -ml-2 text-brand-gray hover:text-brand-mint"
-            >
-              <X size={20} />
-            </button>
-            <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-brand-mint/20 flex items-center justify-center text-brand-mint font-bold">
-              {activeChatId === 1 ? 'L' : 'C'}
-            </div>
-            <span className="font-bold text-sm md:text-base">{activeChatId === 1 ? 'LUCID Agency' : 'Client Alpha'}</span>
-          </div>
-          <button className="p-2 rounded-full hover:bg-white/5 text-brand-gray">
-            <Search size={20} />
-          </button>
-        </div>
-        <div className="flex-grow p-4 md:p-6 overflow-y-auto space-y-4">
-          {activeChatId !== 0 && messages[activeChatId].map((msg, i) => (
-            <div key={i} className={`flex ${msg.isMe ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[85%] md:max-w-[70%] p-3 md:p-4 rounded-2xl ${msg.isMe ? 'bg-brand-mint text-[#0D1117] rounded-tr-none' : 'bg-white/5 border border-[var(--border-color)] rounded-tl-none'}`}>
-                <p className="text-sm">{msg.text}</p>
-                <span className={`text-[10px] mt-1 block ${msg.isMe ? 'text-[#0D1117]/60' : 'text-brand-gray'}`}>{msg.time}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-        <form onSubmit={handleSendMessage} className="p-4 md:p-6 border-t border-[var(--border-color)] flex gap-2 md:gap-4">
-          <input 
-            type="text" 
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            placeholder="Message..." 
-            className="flex-grow bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-full px-4 md:px-6 py-2 md:py-3 text-sm focus:outline-none focus:border-brand-mint transition-all"
-          />
-          <button type="submit" className="bg-brand-mint text-[#0D1117] px-4 md:px-6 py-2 md:py-3 rounded-full font-bold hover:scale-105 transition-all text-sm">
-            Envoyer
-          </button>
-        </form>
-      </div>
+      <h2 className="text-3xl font-bold mb-4">Contactez l'agence sur WhatsApp</h2>
+      <p className="text-brand-gray text-lg max-w-md mb-10">
+        Pour toute question concernant vos missions ou votre compte, discutez directement avec notre équipe via WhatsApp.
+      </p>
+      <a 
+        href="https://wa.me/22890123456" 
+        target="_blank" 
+        rel="noopener noreferrer"
+        className="bg-brand-mint text-[#0D1117] px-10 py-4 rounded-full font-bold text-lg hover:scale-105 transition-all flex items-center gap-3 shadow-xl shadow-brand-mint/20"
+      >
+        <WhatsAppIcon size={24} />
+        Ouvrir WhatsApp
+      </a>
     </div>
   );
 
@@ -441,145 +366,236 @@ export default function DashboardPage() {
     bio: 'Designer UI/UX passionné par les produits digitaux innovants.',
     skills: 'Figma, React, Tailwind CSS'
   });
-  const [isEditingProfile, setIsEditingProfile] = useState(false);
-
-  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [activeSettingsTab, setActiveSettingsTab] = useState<'main' | 'profile' | 'notifications' | 'security' | 'payments'>('main');
   const [passwordForm, setPasswordForm] = useState({ current: '', new: '', confirm: '' });
 
   const handlePasswordChange = (e: FormEvent) => {
     e.preventDefault();
+    if (passwordForm.new !== passwordForm.confirm) {
+      alert('Les mots de passe ne correspondent pas.');
+      return;
+    }
+    changePassword(passwordForm.new);
     alert('Mot de passe mis à jour avec succès !');
-    setIsChangingPassword(false);
+    setActiveSettingsTab('main');
     setPasswordForm({ current: '', new: '', confirm: '' });
   };
 
-  const renderSettings = () => (
-    <div className="bg-[var(--bg-surface)] rounded-3xl border border-[var(--border-color)] p-8">
-      <div className="flex justify-between items-center mb-8">
-        <h2 className="text-2xl font-bold">{t('dashboard.settings.title')}</h2>
-        <div className="flex gap-4">
-          <button 
-            onClick={() => { setIsEditingProfile(!isEditingProfile); setIsChangingPassword(false); }}
-            className="text-brand-mint font-bold hover:underline text-sm"
-          >
-            {isEditingProfile ? 'Annuler' : t('dashboard.settings.profile')}
-          </button>
-          <button 
-            onClick={() => { setIsChangingPassword(!isChangingPassword); setIsEditingProfile(false); }}
-            className="text-brand-mint font-bold hover:underline text-sm"
-          >
-            {isChangingPassword ? 'Annuler' : t('dashboard.settings.security')}
-          </button>
+  const renderSettings = () => {
+    const renderSettingsMain = () => (
+      <div className="space-y-6">
+        <div className="flex items-center gap-6 p-6 rounded-2xl bg-white/5 border border-[var(--border-color)]">
+          <div className="w-20 h-20 rounded-full bg-brand-mint flex items-center justify-center text-[#0D1117] text-3xl font-bold">
+            {profileData.name.charAt(0)}
+          </div>
+          <div>
+            <h3 className="text-xl font-bold mb-1">{profileData.name}</h3>
+            <p className="text-brand-gray">{profileData.email}</p>
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {[
+            { id: 'profile', label: t('dashboard.settings.profile'), desc: 'Gérez votre visibilité et vos compétences.' },
+            { id: 'notifications', label: t('dashboard.settings.notifications'), desc: 'Configurez vos alertes de missions.' },
+            { id: 'security', label: t('dashboard.settings.security'), desc: 'Mot de passe et authentification.' },
+            { id: 'payments', label: 'Paiements', desc: 'Gérez vos factures et coordonnées bancaires.' },
+          ].map((item) => (
+            <div 
+              key={item.id} 
+              onClick={() => setActiveSettingsTab(item.id as any)}
+              className="p-6 rounded-2xl border border-[var(--border-color)] hover:border-brand-mint/30 transition-all cursor-pointer group"
+            >
+              <h3 className="font-bold mb-1 group-hover:text-brand-mint transition-colors">{item.label}</h3>
+              <p className="text-sm text-brand-gray">{item.desc}</p>
+            </div>
+          ))}
         </div>
       </div>
+    );
 
-      {isEditingProfile ? (
-        <form className="space-y-6 max-w-xl" onSubmit={(e) => { e.preventDefault(); setIsEditingProfile(false); }}>
-          <div className="space-y-2">
-            <label className="text-sm text-brand-gray">Nom complet</label>
-            <input 
-              type="text" 
-              value={profileData.name}
-              onChange={(e) => setProfileData({...profileData, name: e.target.value})}
-              className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all"
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm text-brand-gray">Email</label>
-            <input 
-              type="email" 
-              value={profileData.email}
-              onChange={(e) => setProfileData({...profileData, email: e.target.value})}
-              className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all"
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm text-brand-gray">Bio</label>
-            <textarea 
-              value={profileData.bio}
-              onChange={(e) => setProfileData({...profileData, bio: e.target.value})}
-              rows={4}
-              className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all resize-none"
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm text-brand-gray">Compétences (séparées par des virgules)</label>
-            <input 
-              type="text" 
-              value={profileData.skills}
-              onChange={(e) => setProfileData({...profileData, skills: e.target.value})}
-              className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all"
-            />
-          </div>
+    const renderProfileForm = () => (
+      <form className="space-y-6 max-w-xl" onSubmit={(e) => { e.preventDefault(); setActiveSettingsTab('main'); }}>
+        <div className="space-y-2">
+          <label className="text-sm text-brand-gray">Nom complet</label>
+          <input 
+            type="text" 
+            value={profileData.name}
+            onChange={(e) => setProfileData({...profileData, name: e.target.value})}
+            className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all"
+          />
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm text-brand-gray">Email</label>
+          <input 
+            type="email" 
+            value={profileData.email}
+            onChange={(e) => setProfileData({...profileData, email: e.target.value})}
+            className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all"
+          />
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm text-brand-gray">Bio</label>
+          <textarea 
+            value={profileData.bio}
+            onChange={(e) => setProfileData({...profileData, bio: e.target.value})}
+            rows={4}
+            className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all resize-none"
+          />
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm text-brand-gray">Compétences (séparées par des virgules)</label>
+          <input 
+            type="text" 
+            value={profileData.skills}
+            onChange={(e) => setProfileData({...profileData, skills: e.target.value})}
+            className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all"
+          />
+        </div>
+        <div className="flex gap-4">
           <button type="submit" className="bg-brand-mint text-[#0D1117] px-8 py-3 rounded-xl font-bold hover:scale-105 transition-all">
-            Enregistrer les modifications
+            Enregistrer
           </button>
-        </form>
-      ) : isChangingPassword ? (
-        <form className="space-y-6 max-w-xl" onSubmit={handlePasswordChange}>
-          <div className="space-y-2">
-            <label className="text-sm text-brand-gray">{t('dashboard.settings.security.current')}</label>
-            <input 
-              required
-              type="password" 
-              value={passwordForm.current}
-              onChange={(e) => setPasswordForm({...passwordForm, current: e.target.value})}
-              className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all"
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm text-brand-gray">{t('dashboard.settings.security.new')}</label>
-            <input 
-              required
-              type="password" 
-              value={passwordForm.new}
-              onChange={(e) => setPasswordForm({...passwordForm, new: e.target.value})}
-              className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all"
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm text-brand-gray">{t('dashboard.settings.security.confirm')}</label>
-            <input 
-              required
-              type="password" 
-              value={passwordForm.confirm}
-              onChange={(e) => setPasswordForm({...passwordForm, confirm: e.target.value})}
-              className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all"
-            />
-          </div>
+          <button type="button" onClick={() => setActiveSettingsTab('main')} className="px-8 py-3 rounded-xl border border-[var(--border-color)] text-brand-gray font-bold hover:bg-white/5 transition-all">
+            Annuler
+          </button>
+        </div>
+      </form>
+    );
+
+    const renderSecurityForm = () => (
+      <form className="space-y-6 max-w-xl" onSubmit={handlePasswordChange}>
+        <div className="space-y-2">
+          <label className="text-sm text-brand-gray">{t('dashboard.settings.security.current')}</label>
+          <input 
+            required
+            type="password" 
+            value={passwordForm.current}
+            onChange={(e) => setPasswordForm({...passwordForm, current: e.target.value})}
+            className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all"
+          />
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm text-brand-gray">{t('dashboard.settings.security.new')}</label>
+          <input 
+            required
+            type="password" 
+            value={passwordForm.new}
+            onChange={(e) => setPasswordForm({...passwordForm, new: e.target.value})}
+            className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all"
+          />
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm text-brand-gray">{t('dashboard.settings.security.confirm')}</label>
+          <input 
+            required
+            type="password" 
+            value={passwordForm.confirm}
+            onChange={(e) => setPasswordForm({...passwordForm, confirm: e.target.value})}
+            className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all"
+          />
+        </div>
+        <div className="flex gap-4">
           <button type="submit" className="bg-brand-mint text-[#0D1117] px-8 py-3 rounded-xl font-bold hover:scale-105 transition-all">
             {t('dashboard.settings.security.submit')}
           </button>
-        </form>
-      ) : (
-        <div className="space-y-6">
-          <div className="flex items-center gap-6 p-6 rounded-2xl bg-white/5 border border-[var(--border-color)]">
-            <div className="w-20 h-20 rounded-full bg-brand-mint flex items-center justify-center text-[#0D1117] text-3xl font-bold">
-              {profileData.name.charAt(0)}
-            </div>
-            <div>
-              <h3 className="text-xl font-bold mb-1">{profileData.name}</h3>
-              <p className="text-brand-gray">{profileData.email}</p>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {[
-              { label: t('dashboard.settings.profile'), desc: 'Gérez votre visibilité et vos compétences.' },
-              { label: t('dashboard.settings.notifications'), desc: 'Configurez vos alertes de missions.' },
-              { label: t('dashboard.settings.security'), desc: 'Mot de passe et authentification.' },
-              { label: 'Paiements', desc: 'Gérez vos factures et coordonnées bancaires.' },
-            ].map((item, i) => (
-              <div key={i} className="p-6 rounded-2xl border border-[var(--border-color)] hover:border-brand-mint/30 transition-all cursor-pointer group">
-                <h3 className="font-bold mb-1 group-hover:text-brand-mint transition-colors">{item.label}</h3>
-                <p className="text-sm text-brand-gray">{item.desc}</p>
+          <button type="button" onClick={() => setActiveSettingsTab('main')} className="px-8 py-3 rounded-xl border border-[var(--border-color)] text-brand-gray font-bold hover:bg-white/5 transition-all">
+            Annuler
+          </button>
+        </div>
+      </form>
+    );
+
+    const renderNotificationsSettings = () => (
+      <div className="space-y-8 max-w-xl">
+        <div className="space-y-4">
+          <h3 className="font-bold text-lg">Alertes Email</h3>
+          {[
+            { label: 'Nouvelles missions correspondantes', checked: true },
+            { label: 'Mises à jour de mes candidatures', checked: true },
+            { label: 'Messages de l\'agence', checked: true },
+            { label: 'Newsletter mensuelle', checked: false },
+          ].map((item, i) => (
+            <label key={i} className="flex items-center justify-between p-4 rounded-xl border border-[var(--border-color)] bg-white/5 cursor-pointer hover:border-brand-mint/30 transition-all">
+              <span className="text-sm">{item.label}</span>
+              <input type="checkbox" defaultChecked={item.checked} className="w-5 h-5 accent-brand-mint" />
+            </label>
+          ))}
+        </div>
+        <button onClick={() => setActiveSettingsTab('main')} className="bg-brand-mint text-[#0D1117] px-8 py-3 rounded-xl font-bold hover:scale-105 transition-all">
+          Enregistrer les préférences
+        </button>
+      </div>
+    );
+
+    const renderPaymentsSettings = () => (
+      <div className="space-y-8 max-w-2xl">
+        <div className="p-6 rounded-2xl border border-[var(--border-color)] bg-white/5">
+          <h3 className="font-bold mb-4">Méthode de Paiement</h3>
+          <div className="flex items-center justify-between p-4 rounded-xl border border-brand-mint/20 bg-brand-mint/5">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-8 bg-white/10 rounded flex items-center justify-center font-bold text-[10px]">VISA</div>
+              <div>
+                <p className="text-sm font-bold">•••• •••• •••• 4242</p>
+                <p className="text-xs text-brand-gray">Expire 12/28</p>
               </div>
-            ))}
+            </div>
+            <button className="text-xs text-brand-mint font-bold hover:underline">Modifier</button>
           </div>
         </div>
-      )}
-    </div>
-  );
+
+        <div className="space-y-4">
+          <h3 className="font-bold">Dernières Factures</h3>
+          {[
+            { id: 'INV-001', date: '15 Mars 2026', amount: '1 200 €', status: 'Payé' },
+            { id: 'INV-002', date: '01 Mars 2026', amount: '3 000 €', status: 'Payé' },
+          ].map((inv) => (
+            <div key={inv.id} className="flex items-center justify-between p-4 rounded-xl border border-[var(--border-color)] hover:bg-white/5 transition-all">
+              <div>
+                <p className="text-sm font-bold">{inv.id}</p>
+                <p className="text-xs text-brand-gray">{inv.date}</p>
+              </div>
+              <div className="flex items-center gap-6">
+                <span className="text-sm font-bold">{inv.amount}</span>
+                <span className="text-xs text-green-400 font-bold uppercase">{inv.status}</span>
+                <button className="text-brand-gray hover:text-brand-mint"><Download size={18} /></button>
+              </div>
+            </div>
+          ))}
+        </div>
+        <button onClick={() => setActiveSettingsTab('main')} className="px-8 py-3 rounded-xl border border-[var(--border-color)] text-brand-gray font-bold hover:bg-white/5 transition-all">
+          Retour
+        </button>
+      </div>
+    );
+
+    return (
+      <div className="bg-[var(--bg-surface)] rounded-3xl border border-[var(--border-color)] p-8">
+        <div className="flex justify-between items-center mb-8">
+          <h2 className="text-2xl font-bold">
+            {activeSettingsTab === 'main' ? t('dashboard.settings.title') : (
+              <button 
+                onClick={() => setActiveSettingsTab('main')}
+                className="flex items-center gap-2 hover:text-brand-mint transition-colors"
+              >
+                <ChevronRight className="rotate-180" size={24} />
+                {activeSettingsTab === 'profile' && t('dashboard.settings.profile')}
+                {activeSettingsTab === 'notifications' && t('dashboard.settings.notifications')}
+                {activeSettingsTab === 'security' && t('dashboard.settings.security')}
+                {activeSettingsTab === 'payments' && 'Paiements'}
+              </button>
+            )}
+          </h2>
+        </div>
+
+        {activeSettingsTab === 'main' && renderSettingsMain()}
+        {activeSettingsTab === 'profile' && renderProfileForm()}
+        {activeSettingsTab === 'security' && renderSecurityForm()}
+        {activeSettingsTab === 'notifications' && renderNotificationsSettings()}
+        {activeSettingsTab === 'payments' && renderPaymentsSettings()}
+      </div>
+    );
+  };
 
   const renderContent = () => {
     switch (activeTab) {

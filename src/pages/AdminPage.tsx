@@ -1,10 +1,11 @@
 import { useState, useMemo, FormEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLanguage } from '../context/LanguageContext';
-import { Users, Briefcase, MessageSquare, Settings, LogOut, Bell, Search, Filter, CheckCircle, Clock, XCircle, MoreVertical, X, Mail, Phone, Globe, Download } from 'lucide-react';
+import { Users, Briefcase, MessageSquare, Settings, LogOut, Bell, Search, Filter, CheckCircle, Clock, XCircle, MoreVertical, X, Mail, Phone, Globe, Download, ChevronRight, Shield, Settings2, Database, Link as LinkIcon } from 'lucide-react';
 import Navbar from '../components/Navbar';
 
 import { useAuth } from '../context/AuthContext';
+import { Phone as WhatsAppIcon } from 'lucide-react';
 
 interface TalentRequest {
   id: number;
@@ -71,7 +72,7 @@ const INITIAL_PROJECTS: Project[] = [
 
 export default function AdminPage() {
   const { t } = useLanguage();
-  const { logout } = useAuth();
+  const { logout, changePassword } = useAuth();
   const [activeTab, setActiveTab] = useState('talents');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -82,28 +83,6 @@ export default function AdminPage() {
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
   const [newProject, setNewProject] = useState({ title: '', client: '', talent: '', budget: '', deadline: '' });
   
-  const [messages, setMessages] = useState([
-    { id: 1, sender: 'Thomas K.', text: 'Bonjour, j\'aimerais en savoir plus sur LUCID.', time: '09:00', isMe: false },
-    { id: 2, sender: 'Admin', text: 'Bonjour Thomas, nous avons bien reçu votre demande.', time: '09:15', isMe: true },
-  ]);
-  const [newMessage, setNewMessage] = useState('');
-
-  const handleSendMessage = (e: FormEvent) => {
-    e.preventDefault();
-    if (!newMessage.trim()) return;
-    
-    const msg = {
-      id: messages.length + 1,
-      sender: 'Admin',
-      text: newMessage,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      isMe: true
-    };
-    
-    setMessages([...messages, msg]);
-    setNewMessage('');
-  };
-
   const handleCreateProject = (e: FormEvent) => {
     e.preventDefault();
     const project: Project = {
@@ -336,60 +315,65 @@ export default function AdminPage() {
     </div>
   );
 
-  const renderMessages = () => (
-    <div className="bg-[var(--bg-surface)] rounded-2xl md:rounded-3xl border border-[var(--border-color)] overflow-hidden flex flex-col md:flex-row h-[600px]">
-      <div className={`w-full md:w-1/3 border-r border-[var(--border-color)] p-4 md:p-6 flex flex-col ${messages.length > 0 && 'hidden md:flex'}`}>
-        <h2 className="text-xl font-bold mb-6">{t('admin.nav.messages')}</h2>
-        <div className="space-y-4 overflow-y-auto">
-          {[
-            { id: 1, name: 'Thomas K.', last: 'Bonjour, j\'aimerais...', time: '09:00', active: true },
-            { id: 2, name: 'Amina L.', last: 'Merci pour l\'invitation.', time: 'Hier', active: false },
-          ].map((chat, i) => (
-            <div key={i} className={`p-4 rounded-2xl cursor-pointer transition-all ${chat.active ? 'bg-brand-mint/10 border border-brand-mint/30' : 'hover:bg-white/5 border border-transparent'}`}>
-              <div className="flex justify-between items-start mb-1">
-                <span className="font-bold">{chat.name}</span>
-                <span className="text-xs text-brand-gray">{chat.time}</span>
-              </div>
-              <p className="text-sm text-brand-gray truncate">{chat.last}</p>
-            </div>
-          ))}
+  const renderMessages = () => {
+    const approvedFreelancers = requests.filter(r => r.status === 'approved');
+
+    return (
+      <div className="bg-[var(--bg-surface)] rounded-2xl md:rounded-3xl border border-[var(--border-color)] p-6 md:p-8">
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold mb-2">Messagerie WhatsApp</h2>
+          <p className="text-brand-gray">Contactez directement vos talents approuvés via WhatsApp.</p>
         </div>
-      </div>
-      <div className="flex-grow flex flex-col">
-        <div className="p-4 md:p-6 border-b border-[var(--border-color)] flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-brand-mint/20 flex items-center justify-center text-brand-mint font-bold">T</div>
-            <span className="font-bold text-sm md:text-base">Thomas K.</span>
+
+        {approvedFreelancers.length === 0 ? (
+          <div className="text-center py-20 border-2 border-dashed border-[var(--border-color)] rounded-3xl">
+            <WhatsAppIcon className="mx-auto mb-4 text-brand-gray opacity-20" size={48} />
+            <p className="text-brand-gray">Aucun talent approuvé pour le moment.</p>
           </div>
-          <button className="p-2 rounded-full hover:bg-white/5 text-brand-gray">
-            <Search size={20} />
-          </button>
-        </div>
-        <div className="flex-grow p-4 md:p-6 overflow-y-auto space-y-4">
-          {messages.map((msg) => (
-            <div key={msg.id} className={`flex ${msg.isMe ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[85%] md:max-w-[70%] p-3 md:p-4 rounded-2xl ${msg.isMe ? 'bg-brand-mint text-[#0D1117] rounded-tr-none' : 'bg-white/5 border border-[var(--border-color)] rounded-tl-none'}`}>
-                <p className="text-sm">{msg.text}</p>
-                <span className={`text-[10px] mt-1 block ${msg.isMe ? 'text-[#0D1117]/60' : 'text-brand-gray'}`}>{msg.time}</span>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {approvedFreelancers.map((freelancer) => (
+              <div 
+                key={freelancer.id}
+                className="p-6 rounded-2xl border border-[var(--border-color)] bg-white/5 hover:border-brand-mint/30 transition-all group"
+              >
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="w-12 h-12 rounded-full bg-brand-mint/10 flex items-center justify-center text-brand-mint font-bold text-lg uppercase">
+                    {freelancer.name.charAt(0)}
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg">{freelancer.name}</h3>
+                    <p className="text-xs text-brand-mint font-medium uppercase tracking-wider">{freelancer.specialty}</p>
+                  </div>
+                </div>
+                
+                <div className="space-y-3 mb-6">
+                  <div className="flex items-center gap-2 text-sm text-brand-gray">
+                    <Phone size={14} className="text-brand-mint" />
+                    <span>{freelancer.phone}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-brand-gray">
+                    <Mail size={14} className="text-brand-mint" />
+                    <span className="truncate">{freelancer.email}</span>
+                  </div>
+                </div>
+
+                <a 
+                  href={`https://wa.me/${freelancer.phone.replace(/\s+/g, '').replace('+', '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full bg-brand-mint text-[#0D1117] py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:scale-[1.02] transition-all"
+                >
+                  <WhatsAppIcon size={18} />
+                  Discuter sur WhatsApp
+                </a>
               </div>
-            </div>
-          ))}
-        </div>
-        <form onSubmit={handleSendMessage} className="p-4 md:p-6 border-t border-[var(--border-color)] flex gap-2 md:gap-4">
-          <input 
-            type="text" 
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            placeholder="Message..." 
-            className="flex-grow bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-full px-4 md:px-6 py-2 md:py-3 text-sm focus:outline-none focus:border-brand-mint transition-all"
-          />
-          <button type="submit" className="bg-brand-mint text-[#0D1117] px-4 md:px-6 py-2 md:py-3 rounded-full font-bold hover:scale-105 transition-all text-sm">
-            Envoyer
-          </button>
-        </form>
+            ))}
+          </div>
+        )}
       </div>
-    </div>
-  );
+    );
+  };
 
   const [agencyData, setAgencyData] = useState({
     name: 'LUCID Agency',
@@ -397,150 +381,269 @@ export default function AdminPage() {
     vision: 'Faire de chaque PME africaine une entreprise qui performe digitalement.',
     mission: 'Transformer votre présence digitale en moteur de croissance réelle.'
   });
-  const [isEditingAgency, setIsEditingAgency] = useState(false);
-
-  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [activeSettingsTab, setActiveSettingsTab] = useState<'main' | 'agency' | 'roles' | 'system' | 'integrations' | 'security'>('main');
   const [passwordForm, setPasswordForm] = useState({ current: '', new: '', confirm: '' });
 
   const handlePasswordChange = (e: FormEvent) => {
     e.preventDefault();
-    // Mock password change
+    if (passwordForm.new !== passwordForm.confirm) {
+      alert('Les mots de passe ne correspondent pas.');
+      return;
+    }
+    changePassword(passwordForm.new);
     alert('Mot de passe mis à jour avec succès !');
-    setIsChangingPassword(false);
+    setActiveSettingsTab('main');
     setPasswordForm({ current: '', new: '', confirm: '' });
   };
 
-  const renderSettings = () => (
-    <div className="bg-[var(--bg-surface)] rounded-3xl border border-[var(--border-color)] p-8">
-      <div className="flex justify-between items-center mb-8">
-        <h2 className="text-2xl font-bold">{t('admin.nav.settings')}</h2>
-        <div className="flex gap-4">
-          <button 
-            onClick={() => { setIsEditingAgency(!isEditingAgency); setIsChangingPassword(false); }}
-            className="text-brand-mint font-bold hover:underline text-sm"
-          >
-            {isEditingAgency ? 'Annuler' : t('admin.settings.agency.title')}
-          </button>
-          <button 
-            onClick={() => { setIsChangingPassword(!isChangingPassword); setIsEditingAgency(false); }}
-            className="text-brand-mint font-bold hover:underline text-sm"
-          >
-            {isChangingPassword ? 'Annuler' : t('admin.settings.security.title')}
-          </button>
+  const renderSettings = () => {
+    const renderSettingsMain = () => (
+      <div className="space-y-6">
+        <div className="p-6 rounded-2xl bg-white/5 border border-[var(--border-color)]">
+          <h3 className="text-xl font-bold mb-4">{agencyData.name}</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div>
+              <h4 className="text-xs font-bold uppercase tracking-widest text-brand-gray mb-2">Vision</h4>
+              <p className="text-sm text-brand-gray">{agencyData.vision}</p>
+            </div>
+            <div>
+              <h4 className="text-xs font-bold uppercase tracking-widest text-brand-gray mb-2">Mission</h4>
+              <p className="text-sm text-brand-gray">{agencyData.mission}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {[
+            { id: 'agency', label: 'Configuration Agence', desc: 'Gérez les informations de LUCID Agency.', icon: <Settings2 size={20} /> },
+            { id: 'roles', label: 'Gestion des Rôles', desc: 'Définissez les accès pour votre équipe.', icon: <Users size={20} /> },
+            { id: 'security', label: 'Sécurité', desc: 'Mot de passe et authentification.', icon: <Shield size={20} /> },
+            { id: 'system', label: 'Paramètres Système', desc: 'Maintenance et logs du back-office.', icon: <Database size={20} /> },
+            { id: 'integrations', label: 'Intégrations', desc: 'Connectez vos outils tiers (Slack, Trello).', icon: <LinkIcon size={20} /> },
+          ].map((item) => (
+            <div 
+              key={item.id} 
+              onClick={() => setActiveSettingsTab(item.id as any)}
+              className="p-6 rounded-2xl border border-[var(--border-color)] hover:border-brand-mint/30 transition-all cursor-pointer group"
+            >
+              <div className="flex items-center gap-3 mb-2">
+                <div className="text-brand-mint">{item.icon}</div>
+                <h3 className="font-bold group-hover:text-brand-mint transition-colors">{item.label}</h3>
+              </div>
+              <p className="text-sm text-brand-gray">{item.desc}</p>
+            </div>
+          ))}
         </div>
       </div>
+    );
 
-      {isEditingAgency ? (
-        <form className="space-y-6 max-w-xl" onSubmit={(e) => { e.preventDefault(); setIsEditingAgency(false); }}>
-          <div className="space-y-2">
-            <label className="text-sm text-brand-gray">Nom de l'agence</label>
-            <input 
-              type="text" 
-              value={agencyData.name}
-              onChange={(e) => setAgencyData({...agencyData, name: e.target.value})}
-              className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all"
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm text-brand-gray">Email de contact</label>
-            <input 
-              type="email" 
-              value={agencyData.email}
-              onChange={(e) => setAgencyData({...agencyData, email: e.target.value})}
-              className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all"
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm text-brand-gray">Vision</label>
-            <textarea 
-              value={agencyData.vision}
-              onChange={(e) => setAgencyData({...agencyData, vision: e.target.value})}
-              rows={3}
-              className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all resize-none"
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm text-brand-gray">Mission</label>
-            <textarea 
-              value={agencyData.mission}
-              onChange={(e) => setAgencyData({...agencyData, mission: e.target.value})}
-              rows={3}
-              className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all resize-none"
-            />
-          </div>
+    const renderAgencyForm = () => (
+      <form className="space-y-6 max-w-xl" onSubmit={(e) => { e.preventDefault(); setActiveSettingsTab('main'); }}>
+        <div className="space-y-2">
+          <label className="text-sm text-brand-gray">Nom de l'agence</label>
+          <input 
+            type="text" 
+            value={agencyData.name}
+            onChange={(e) => setAgencyData({...agencyData, name: e.target.value})}
+            className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all"
+          />
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm text-brand-gray">Email de contact</label>
+          <input 
+            type="email" 
+            value={agencyData.email}
+            onChange={(e) => setAgencyData({...agencyData, email: e.target.value})}
+            className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all"
+          />
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm text-brand-gray">Vision</label>
+          <textarea 
+            value={agencyData.vision}
+            onChange={(e) => setAgencyData({...agencyData, vision: e.target.value})}
+            rows={3}
+            className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all resize-none"
+          />
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm text-brand-gray">Mission</label>
+          <textarea 
+            value={agencyData.mission}
+            onChange={(e) => setAgencyData({...agencyData, mission: e.target.value})}
+            rows={3}
+            className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all resize-none"
+          />
+        </div>
+        <div className="flex gap-4">
           <button type="submit" className="bg-brand-mint text-[#0D1117] px-8 py-3 rounded-xl font-bold hover:scale-105 transition-all">
-            Enregistrer les modifications
+            Enregistrer
           </button>
-        </form>
-      ) : isChangingPassword ? (
-        <form className="space-y-6 max-w-xl" onSubmit={handlePasswordChange}>
-          <div className="space-y-2">
-            <label className="text-sm text-brand-gray">{t('dashboard.settings.security.current')}</label>
-            <input 
-              required
-              type="password" 
-              value={passwordForm.current}
-              onChange={(e) => setPasswordForm({...passwordForm, current: e.target.value})}
-              className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all"
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm text-brand-gray">{t('dashboard.settings.security.new')}</label>
-            <input 
-              required
-              type="password" 
-              value={passwordForm.new}
-              onChange={(e) => setPasswordForm({...passwordForm, new: e.target.value})}
-              className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all"
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm text-brand-gray">{t('dashboard.settings.security.confirm')}</label>
-            <input 
-              required
-              type="password" 
-              value={passwordForm.confirm}
-              onChange={(e) => setPasswordForm({...passwordForm, confirm: e.target.value})}
-              className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all"
-            />
-          </div>
+          <button type="button" onClick={() => setActiveSettingsTab('main')} className="px-8 py-3 rounded-xl border border-[var(--border-color)] text-brand-gray font-bold hover:bg-white/5 transition-all">
+            Annuler
+          </button>
+        </div>
+      </form>
+    );
+
+    const renderSecurityForm = () => (
+      <form className="space-y-6 max-w-xl" onSubmit={handlePasswordChange}>
+        <div className="space-y-2">
+          <label className="text-sm text-brand-gray">{t('dashboard.settings.security.current')}</label>
+          <input 
+            required
+            type="password" 
+            value={passwordForm.current}
+            onChange={(e) => setPasswordForm({...passwordForm, current: e.target.value})}
+            className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all"
+          />
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm text-brand-gray">{t('dashboard.settings.security.new')}</label>
+          <input 
+            required
+            type="password" 
+            value={passwordForm.new}
+            onChange={(e) => setPasswordForm({...passwordForm, new: e.target.value})}
+            className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all"
+          />
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm text-brand-gray">{t('dashboard.settings.security.confirm')}</label>
+          <input 
+            required
+            type="password" 
+            value={passwordForm.confirm}
+            onChange={(e) => setPasswordForm({...passwordForm, confirm: e.target.value})}
+            className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all"
+          />
+        </div>
+        <div className="flex gap-4">
           <button type="submit" className="bg-brand-mint text-[#0D1117] px-8 py-3 rounded-xl font-bold hover:scale-105 transition-all">
             {t('dashboard.settings.security.submit')}
           </button>
-        </form>
-      ) : (
-        <div className="space-y-6">
-          <div className="p-6 rounded-2xl bg-white/5 border border-[var(--border-color)]">
-            <h3 className="text-xl font-bold mb-4">{agencyData.name}</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div>
-                <h4 className="text-xs font-bold uppercase tracking-widest text-brand-gray mb-2">Vision</h4>
-                <p className="text-sm text-brand-gray">{agencyData.vision}</p>
-              </div>
-              <div>
-                <h4 className="text-xs font-bold uppercase tracking-widest text-brand-gray mb-2">Mission</h4>
-                <p className="text-sm text-brand-gray">{agencyData.mission}</p>
-              </div>
-            </div>
-          </div>
+          <button type="button" onClick={() => setActiveSettingsTab('main')} className="px-8 py-3 rounded-xl border border-[var(--border-color)] text-brand-gray font-bold hover:bg-white/5 transition-all">
+            Annuler
+          </button>
+        </div>
+      </form>
+    );
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {[
-              { label: 'Configuration Agence', desc: 'Gérez les informations de LUCID Agency.' },
-              { label: 'Gestion des Rôles', desc: 'Définissez les accès pour votre équipe.' },
-              { label: 'Paramètres Système', desc: 'Maintenance et logs du back-office.' },
-              { label: 'Intégrations', desc: 'Connectez vos outils tiers (Slack, Trello).' },
-            ].map((item, i) => (
-              <div key={i} className="p-6 rounded-2xl border border-[var(--border-color)] hover:border-brand-mint/30 transition-all cursor-pointer group">
-                <h3 className="font-bold mb-1 group-hover:text-brand-mint transition-colors">{item.label}</h3>
-                <p className="text-sm text-brand-gray">{item.desc}</p>
+    const renderRoles = () => (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h3 className="font-bold text-lg">Membres de l'équipe</h3>
+          <button className="bg-brand-mint text-[#0D1117] px-4 py-2 rounded-lg text-sm font-bold">Ajouter un membre</button>
+        </div>
+        <div className="space-y-4">
+          {[
+            { name: 'Admin Principal', email: 'admin@lucid.agency', role: 'Super Admin' },
+            { name: 'Sarah M.', email: 'sarah@lucid.agency', role: 'Manager' },
+          ].map((user, i) => (
+            <div key={i} className="flex items-center justify-between p-4 rounded-xl border border-[var(--border-color)] bg-white/5">
+              <div>
+                <p className="font-bold">{user.name}</p>
+                <p className="text-xs text-brand-gray">{user.email}</p>
               </div>
-            ))}
+              <span className="px-3 py-1 rounded-full bg-brand-mint/10 text-brand-mint text-[10px] font-bold uppercase tracking-wider border border-brand-mint/20">
+                {user.role}
+              </span>
+            </div>
+          ))}
+        </div>
+        <button onClick={() => setActiveSettingsTab('main')} className="px-8 py-3 rounded-xl border border-[var(--border-color)] text-brand-gray font-bold hover:bg-white/5 transition-all">
+          Retour
+        </button>
+      </div>
+    );
+
+    const renderSystem = () => (
+      <div className="space-y-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[
+            { label: 'Statut API', value: 'Opérationnel', color: 'text-green-400' },
+            { label: 'Version', value: 'v2.4.0', color: 'text-brand-mint' },
+            { label: 'Dernière Backup', value: 'Il y a 2h', color: 'text-brand-gray' },
+          ].map((stat, i) => (
+            <div key={i} className="p-4 rounded-xl border border-[var(--border-color)] bg-white/5">
+              <p className="text-xs text-brand-gray mb-1">{stat.label}</p>
+              <p className={`font-bold ${stat.color}`}>{stat.value}</p>
+            </div>
+          ))}
+        </div>
+        <div className="space-y-4">
+          <h3 className="font-bold">Logs récents</h3>
+          <div className="bg-[var(--bg-primary)] rounded-xl p-4 font-mono text-xs text-brand-gray border border-[var(--border-color)] max-h-40 overflow-y-auto">
+            <p>[2026-04-01 10:15:22] User Thomas K. logged in</p>
+            <p>[2026-04-01 10:20:45] New project created: Refonte Site Web</p>
+            <p>[2026-04-01 11:05:12] Backup completed successfully</p>
+            <p>[2026-04-01 12:00:01] System health check: OK</p>
           </div>
         </div>
-      )}
-    </div>
-  );
+        <button onClick={() => setActiveSettingsTab('main')} className="px-8 py-3 rounded-xl border border-[var(--border-color)] text-brand-gray font-bold hover:bg-white/5 transition-all">
+          Retour
+        </button>
+      </div>
+    );
+
+    const renderIntegrations = () => (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {[
+            { name: 'Slack', status: 'Connecté', icon: '💬' },
+            { name: 'Trello', status: 'Non connecté', icon: '📋' },
+            { name: 'Google Drive', status: 'Connecté', icon: '📁' },
+            { name: 'Stripe', status: 'Connecté', icon: '💳' },
+          ].map((app, i) => (
+            <div key={i} className="flex items-center justify-between p-4 rounded-xl border border-[var(--border-color)] bg-white/5">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">{app.icon}</span>
+                <div>
+                  <p className="font-bold text-sm">{app.name}</p>
+                  <p className={`text-[10px] ${app.status === 'Connecté' ? 'text-brand-mint' : 'text-brand-gray'}`}>{app.status}</p>
+                </div>
+              </div>
+              <button className="text-xs font-bold hover:underline">
+                {app.status === 'Connecté' ? 'Gérer' : 'Connecter'}
+              </button>
+            </div>
+          ))}
+        </div>
+        <button onClick={() => setActiveSettingsTab('main')} className="px-8 py-3 rounded-xl border border-[var(--border-color)] text-brand-gray font-bold hover:bg-white/5 transition-all">
+          Retour
+        </button>
+      </div>
+    );
+
+    return (
+      <div className="bg-[var(--bg-surface)] rounded-3xl border border-[var(--border-color)] p-8">
+        <div className="flex justify-between items-center mb-8">
+          <h2 className="text-2xl font-bold">
+            {activeSettingsTab === 'main' ? t('admin.nav.settings') : (
+              <button 
+                onClick={() => setActiveSettingsTab('main')}
+                className="flex items-center gap-2 hover:text-brand-mint transition-colors"
+              >
+                <ChevronRight className="rotate-180" size={24} />
+                {activeSettingsTab === 'agency' && 'Configuration Agence'}
+                {activeSettingsTab === 'roles' && 'Gestion des Rôles'}
+                {activeSettingsTab === 'security' && 'Sécurité'}
+                {activeSettingsTab === 'system' && 'Paramètres Système'}
+                {activeSettingsTab === 'integrations' && 'Intégrations'}
+              </button>
+            )}
+          </h2>
+        </div>
+
+        {activeSettingsTab === 'main' && renderSettingsMain()}
+        {activeSettingsTab === 'agency' && renderAgencyForm()}
+        {activeSettingsTab === 'security' && renderSecurityForm()}
+        {activeSettingsTab === 'roles' && renderRoles()}
+        {activeSettingsTab === 'system' && renderSystem()}
+        {activeSettingsTab === 'integrations' && renderIntegrations()}
+      </div>
+    );
+  };
 
   const renderContent = () => {
     switch (activeTab) {

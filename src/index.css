@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&family=Roboto:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&family=Roboto:wght@400;500&family=IBM+Plex+Sans:wght@400;600;700&display=swap');
 
 :root {
   --bg-primary: #0D1117;
@@ -28,6 +28,7 @@
 @theme {
   --font-sans: "Montserrat", "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-serif: "Poppins", "Roboto", ui-serif, Georgia, serif;
+  --font-ibm: "IBM Plex Sans", sans-serif;
   
   --color-brand-anthracite: var(--bg-primary);
   --color-brand-darkblue: var(--bg-surface);

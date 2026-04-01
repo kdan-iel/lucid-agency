@@ -4,6 +4,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   userRole: 'admin' | 'freelancer' | null;
   login: (username: string, password: string, role: 'admin' | 'freelancer') => boolean;
+  changePassword: (newPassword: string) => void;
   logout: () => void;
 }
 
@@ -23,9 +24,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = (username: string, password: string, role: 'admin' | 'freelancer') => {
-    // Simple hardcoded credentials for demo purposes
-    const validAdmin = username === 'admin' && password === 'admin123';
-    const validFreelancer = username === 'freelancer' && password === 'free123';
+    const storedAdminPass = localStorage.getItem('lucid_admin_pass') || 'admin123';
+    const storedFreePass = localStorage.getItem('lucid_free_pass') || 'free123';
+
+    const validAdmin = username === 'admin' && password === storedAdminPass;
+    const validFreelancer = username === 'freelancer' && password === storedFreePass;
 
     if ((role === 'admin' && validAdmin) || (role === 'freelancer' && validFreelancer)) {
       setIsAuthenticated(true);
@@ -37,6 +40,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return false;
   };
 
+  const changePassword = (newPassword: string) => {
+    if (userRole === 'admin') {
+      localStorage.setItem('lucid_admin_pass', newPassword);
+    } else if (userRole === 'freelancer') {
+      localStorage.setItem('lucid_free_pass', newPassword);
+    }
+  };
+
   const logout = () => {
     setIsAuthenticated(false);
     setUserRole(null);
@@ -46,7 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, userRole, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, userRole, login, changePassword, logout }}>
       {children}
     </AuthContext.Provider>
   );

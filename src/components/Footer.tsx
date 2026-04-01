@@ -9,9 +9,18 @@ export default function Footer() {
       <div className="container mx-auto px-6">
         <div className="grid md:grid-cols-4 gap-16 mb-20">
           <div>
-            <div className="flex items-center gap-2 mb-6">
-              <span className="text-2xl font-bold tracking-tighter text-white">LUCID</span>
-              <span className="text-xs font-semibold tracking-widest text-brand-mint uppercase">Agency</span>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 flex items-center justify-center">
+                <svg width="32" height="32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M50 10L15 85H85L50 10Z" stroke="#2DF5A0" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M50 10V85" stroke="#2DF5A0" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M50 45L85 85" stroke="#2DF5A0" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-bold tracking-tighter text-white font-ibm">LUCID</span>
+                <span className="text-[10px] font-semibold tracking-[0.3em] text-brand-mint uppercase font-ibm">Agency</span>
+              </div>
             </div>
             <p className="text-sm leading-relaxed max-w-xs">
               {t('footer.tagline')}
