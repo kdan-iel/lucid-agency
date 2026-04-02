@@ -97,7 +97,7 @@ export default function Navbar() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed inset-0 z-50 md:hidden bg-brand-darkest/95 backdrop-blur-3xl flex flex-col"
+            className="fixed inset-0 z-50 md:hidden bg-brand-darkest/50 backdrop-blur-3xl flex flex-col"
           >
             <div className="flex justify-between items-center p-6 border-b border-white/5">
               <a href="/" className="flex items-center gap-3" onClick={() => setIsOpen(false)}>
