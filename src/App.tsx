@@ -4,7 +4,6 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { useEffect, useState } from 'react';
 
-// Pages & composants
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import Philosophy from './components/Philosophy';
@@ -14,14 +13,14 @@ import Results from './components/Results';
 import Offers from './components/Offers';
 import ContactForm from './components/ContactForm';
 import Footer from './components/Footer';
+
 import JoinPage from './pages/JoinPage';
 import DashboardPage from './pages/DashboardPage';
 import AdminPage from './pages/AdminPage';
 import LoginPage from './pages/LoginPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
+import NotFoundPage from './pages/NotFoundPage';
 
-// ============================================================
-// LANDING PAGE
-// ============================================================
 function LandingPage() {
   return (
     <div className="bg-[var(--bg-primary)] min-h-screen selection:bg-brand-mint selection:text-brand-anthracite transition-colors duration-300">
@@ -40,66 +39,49 @@ function LandingPage() {
   );
 }
 
-// ============================================================
-// CONTENU PRINCIPAL — ROUTING
-// ============================================================
+const VALID_PATHS = ['/', '/join', '/dashboard', '/admin', '/login', '/reset-password'];
+
 function AppContent() {
   const [path, setPath] = useState(window.location.pathname);
-
-  // On n'utilise plus isAuthenticated/userRole du localStorage
-  // La vérification se fait dans ProtectedRoute via session Supabase
   const { loading } = useAuth();
 
   useEffect(() => {
-    const handleLocationChange = () => {
-      setPath(window.location.pathname);
-    };
-
+    const handleLocationChange = () => setPath(window.location.pathname);
     window.addEventListener('popstate', handleLocationChange);
 
-    // Scroll vers l'ancre au chargement
     if (window.location.hash) {
       setTimeout(() => {
-        const element = document.querySelector(window.location.hash);
-        if (element) element.scrollIntoView({ behavior: 'smooth' });
+        const el = document.querySelector(window.location.hash);
+        if (el) el.scrollIntoView({ behavior: 'smooth' });
       }, 500);
     }
 
-    // Interception des liens internes
     const handleClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       const anchor = target.closest('a');
       if (anchor && anchor.href.startsWith(window.location.origin)) {
         const url = new URL(anchor.href);
-        const internalPaths = ['/join', '/dashboard', '/admin', '/'];
-
-        if (internalPaths.includes(url.pathname)) {
-          if (url.pathname === window.location.pathname && url.hash) {
-            return;
-          }
+        if (VALID_PATHS.includes(url.pathname)) {
+          if (url.pathname === window.location.pathname && url.hash) return;
           e.preventDefault();
           window.history.pushState({}, '', url.pathname + url.hash);
           setPath(url.pathname);
-
-          if (!url.hash) {
-            window.scrollTo(0, 0);
-          } else {
-            const element = document.querySelector(url.hash);
-            if (element) element.scrollIntoView({ behavior: 'smooth' });
+          if (!url.hash) window.scrollTo(0, 0);
+          else {
+            const el = document.querySelector(url.hash);
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
           }
         }
       }
     };
 
     document.addEventListener('click', handleClick);
-
     return () => {
       window.removeEventListener('popstate', handleLocationChange);
       document.removeEventListener('click', handleClick);
     };
   }, [path]);
 
-  // ✅ Spinner global pendant l'initialisation de la session Supabase
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[var(--bg-primary)]">
@@ -111,12 +93,9 @@ function AppContent() {
   const renderContent = () => {
     switch (path) {
       case '/join':
-        // Page publique, pas de protection
         return <JoinPage />;
 
       case '/dashboard':
-        // ✅ Vérification JWT Supabase via ProtectedRoute
-        // Plus de localStorage, plus de bypass possible
         return (
           <ProtectedRoute requiredRole="freelancer">
             <DashboardPage />
@@ -124,28 +103,35 @@ function AppContent() {
         );
 
       case '/admin':
-        // ✅ Vérification JWT Supabase via ProtectedRoute
         return (
           <ProtectedRoute requiredRole="admin">
             <AdminPage />
           </ProtectedRoute>
         );
 
-      default:
+      case '/login':
+        return <LoginPage role="freelancer" />;
+
+      case '/reset-password':
+        return <ResetPasswordPage />;
+
+      case '/':
         return <LandingPage />;
+
+      default:
+        return <NotFoundPage />;
     }
   };
 
   return (
     <ThemeProvider>
-      <LanguageProvider>{renderContent()}</LanguageProvider>
+      <LanguageProvider>
+        {renderContent()}
+      </LanguageProvider>
     </ThemeProvider>
   );
 }
 
-// ============================================================
-// APP ROOT
-// ============================================================
 export default function App() {
   return (
     <AuthProvider>
