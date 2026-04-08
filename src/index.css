@@ -1,35 +1,35 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&family=Roboto:wght@400;500&family=IBM+Plex+Sans:wght@400;600;700&display=swap');
 
 :root {
-  --bg-primary: #0D1117;
-  --bg-surface: #2A3240;
-  --text-primary: #FFFFFF;
-  --text-secondary: #B0B8C1;
-  --bg-offwhite: #F0F4F8;
-  --bg-darkest: #0D0D1A;
+  --bg-primary: #0d1117;
+  --bg-surface: #2a3240;
+  --text-primary: #ffffff;
+  --text-secondary: #b0b8c1;
+  --bg-offwhite: #f0f4f8;
+  --bg-darkest: #0d0d1a;
   --border-color: rgba(255, 255, 255, 0.05);
-  --accent-primary: #2DF5A0;
-  --accent-secondary: #1CC97F;
+  --accent-primary: #2df5a0;
+  --accent-secondary: #1cc97f;
 }
 
 .light {
-  --bg-primary: #F0F4F8;
-  --bg-surface: #FFFFFF;
-  --text-primary: #0D1117;
-  --text-secondary: #4A4A4A;
-  --bg-offwhite: #FFFFFF;
-  --bg-darkest: #E2E8F0;
+  --bg-primary: #f0f4f8;
+  --bg-surface: #ffffff;
+  --text-primary: #0d1117;
+  --text-secondary: #4a4a4a;
+  --bg-offwhite: #ffffff;
+  --bg-darkest: #e2e8f0;
   --border-color: rgba(0, 0, 0, 0.05);
-  --accent-primary: #1CC97F;
-  --accent-secondary: #2DF5A0;
+  --accent-primary: #1cc97f;
+  --accent-secondary: #2df5a0;
 }
 
 @theme {
-  --font-sans: "Montserrat", "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-serif: "Poppins", "Roboto", ui-serif, Georgia, serif;
-  --font-ibm: "IBM Plex Sans", sans-serif;
-  
+  --font-sans: 'Montserrat', 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-serif: 'Poppins', 'Roboto', ui-serif, Georgia, serif;
+  --font-ibm: 'IBM Plex Sans', sans-serif;
+
   --color-brand-anthracite: var(--bg-primary);
   --color-brand-darkblue: var(--bg-surface);
   --color-brand-mint: var(--accent-primary);
@@ -61,9 +61,15 @@
 }
 
 @keyframes float {
-  0% { transform: translateY(0px); }
-  50% { transform: translateY(-10px); }
-  100% { transform: translateY(0px); }
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
 }
 
 .animate-float {

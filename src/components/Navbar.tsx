@@ -32,8 +32,12 @@ export default function Navbar() {
             <img src="/logo.png" alt="LUCID Agency Logo" />
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-bold tracking-tighter text-[var(--text-primary)] font-ibm">LUCID</span>
-            <span className="text-[10px] font-semibold tracking-[0.3em] text-brand-mint uppercase group-hover:opacity-80 transition-opacity font-ibm">Agency</span>
+            <span className="text-2xl font-bold tracking-tighter text-[var(--text-primary)] font-ibm">
+              LUCID
+            </span>
+            <span className="text-[10px] font-semibold tracking-[0.3em] text-brand-mint uppercase group-hover:opacity-80 transition-opacity font-ibm">
+              Agency
+            </span>
           </div>
         </a>
 
@@ -48,7 +52,7 @@ export default function Navbar() {
               {link.name}
             </a>
           ))}
-          
+
           <div className="flex items-center gap-4 ml-4 border-l border-[var(--border-color)] pl-8">
             <button
               onClick={toggleTheme}
@@ -105,11 +109,19 @@ export default function Navbar() {
                   <img src="/logo.png" alt="LUCID Agency Logo" />
                 </div>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-bold tracking-tighter text-white font-ibm">LUCID</span>
-                  <span className="text-[10px] font-semibold tracking-[0.3em] text-brand-mint uppercase font-ibm">Agency</span>
+                  <span className="text-2xl font-bold tracking-tighter text-white font-ibm">
+                    LUCID
+                  </span>
+                  <span className="text-[10px] font-semibold tracking-[0.3em] text-brand-mint uppercase font-ibm">
+                    Agency
+                  </span>
                 </div>
               </a>
-              <button className="text-white p-2" onClick={() => setIsOpen(false)} aria-label="Close menu">
+              <button
+                className="text-white p-2"
+                onClick={() => setIsOpen(false)}
+                aria-label="Close menu"
+              >
                 <X size={32} />
               </button>
             </div>
@@ -141,10 +153,7 @@ export default function Navbar() {
                   <Globe size={24} />
                   {lang === 'FR' ? 'English' : 'Français'}
                 </button>
-                <button
-                  onClick={toggleTheme}
-                  className="p-3 bg-white/5 rounded-full text-white"
-                >
+                <button onClick={toggleTheme} className="p-3 bg-white/5 rounded-full text-white">
                   {theme === 'dark' ? <Sun size={24} /> : <Moon size={24} />}
                 </button>
               </div>

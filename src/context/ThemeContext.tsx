@@ -30,11 +30,7 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     document.documentElement.classList.toggle('light', newTheme === 'light');
   };
 
-  return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
-      {children}
-    </ThemeContext.Provider>
-  );
+  return <ThemeContext.Provider value={{ theme, toggleTheme }}>{children}</ThemeContext.Provider>;
 };
 
 export const useTheme = () => {

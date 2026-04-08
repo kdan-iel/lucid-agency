@@ -16,10 +16,13 @@ export default function Philosophy() {
   ];
 
   return (
-    <section id="philosophie" className="py-24 bg-[var(--bg-primary)] text-[var(--text-primary)] transition-colors duration-300 relative overflow-hidden">
+    <section
+      id="philosophie"
+      className="py-24 bg-[var(--bg-primary)] text-[var(--text-primary)] transition-colors duration-300 relative overflow-hidden"
+    >
       {/* Background Decorative Elements */}
       <div className="absolute top-0 right-0 w-1/3 h-full bg-brand-mint/5 -skew-x-12 translate-x-1/2 pointer-events-none" />
-      
+
       <div className="container mx-auto px-6 relative z-10">
         {/* Vision & Mission - Compact Accordion Layout */}
         <div className="space-y-6 mb-32">
@@ -29,7 +32,9 @@ export default function Philosophy() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             className={`bg-[var(--bg-surface)] rounded-[2rem] border transition-all duration-500 overflow-hidden ${
-              visionExpanded ? 'border-brand-mint ring-1 ring-brand-mint/20 shadow-2xl shadow-brand-mint/5' : 'border-[var(--border-color)]'
+              visionExpanded
+                ? 'border-brand-mint ring-1 ring-brand-mint/20 shadow-2xl shadow-brand-mint/5'
+                : 'border-[var(--border-color)]'
             }`}
           >
             <button
@@ -42,9 +47,13 @@ export default function Philosophy() {
                   {t('philosophy.vision.title')}
                 </span>
               </div>
-              <div className={`p-2 rounded-full transition-all duration-300 ${
-                visionExpanded ? 'bg-brand-mint text-[#0D1117] rotate-180' : 'bg-brand-mint/10 text-brand-mint'
-              }`}>
+              <div
+                className={`p-2 rounded-full transition-all duration-300 ${
+                  visionExpanded
+                    ? 'bg-brand-mint text-[#0D1117] rotate-180'
+                    : 'bg-brand-mint/10 text-brand-mint'
+                }`}
+              >
                 {visionExpanded ? <Minus size={20} /> : <Plus size={20} />}
               </div>
             </button>
@@ -65,7 +74,9 @@ export default function Philosophy() {
                         </h2>
                       </div>
                       <div className="md:col-span-7 relative pt-4 md:pt-0">
-                        <div className="absolute -left-4 md:-left-8 -top-6 md:-top-4 text-6xl font-serif text-brand-mint/20 leading-none">“</div>
+                        <div className="absolute -left-4 md:-left-8 -top-6 md:-top-4 text-6xl font-serif text-brand-mint/20 leading-none">
+                          “
+                        </div>
                         <p className="text-brand-gray text-lg md:text-xl leading-relaxed font-light italic">
                           {t('philosophy.vision.body')}
                         </p>
@@ -83,7 +94,9 @@ export default function Philosophy() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             className={`bg-[var(--bg-surface)] rounded-[2rem] border transition-all duration-500 overflow-hidden ${
-              missionExpanded ? 'border-brand-mint ring-1 ring-brand-mint/20 shadow-2xl shadow-brand-mint/5' : 'border-[var(--border-color)]'
+              missionExpanded
+                ? 'border-brand-mint ring-1 ring-brand-mint/20 shadow-2xl shadow-brand-mint/5'
+                : 'border-[var(--border-color)]'
             }`}
           >
             <button
@@ -96,9 +109,13 @@ export default function Philosophy() {
                   {t('philosophy.mission.title')}
                 </span>
               </div>
-              <div className={`p-2 rounded-full transition-all duration-300 ${
-                missionExpanded ? 'bg-brand-mint text-[#0D1117] rotate-180' : 'bg-brand-mint/10 text-brand-mint'
-              }`}>
+              <div
+                className={`p-2 rounded-full transition-all duration-300 ${
+                  missionExpanded
+                    ? 'bg-brand-mint text-[#0D1117] rotate-180'
+                    : 'bg-brand-mint/10 text-brand-mint'
+                }`}
+              >
                 {missionExpanded ? <Minus size={20} /> : <Plus size={20} />}
               </div>
             </button>
@@ -160,9 +177,7 @@ export default function Philosophy() {
                 <h3 className="text-xl font-bold mb-4 group-hover:text-brand-mint transition-colors">
                   {value.title}
                 </h3>
-                <p className="text-brand-gray leading-relaxed">
-                  {value.body}
-                </p>
+                <p className="text-brand-gray leading-relaxed">{value.body}</p>
               </motion.div>
             ))}
           </div>

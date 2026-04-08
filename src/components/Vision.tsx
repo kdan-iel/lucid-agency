@@ -11,7 +11,10 @@ export default function Vision() {
   ];
 
   return (
-    <section id="vision" className="py-24 bg-brand-offwhite text-brand-anthracite relative overflow-hidden">
+    <section
+      id="vision"
+      className="py-24 bg-brand-offwhite text-brand-anthracite relative overflow-hidden"
+    >
       <div className="absolute left-0 top-1/2 -translate-y-1/2 text-[15vw] font-bold text-brand-anthracite/5 pointer-events-none select-none">
         LUCID
       </div>
@@ -26,15 +29,15 @@ export default function Vision() {
             <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-8 leading-tight text-[var(--text-primary)]">
               {t('vision.title')}
             </h2>
-            <p className="text-brand-gray text-lg leading-relaxed mb-12">
-              {t('vision.body')}
-            </p>
-            
+            <p className="text-brand-gray text-lg leading-relaxed mb-12">{t('vision.body')}</p>
+
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
               {stats.map((stat, i) => (
                 <div key={i} className="flex flex-col">
                   <span className="text-4xl font-bold text-brand-mint mb-2">{stat.val}</span>
-                  <span className="text-xs font-semibold uppercase tracking-wider text-brand-gray">{stat.label}</span>
+                  <span className="text-xs font-semibold uppercase tracking-wider text-brand-gray">
+                    {stat.label}
+                  </span>
                 </div>
               ))}
             </div>

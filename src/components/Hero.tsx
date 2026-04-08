@@ -6,20 +6,23 @@ export default function Hero() {
   const { t } = useLanguage();
 
   return (
-    <section id="hero" className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
+    <section
+      id="hero"
+      className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20"
+    >
       {/* Animated Background */}
       <div className="absolute inset-0 dot-grid opacity-30" />
       <div className="absolute inset-0 bg-radial-gradient from-brand-mint/6 to-transparent pointer-events-none" />
 
       <div className="container mx-auto px-6 relative z-10 text-center">
         <div className="flex flex-col items-center">
-          <motion.h1 
+          <motion.h1
             initial={{ opacity: 0, y: 40, filter: 'blur(10px)', scale: 0.95 }}
             animate={{ opacity: 1, y: 0, filter: 'blur(0px)', scale: 1 }}
             transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
             className="text-4xl sm:text-6xl md:text-8xl font-bold tracking-tighter leading-tight mb-6"
           >
-            <motion.span 
+            <motion.span
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
@@ -27,7 +30,7 @@ export default function Hero() {
             >
               {t('hero.title1')}
             </motion.span>
-            <motion.span 
+            <motion.span
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
@@ -36,8 +39,8 @@ export default function Hero() {
               {t('hero.title2')}
             </motion.span>
           </motion.h1>
-          
-          <motion.p 
+
+          <motion.p
             initial={{ opacity: 0, y: 20, filter: 'blur(5px)' }}
             animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
             transition={{ duration: 1, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
@@ -46,7 +49,7 @@ export default function Hero() {
             {t('hero.subtitle')}
           </motion.p>
 
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ duration: 0.8, delay: 0.8, ease: [0.16, 1, 0.3, 1] }}

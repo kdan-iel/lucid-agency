@@ -4,18 +4,78 @@ import { useLanguage } from '../context/LanguageContext';
 import { Search } from 'lucide-react';
 
 const talents = [
-  { name: 'Thomas', category: 'Branding', expertise: 'Directeur Artistique', skills: ['Branding Minimaliste', 'UI Design', 'Motion'] },
-  { name: 'Amina', category: 'Web', expertise: 'Stratège Social Media', skills: ['Growth', 'Content Strategy', 'Ads'] },
-  { name: 'Kwame', category: 'Video', expertise: 'Motion Designer', skills: ['3D Animation', 'VFX', 'Storyboarding'] },
-  { name: 'Sofia', category: 'Web', expertise: 'Dev No-Code', skills: ['Webflow', 'Bubble', 'Automation'] },
-  { name: 'Léo', category: 'Photo', expertise: 'SEO & Data', skills: ['Audit Technique', 'Analytics', 'Ranking'] },
-  { name: 'Yasmine', category: 'Branding', expertise: 'Copywriter', skills: ['Storytelling', 'UX Writing', 'Conversion'] },
-  { name: 'Marc', category: 'Video', expertise: 'Réalisateur', skills: ['Publicité', 'Documentaire', 'Montage'] },
-  { name: 'Elena', category: 'Photo', expertise: 'Photographe', skills: ['Mode', 'Produit', 'Retouche'] },
-  { name: 'Lucas', category: 'Branding', expertise: 'Brand Designer', skills: ['Logotype', 'Typographie', 'Identité'] },
-  { name: 'Sarah', category: 'Web', expertise: 'UX Designer', skills: ['User Research', 'Prototypage', 'Figma'] },
-  { name: 'David', category: 'Video', expertise: 'VFX Artist', skills: ['Compositing', '3D', 'Effets Spéciaux'] },
-  { name: 'Chloé', category: 'Photo', expertise: 'Directrice Photo', skills: ['Lumière', 'Portrait', 'Direction Artistique'] },
+  {
+    name: 'Thomas',
+    category: 'Branding',
+    expertise: 'Directeur Artistique',
+    skills: ['Branding Minimaliste', 'UI Design', 'Motion'],
+  },
+  {
+    name: 'Amina',
+    category: 'Web',
+    expertise: 'Stratège Social Media',
+    skills: ['Growth', 'Content Strategy', 'Ads'],
+  },
+  {
+    name: 'Kwame',
+    category: 'Video',
+    expertise: 'Motion Designer',
+    skills: ['3D Animation', 'VFX', 'Storyboarding'],
+  },
+  {
+    name: 'Sofia',
+    category: 'Web',
+    expertise: 'Dev No-Code',
+    skills: ['Webflow', 'Bubble', 'Automation'],
+  },
+  {
+    name: 'Léo',
+    category: 'Photo',
+    expertise: 'SEO & Data',
+    skills: ['Audit Technique', 'Analytics', 'Ranking'],
+  },
+  {
+    name: 'Yasmine',
+    category: 'Branding',
+    expertise: 'Copywriter',
+    skills: ['Storytelling', 'UX Writing', 'Conversion'],
+  },
+  {
+    name: 'Marc',
+    category: 'Video',
+    expertise: 'Réalisateur',
+    skills: ['Publicité', 'Documentaire', 'Montage'],
+  },
+  {
+    name: 'Elena',
+    category: 'Photo',
+    expertise: 'Photographe',
+    skills: ['Mode', 'Produit', 'Retouche'],
+  },
+  {
+    name: 'Lucas',
+    category: 'Branding',
+    expertise: 'Brand Designer',
+    skills: ['Logotype', 'Typographie', 'Identité'],
+  },
+  {
+    name: 'Sarah',
+    category: 'Web',
+    expertise: 'UX Designer',
+    skills: ['User Research', 'Prototypage', 'Figma'],
+  },
+  {
+    name: 'David',
+    category: 'Video',
+    expertise: 'VFX Artist',
+    skills: ['Compositing', '3D', 'Effets Spéciaux'],
+  },
+  {
+    name: 'Chloé',
+    category: 'Photo',
+    expertise: 'Directrice Photo',
+    skills: ['Lumière', 'Portrait', 'Direction Artistique'],
+  },
 ];
 
 export default function Talents() {
@@ -26,9 +86,9 @@ export default function Talents() {
 
   const categories = ['All', 'Branding', 'Video', 'Web', 'Photo'];
 
-  const filteredTalents = talents.filter(talent => {
+  const filteredTalents = talents.filter((talent) => {
     const matchesFilter = filter === 'All' || talent.category === filter;
-    const matchesSearch = 
+    const matchesSearch =
       talent.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
       talent.expertise.toLowerCase().includes(searchQuery.toLowerCase()) ||
       talent.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -47,7 +107,10 @@ export default function Talents() {
         {/* Search & Filters */}
         <div className="max-w-4xl mx-auto mb-16 space-y-8">
           <div className="relative group">
-            <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-brand-gray group-focus-within:text-brand-mint transition-colors" size={20} />
+            <Search
+              className="absolute left-6 top-1/2 -translate-y-1/2 text-brand-gray group-focus-within:text-brand-mint transition-colors"
+              size={20}
+            />
             <input
               type="text"
               placeholder="Rechercher une catégorie, un talent ou une expertise..."
@@ -69,8 +132,8 @@ export default function Talents() {
                   setVisibleCount(6);
                 }}
                 className={`px-6 py-2 rounded-full text-sm font-bold transition-all ${
-                  filter === cat 
-                    ? 'bg-brand-mint text-[#0D1117]' 
+                  filter === cat
+                    ? 'bg-brand-mint text-[#0D1117]'
                     : 'border border-[var(--border-color)] text-[var(--text-primary)] hover:border-brand-mint'
                 }`}
               >
@@ -104,17 +167,22 @@ export default function Talents() {
                     {talent.expertise}
                   </div>
                 </div>
-                
+
                 <div className="p-8">
-                  <h3 className="text-2xl font-bold mb-4 text-[var(--text-primary)]">{talent.name}</h3>
+                  <h3 className="text-2xl font-bold mb-4 text-[var(--text-primary)]">
+                    {talent.name}
+                  </h3>
                   <div className="flex flex-wrap gap-2 mb-8">
-                    {talent.skills.map(skill => (
-                      <span key={skill} className="text-[10px] font-semibold text-brand-gray border border-[var(--border-color)] px-2 py-1 rounded uppercase">
+                    {talent.skills.map((skill) => (
+                      <span
+                        key={skill}
+                        className="text-[10px] font-semibold text-brand-gray border border-[var(--border-color)] px-2 py-1 rounded uppercase"
+                      >
                         {skill}
                       </span>
                     ))}
                   </div>
-                  
+
                   <a
                     href="#contact"
                     className="block w-full text-center py-3 border border-brand-mint text-brand-mint rounded-lg text-sm font-bold hover:bg-brand-mint hover:text-[#0D1117] transition-all"
@@ -130,7 +198,7 @@ export default function Talents() {
         {visibleCount < filteredTalents.length && (
           <div className="text-center">
             <button
-              onClick={() => setVisibleCount(prev => prev + 6)}
+              onClick={() => setVisibleCount((prev) => prev + 6)}
               className="px-10 py-4 border border-brand-mint text-brand-mint rounded-full text-lg font-bold hover:bg-brand-mint hover:text-[#0D1117] transition-all"
             >
               {t('Voir Plus')}

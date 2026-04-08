@@ -27,7 +27,9 @@ export default function Method() {
     <section id="methode" className="py-24 bg-brand-anthracite">
       <div className="container mx-auto px-6">
         <div className="text-center mb-20">
-          <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-7 text-[var(--text-primary)]">{t('method.title')}</h2>
+          <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-7 text-[var(--text-primary)]">
+            {t('method.title')}
+          </h2>
           <div className="flex items-center justify-center gap-4 text-brand-mint font-bold tracking-widest text-sm uppercase">
             <span>DATA</span>
             <ArrowRight size={16} />
@@ -51,9 +53,7 @@ export default function Method() {
                 {step.id}
               </span>
               <h3 className="text-xl font-bold mb-4 tracking-wider">{step.title}</h3>
-              <p className="text-brand-gray leading-relaxed">
-                {step.body}
-              </p>
+              <p className="text-brand-gray leading-relaxed">{step.body}</p>
             </motion.div>
           ))}
         </div>

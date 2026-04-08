@@ -1,7 +1,30 @@
 import { useState, useMemo, FormEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLanguage } from '../context/LanguageContext';
-import { Users, Briefcase, MessageSquare, Settings, LogOut, Bell, Search, Filter, CheckCircle, Clock, XCircle, MoreVertical, X, Mail, Phone, Globe, Download, ChevronRight, Shield, Settings2, Database, Link as LinkIcon } from 'lucide-react';
+import {
+  Users,
+  Briefcase,
+  MessageSquare,
+  Settings,
+  LogOut,
+  Bell,
+  Search,
+  Filter,
+  CheckCircle,
+  Clock,
+  XCircle,
+  MoreVertical,
+  X,
+  Mail,
+  Phone,
+  Globe,
+  Download,
+  ChevronRight,
+  Shield,
+  Settings2,
+  Database,
+  Link as LinkIcon,
+} from 'lucide-react';
 import Navbar from '../components/Navbar';
 
 import { useAuth } from '../context/AuthContext';
@@ -20,38 +43,38 @@ interface TalentRequest {
 }
 
 const INITIAL_REQUESTS: TalentRequest[] = [
-  { 
-    id: 1, 
-    name: 'Jean David K.', 
-    specialty: 'Branding', 
-    date: '29/03/2026', 
+  {
+    id: 1,
+    name: 'Jean David K.',
+    specialty: 'Branding',
+    date: '29/03/2026',
     status: 'pending',
     email: 'jdaviel@gmail.com',
     phone: '+228 70 51 67 69',
     portfolio: 'behance.net/thomask',
-    experience: '5 ans'
+    experience: '5 ans',
   },
-  { 
-    id: 2, 
-    name: 'Godwin A.', 
-    specialty: 'Graphiste', 
-    date: '28/03/2026', 
+  {
+    id: 2,
+    name: 'Godwin A.',
+    specialty: 'Graphiste',
+    date: '28/03/2026',
     status: 'approved',
     email: 'godwinakakpo@gmail.com',
     phone: '+228 98 60 96 69',
     portfolio: 'amina.design',
-    experience: '3 ans'
+    experience: '3 ans',
   },
-  { 
-    id: 3, 
-    name: 'Kwame O.', 
-    specialty: 'Motion Design', 
-    date: '27/03/2026', 
+  {
+    id: 3,
+    name: 'Kwame O.',
+    specialty: 'Motion Design',
+    date: '27/03/2026',
     status: 'rejected',
     email: 'kwame.o@example.com',
     phone: '+228 92 34 56 78',
     portfolio: 'vimeo.com/kwameo',
-    experience: '7 ans'
+    experience: '7 ans',
   },
 ];
 
@@ -66,8 +89,24 @@ interface Project {
 }
 
 const INITIAL_PROJECTS: Project[] = [
-  { id: 1, title: 'Refonte Site Web', client: 'EcoShop', talent: 'Amina L.', budget: '1 200 €', status: 'in-progress', deadline: '15/04/2026' },
-  { id: 2, title: 'Campagne Social Ads', client: 'TechFlow', talent: 'Thomas K.', budget: '3 000 €', status: 'completed', deadline: '20/03/2026' },
+  {
+    id: 1,
+    title: 'Refonte Site Web',
+    client: 'EcoShop',
+    talent: 'Amina L.',
+    budget: '1 200 €',
+    status: 'in-progress',
+    deadline: '15/04/2026',
+  },
+  {
+    id: 2,
+    title: 'Campagne Social Ads',
+    client: 'TechFlow',
+    talent: 'Thomas K.',
+    budget: '3 000 €',
+    status: 'completed',
+    deadline: '20/03/2026',
+  },
 ];
 
 export default function AdminPage() {
@@ -76,19 +115,27 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState('talents');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>(
+    'all'
+  );
   const [requests, setRequests] = useState<TalentRequest[]>(INITIAL_REQUESTS);
   const [projects, setProjects] = useState<Project[]>(INITIAL_PROJECTS);
   const [selectedTalent, setSelectedTalent] = useState<TalentRequest | null>(null);
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
-  const [newProject, setNewProject] = useState({ title: '', client: '', talent: '', budget: '', deadline: '' });
-  
+  const [newProject, setNewProject] = useState({
+    title: '',
+    client: '',
+    talent: '',
+    budget: '',
+    deadline: '',
+  });
+
   const handleCreateProject = (e: FormEvent) => {
     e.preventDefault();
     const project: Project = {
       id: projects.length + 1,
       ...newProject,
-      status: 'in-progress'
+      status: 'in-progress',
     };
     setProjects([project, ...projects]);
     setIsProjectModalOpen(false);
@@ -96,7 +143,7 @@ export default function AdminPage() {
   };
 
   const handleUpdateProjectStatus = (id: number, status: Project['status']) => {
-    setProjects(projects.map(p => p.id === id ? { ...p, status } : p));
+    setProjects(projects.map((p) => (p.id === id ? { ...p, status } : p)));
   };
 
   const sidebarItems = [
@@ -107,24 +154,40 @@ export default function AdminPage() {
   ];
 
   const stats = [
-    { id: 'all', label: t('admin.stats.activeTalents'), value: requests.filter(r => r.status === 'approved').length.toString(), color: 'text-brand-mint' },
-    { id: 'projects', label: t('admin.stats.activeProjects'), value: projects.filter(p => p.status === 'in-progress').length.toString(), color: 'text-blue-400' },
-    { id: 'pending', label: t('admin.stats.pendingRequests'), value: requests.filter(r => r.status === 'pending').length.toString(), color: 'text-yellow-400' },
+    {
+      id: 'all',
+      label: t('admin.stats.activeTalents'),
+      value: requests.filter((r) => r.status === 'approved').length.toString(),
+      color: 'text-brand-mint',
+    },
+    {
+      id: 'projects',
+      label: t('admin.stats.activeProjects'),
+      value: projects.filter((p) => p.status === 'in-progress').length.toString(),
+      color: 'text-blue-400',
+    },
+    {
+      id: 'pending',
+      label: t('admin.stats.pendingRequests'),
+      value: requests.filter((r) => r.status === 'pending').length.toString(),
+      color: 'text-yellow-400',
+    },
   ];
 
   const filteredRequests = useMemo(() => {
-    return requests.filter(r => {
-      const matchesSearch = r.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                           r.specialty.toLowerCase().includes(searchQuery.toLowerCase());
+    return requests.filter((r) => {
+      const matchesSearch =
+        r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        r.specialty.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesStatus = statusFilter === 'all' || r.status === statusFilter;
       return matchesSearch && matchesStatus;
     });
   }, [requests, searchQuery, statusFilter]);
 
   const handleUpdateStatus = (id: number, newStatus: 'approved' | 'rejected') => {
-    setRequests(prev => prev.map(r => r.id === id ? { ...r, status: newStatus } : r));
+    setRequests((prev) => prev.map((r) => (r.id === id ? { ...r, status: newStatus } : r)));
     if (selectedTalent?.id === id) {
-      setSelectedTalent(prev => prev ? { ...prev, status: newStatus } : null);
+      setSelectedTalent((prev) => (prev ? { ...prev, status: newStatus } : null));
     }
   };
 
@@ -133,18 +196,21 @@ export default function AdminPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <h2 className="text-xl font-bold">{t('admin.talents.title')}</h2>
         <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
-            <div className="relative w-full sm:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-gray" size={18} />
-            <input 
-              type="text" 
+          <div className="relative w-full sm:w-64">
+            <Search
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-gray"
+              size={18}
+            />
+            <input
+              type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Rechercher..." 
+              placeholder="Rechercher..."
               aria-label="Rechercher talents par nom ou spécialité"
               className="bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-full py-2 pl-10 pr-4 text-sm focus:outline-none focus:border-brand-mint transition-all w-full"
             />
           </div>
-          <select 
+          <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as any)}
             aria-label="Filtrer les talents par statut"
@@ -171,7 +237,11 @@ export default function AdminPage() {
           </thead>
           <tbody className="divide-y divide-[var(--border-color)]">
             {filteredRequests.map((row) => (
-              <tr key={row.id} className="group hover:bg-white/5 transition-all cursor-pointer" onClick={() => setSelectedTalent(row)}>
+              <tr
+                key={row.id}
+                className="group hover:bg-white/5 transition-all cursor-pointer"
+                onClick={() => setSelectedTalent(row)}
+              >
                 <td className="py-4">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-full bg-brand-mint/20 flex items-center justify-center text-brand-mint font-bold text-xs uppercase">
@@ -200,7 +270,14 @@ export default function AdminPage() {
                   )}
                 </td>
                 <td className="py-4 text-right">
-                  <button className="p-2 rounded-lg hover:bg-white/10 text-brand-gray" onClick={(e) => { e.stopPropagation(); setSelectedTalent(row); }} title="Plus d'options">
+                  <button
+                    className="p-2 rounded-lg hover:bg-white/10 text-brand-gray"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedTalent(row);
+                    }}
+                    title="Plus d'options"
+                  >
                     <MoreVertical size={18} />
                   </button>
                 </td>
@@ -213,8 +290,8 @@ export default function AdminPage() {
       {/* Mobile Talent List */}
       <div className="md:hidden space-y-4">
         {filteredRequests.map((row) => (
-          <div 
-            key={row.id} 
+          <div
+            key={row.id}
             onClick={() => setSelectedTalent(row)}
             className="p-4 rounded-2xl border border-[var(--border-color)] bg-white/5 space-y-3"
           >
@@ -235,13 +312,19 @@ export default function AdminPage() {
             <div className="flex justify-between items-center text-xs">
               <span className="text-brand-gray">{row.date}</span>
               {row.status === 'approved' && (
-                <span className="text-green-400 font-bold uppercase">{t('admin.status.approved')}</span>
+                <span className="text-green-400 font-bold uppercase">
+                  {t('admin.status.approved')}
+                </span>
               )}
               {row.status === 'pending' && (
-                <span className="text-yellow-400 font-bold uppercase">{t('admin.status.pending')}</span>
+                <span className="text-yellow-400 font-bold uppercase">
+                  {t('admin.status.pending')}
+                </span>
               )}
               {row.status === 'rejected' && (
-                <span className="text-red-400 font-bold uppercase">{t('admin.status.rejected')}</span>
+                <span className="text-red-400 font-bold uppercase">
+                  {t('admin.status.rejected')}
+                </span>
               )}
             </div>
           </div>
@@ -254,7 +337,7 @@ export default function AdminPage() {
     <div className="bg-[var(--bg-surface)] rounded-3xl border border-[var(--border-color)] p-8">
       <div className="flex justify-between items-center mb-8">
         <h2 className="text-xl font-bold">{t('admin.nav.projects')}</h2>
-        <button 
+        <button
           onClick={() => setIsProjectModalOpen(true)}
           className="bg-brand-mint text-[#0D1117] px-6 py-2 rounded-full font-bold hover:scale-105 transition-all text-sm"
         >
@@ -291,13 +374,16 @@ export default function AdminPage() {
                 </td>
                 <td className="py-4 text-brand-gray">{project.budget}</td>
                 <td className="py-4">
-                  <select 
+                  <select
                     value={project.status}
                     onChange={(e) => handleUpdateProjectStatus(project.id, e.target.value as any)}
                     aria-label={`Modifier le statut du projet ${project.title}`}
                     className={`text-xs font-bold uppercase px-2 py-1 rounded bg-transparent border border-transparent hover:border-[var(--border-color)] focus:outline-none ${
-                      project.status === 'completed' ? 'text-green-400' : 
-                      project.status === 'in-progress' ? 'text-blue-400' : 'text-yellow-400'
+                      project.status === 'completed'
+                        ? 'text-green-400'
+                        : project.status === 'in-progress'
+                          ? 'text-blue-400'
+                          : 'text-yellow-400'
                     }`}
                   >
                     <option value="in-progress">{t('admin.projects.status.inprogress')}</option>
@@ -306,7 +392,10 @@ export default function AdminPage() {
                   </select>
                 </td>
                 <td className="py-4 text-right">
-                  <button className="p-2 rounded-lg hover:bg-white/10 text-brand-gray" title="Plus d'options">
+                  <button
+                    className="p-2 rounded-lg hover:bg-white/10 text-brand-gray"
+                    title="Plus d'options"
+                  >
                     <MoreVertical size={18} />
                   </button>
                 </td>
@@ -319,13 +408,15 @@ export default function AdminPage() {
   );
 
   const renderMessages = () => {
-    const approvedFreelancers = requests.filter(r => r.status === 'approved');
+    const approvedFreelancers = requests.filter((r) => r.status === 'approved');
 
     return (
       <div className="bg-[var(--bg-surface)] rounded-2xl md:rounded-3xl border border-[var(--border-color)] p-6 md:p-8">
         <div className="mb-8">
           <h2 className="text-2xl font-bold mb-2">Messagerie WhatsApp</h2>
-          <p className="text-brand-gray">Contactez directement vos talents approuvés via WhatsApp.</p>
+          <p className="text-brand-gray">
+            Contactez directement vos talents approuvés via WhatsApp.
+          </p>
         </div>
 
         {approvedFreelancers.length === 0 ? (
@@ -336,7 +427,7 @@ export default function AdminPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {approvedFreelancers.map((freelancer) => (
-              <div 
+              <div
                 key={freelancer.id}
                 className="p-6 rounded-2xl border border-[var(--border-color)] bg-white/5 hover:border-brand-mint/30 transition-all group"
               >
@@ -346,10 +437,12 @@ export default function AdminPage() {
                   </div>
                   <div>
                     <h3 className="font-bold text-lg">{freelancer.name}</h3>
-                    <p className="text-xs text-brand-mint font-medium uppercase tracking-wider">{freelancer.specialty}</p>
+                    <p className="text-xs text-brand-mint font-medium uppercase tracking-wider">
+                      {freelancer.specialty}
+                    </p>
                   </div>
                 </div>
-                
+
                 <div className="space-y-3 mb-6">
                   <div className="flex items-center gap-2 text-sm text-brand-gray">
                     <Phone size={14} className="text-brand-mint" />
@@ -361,7 +454,7 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                <a 
+                <a
                   href={`https://wa.me/22870516769?text=Bonjour%20${encodeURIComponent(freelancer.name)},%20je%20suis%20intéressé%20par%20votre%20profil%20pour%20un%20projet%20chez%20LUCID%20Agency.%20Pouvez-vous%20me%20dire%20quand%20vous%20êtes%20disponible%20pour%20en%20discuter?`}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -382,9 +475,11 @@ export default function AdminPage() {
     name: 'LUCID Agency',
     email: 'contact@lucid-agency.com',
     vision: 'Faire de chaque PME africaine une entreprise qui performe digitalement.',
-    mission: 'Transformer votre présence digitale en moteur de croissance réelle.'
+    mission: 'Transformer votre présence digitale en moteur de croissance réelle.',
   });
-  const [activeSettingsTab, setActiveSettingsTab] = useState<'main' | 'agency' | 'roles' | 'system' | 'integrations' | 'security'>('main');
+  const [activeSettingsTab, setActiveSettingsTab] = useState<
+    'main' | 'agency' | 'roles' | 'system' | 'integrations' | 'security'
+  >('main');
   const [passwordForm, setPasswordForm] = useState({ current: '', new: '', confirm: '' });
 
   const handlePasswordChange = (e: FormEvent) => {
@@ -406,11 +501,15 @@ export default function AdminPage() {
           <h3 className="text-xl font-bold mb-4">{agencyData.name}</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div>
-              <h4 className="text-xs font-bold uppercase tracking-widest text-brand-gray mb-2">Vision</h4>
+              <h4 className="text-xs font-bold uppercase tracking-widest text-brand-gray mb-2">
+                Vision
+              </h4>
               <p className="text-sm text-brand-gray">{agencyData.vision}</p>
             </div>
             <div>
-              <h4 className="text-xs font-bold uppercase tracking-widest text-brand-gray mb-2">Mission</h4>
+              <h4 className="text-xs font-bold uppercase tracking-widest text-brand-gray mb-2">
+                Mission
+              </h4>
               <p className="text-sm text-brand-gray">{agencyData.mission}</p>
             </div>
           </div>
@@ -418,20 +517,47 @@ export default function AdminPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {[
-            { id: 'agency', label: 'Configuration Agence', desc: 'Gérez les informations de LUCID Agency.', icon: <Settings2 size={20} /> },
-            { id: 'roles', label: 'Gestion des Rôles', desc: 'Définissez les accès pour votre équipe.', icon: <Users size={20} /> },
-            { id: 'security', label: 'Sécurité', desc: 'Mot de passe et authentification.', icon: <Shield size={20} /> },
-            { id: 'system', label: 'Paramètres Système', desc: 'Maintenance et logs du back-office.', icon: <Database size={20} /> },
-            { id: 'integrations', label: 'Intégrations', desc: 'Connectez vos outils tiers (Slack, Trello).', icon: <LinkIcon size={20} /> },
+            {
+              id: 'agency',
+              label: 'Configuration Agence',
+              desc: 'Gérez les informations de LUCID Agency.',
+              icon: <Settings2 size={20} />,
+            },
+            {
+              id: 'roles',
+              label: 'Gestion des Rôles',
+              desc: 'Définissez les accès pour votre équipe.',
+              icon: <Users size={20} />,
+            },
+            {
+              id: 'security',
+              label: 'Sécurité',
+              desc: 'Mot de passe et authentification.',
+              icon: <Shield size={20} />,
+            },
+            {
+              id: 'system',
+              label: 'Paramètres Système',
+              desc: 'Maintenance et logs du back-office.',
+              icon: <Database size={20} />,
+            },
+            {
+              id: 'integrations',
+              label: 'Intégrations',
+              desc: 'Connectez vos outils tiers (Slack, Trello).',
+              icon: <LinkIcon size={20} />,
+            },
           ].map((item) => (
-            <div 
-              key={item.id} 
+            <div
+              key={item.id}
               onClick={() => setActiveSettingsTab(item.id as any)}
               className="p-6 rounded-2xl border border-[var(--border-color)] hover:border-brand-mint/30 transition-all cursor-pointer group"
             >
               <div className="flex items-center gap-3 mb-2">
                 <div className="text-brand-mint">{item.icon}</div>
-                <h3 className="font-bold group-hover:text-brand-mint transition-colors">{item.label}</h3>
+                <h3 className="font-bold group-hover:text-brand-mint transition-colors">
+                  {item.label}
+                </h3>
               </div>
               <p className="text-sm text-brand-gray">{item.desc}</p>
             </div>
@@ -441,23 +567,29 @@ export default function AdminPage() {
     );
 
     const renderAgencyForm = () => (
-      <form className="space-y-6 max-w-xl" onSubmit={(e) => { e.preventDefault(); setActiveSettingsTab('main'); }}>
+      <form
+        className="space-y-6 max-w-xl"
+        onSubmit={(e) => {
+          e.preventDefault();
+          setActiveSettingsTab('main');
+        }}
+      >
         <div className="space-y-2">
           <label className="text-sm text-brand-gray">Nom de l'agence</label>
-          <input 
-            type="text" 
+          <input
+            type="text"
             value={agencyData.name}
-            onChange={(e) => setAgencyData({...agencyData, name: e.target.value})}
+            onChange={(e) => setAgencyData({ ...agencyData, name: e.target.value })}
             aria-label="Nom de l'agence"
             className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all"
           />
         </div>
         <div className="space-y-2">
           <label className="text-sm text-brand-gray">Email de contact</label>
-          <input 
-            type="email" 
+          <input
+            type="email"
             value={agencyData.email}
-            onChange={(e) => setAgencyData({...agencyData, email: e.target.value})}
+            onChange={(e) => setAgencyData({ ...agencyData, email: e.target.value })}
             aria-label="Email de contact"
             placeholder="Email de contact"
             className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all"
@@ -465,9 +597,9 @@ export default function AdminPage() {
         </div>
         <div className="space-y-2">
           <label className="text-sm text-brand-gray">Vision</label>
-          <textarea 
+          <textarea
             value={agencyData.vision}
-            onChange={(e) => setAgencyData({...agencyData, vision: e.target.value})}
+            onChange={(e) => setAgencyData({ ...agencyData, vision: e.target.value })}
             rows={3}
             aria-label="Vision de l'agence"
             className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all resize-none"
@@ -475,19 +607,26 @@ export default function AdminPage() {
         </div>
         <div className="space-y-2">
           <label className="text-sm text-brand-gray">Mission</label>
-          <textarea 
+          <textarea
             value={agencyData.mission}
-            onChange={(e) => setAgencyData({...agencyData, mission: e.target.value})}
+            onChange={(e) => setAgencyData({ ...agencyData, mission: e.target.value })}
             rows={3}
             aria-label="Mission de l'agence"
             className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all resize-none"
           />
         </div>
         <div className="flex gap-4">
-          <button type="submit" className="bg-brand-mint text-[#0D1117] px-8 py-3 rounded-xl font-bold hover:scale-105 transition-all">
+          <button
+            type="submit"
+            className="bg-brand-mint text-[#0D1117] px-8 py-3 rounded-xl font-bold hover:scale-105 transition-all"
+          >
             Enregistrer
           </button>
-          <button type="button" onClick={() => setActiveSettingsTab('main')} className="px-8 py-3 rounded-xl border border-[var(--border-color)] text-brand-gray font-bold hover:bg-white/5 transition-all">
+          <button
+            type="button"
+            onClick={() => setActiveSettingsTab('main')}
+            className="px-8 py-3 rounded-xl border border-[var(--border-color)] text-brand-gray font-bold hover:bg-white/5 transition-all"
+          >
             Annuler
           </button>
         </div>
@@ -497,43 +636,54 @@ export default function AdminPage() {
     const renderSecurityForm = () => (
       <form className="space-y-6 max-w-xl" onSubmit={handlePasswordChange}>
         <div className="space-y-2">
-          <label className="text-sm text-brand-gray">{t('dashboard.settings.security.current')}</label>
-          <input 
+          <label className="text-sm text-brand-gray">
+            {t('dashboard.settings.security.current')}
+          </label>
+          <input
             required
-            type="password" 
+            type="password"
             value={passwordForm.current}
-            onChange={(e) => setPasswordForm({...passwordForm, current: e.target.value})}
+            onChange={(e) => setPasswordForm({ ...passwordForm, current: e.target.value })}
             placeholder={t('dashboard.settings.security.current')}
             className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all"
           />
         </div>
         <div className="space-y-2">
           <label className="text-sm text-brand-gray">{t('dashboard.settings.security.new')}</label>
-          <input 
+          <input
             required
-            type="password" 
+            type="password"
             value={passwordForm.new}
-            onChange={(e) => setPasswordForm({...passwordForm, new: e.target.value})}
+            onChange={(e) => setPasswordForm({ ...passwordForm, new: e.target.value })}
             placeholder={t('dashboard.settings.security.new')}
             className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all"
           />
         </div>
         <div className="space-y-2">
-          <label className="text-sm text-brand-gray">{t('dashboard.settings.security.confirm')}</label>
-          <input 
+          <label className="text-sm text-brand-gray">
+            {t('dashboard.settings.security.confirm')}
+          </label>
+          <input
             required
-            type="password" 
+            type="password"
             value={passwordForm.confirm}
-            onChange={(e) => setPasswordForm({...passwordForm, confirm: e.target.value})}
+            onChange={(e) => setPasswordForm({ ...passwordForm, confirm: e.target.value })}
             placeholder={t('dashboard.settings.security.confirm')}
             className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all"
           />
         </div>
         <div className="flex gap-4">
-          <button type="submit" className="bg-brand-mint text-[#0D1117] px-8 py-3 rounded-xl font-bold hover:scale-105 transition-all">
+          <button
+            type="submit"
+            className="bg-brand-mint text-[#0D1117] px-8 py-3 rounded-xl font-bold hover:scale-105 transition-all"
+          >
             {t('dashboard.settings.security.submit')}
           </button>
-          <button type="button" onClick={() => setActiveSettingsTab('main')} className="px-8 py-3 rounded-xl border border-[var(--border-color)] text-brand-gray font-bold hover:bg-white/5 transition-all">
+          <button
+            type="button"
+            onClick={() => setActiveSettingsTab('main')}
+            className="px-8 py-3 rounded-xl border border-[var(--border-color)] text-brand-gray font-bold hover:bg-white/5 transition-all"
+          >
             Annuler
           </button>
         </div>
@@ -544,14 +694,19 @@ export default function AdminPage() {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <h3 className="font-bold text-lg">Membres de l'équipe</h3>
-          <button className="bg-brand-mint text-[#0D1117] px-4 py-2 rounded-lg text-sm font-bold">Ajouter un membre</button>
+          <button className="bg-brand-mint text-[#0D1117] px-4 py-2 rounded-lg text-sm font-bold">
+            Ajouter un membre
+          </button>
         </div>
         <div className="space-y-4">
           {[
             { name: 'Admin Principal', email: 'admin@lucid.agency', role: 'Super Admin' },
             { name: 'Sarah M.', email: 'sarah@lucid.agency', role: 'Manager' },
           ].map((user, i) => (
-            <div key={i} className="flex items-center justify-between p-4 rounded-xl border border-[var(--border-color)] bg-white/5">
+            <div
+              key={i}
+              className="flex items-center justify-between p-4 rounded-xl border border-[var(--border-color)] bg-white/5"
+            >
               <div>
                 <p className="font-bold">{user.name}</p>
                 <p className="text-xs text-brand-gray">{user.email}</p>
@@ -562,7 +717,10 @@ export default function AdminPage() {
             </div>
           ))}
         </div>
-        <button onClick={() => setActiveSettingsTab('main')} className="px-8 py-3 rounded-xl border border-[var(--border-color)] text-brand-gray font-bold hover:bg-white/5 transition-all">
+        <button
+          onClick={() => setActiveSettingsTab('main')}
+          className="px-8 py-3 rounded-xl border border-[var(--border-color)] text-brand-gray font-bold hover:bg-white/5 transition-all"
+        >
           Retour
         </button>
       </div>
@@ -591,7 +749,10 @@ export default function AdminPage() {
             <p>[2026-04-01 12:00:01] System health check: OK</p>
           </div>
         </div>
-        <button onClick={() => setActiveSettingsTab('main')} className="px-8 py-3 rounded-xl border border-[var(--border-color)] text-brand-gray font-bold hover:bg-white/5 transition-all">
+        <button
+          onClick={() => setActiveSettingsTab('main')}
+          className="px-8 py-3 rounded-xl border border-[var(--border-color)] text-brand-gray font-bold hover:bg-white/5 transition-all"
+        >
           Retour
         </button>
       </div>
@@ -606,12 +767,19 @@ export default function AdminPage() {
             { name: 'Google Drive', status: 'Connecté', icon: '📁' },
             { name: 'Stripe', status: 'Connecté', icon: '💳' },
           ].map((app, i) => (
-            <div key={i} className="flex items-center justify-between p-4 rounded-xl border border-[var(--border-color)] bg-white/5">
+            <div
+              key={i}
+              className="flex items-center justify-between p-4 rounded-xl border border-[var(--border-color)] bg-white/5"
+            >
               <div className="flex items-center gap-3">
                 <span className="text-2xl">{app.icon}</span>
                 <div>
                   <p className="font-bold text-sm">{app.name}</p>
-                  <p className={`text-[10px] ${app.status === 'Connecté' ? 'text-brand-mint' : 'text-brand-gray'}`}>{app.status}</p>
+                  <p
+                    className={`text-[10px] ${app.status === 'Connecté' ? 'text-brand-mint' : 'text-brand-gray'}`}
+                  >
+                    {app.status}
+                  </p>
                 </div>
               </div>
               <button className="text-xs font-bold hover:underline">
@@ -620,7 +788,10 @@ export default function AdminPage() {
             </div>
           ))}
         </div>
-        <button onClick={() => setActiveSettingsTab('main')} className="px-8 py-3 rounded-xl border border-[var(--border-color)] text-brand-gray font-bold hover:bg-white/5 transition-all">
+        <button
+          onClick={() => setActiveSettingsTab('main')}
+          className="px-8 py-3 rounded-xl border border-[var(--border-color)] text-brand-gray font-bold hover:bg-white/5 transition-all"
+        >
           Retour
         </button>
       </div>
@@ -630,8 +801,10 @@ export default function AdminPage() {
       <div className="bg-[var(--bg-surface)] rounded-3xl border border-[var(--border-color)] p-8">
         <div className="flex justify-between items-center mb-8">
           <h2 className="text-2xl font-bold">
-            {activeSettingsTab === 'main' ? t('admin.nav.settings') : (
-              <button 
+            {activeSettingsTab === 'main' ? (
+              t('admin.nav.settings')
+            ) : (
+              <button
                 onClick={() => setActiveSettingsTab('main')}
                 className="flex items-center gap-2 hover:text-brand-mint transition-colors"
               >
@@ -674,7 +847,7 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
       <Navbar />
-      
+
       <div className="pt-24 flex min-h-screen relative">
         {/* Sidebar Overlay for Mobile */}
         <AnimatePresence>
@@ -690,14 +863,20 @@ export default function AdminPage() {
         </AnimatePresence>
 
         {/* Sidebar */}
-        <aside className={`
+        <aside
+          className={`
           fixed md:static inset-y-0 left-0 z-50 w-64 border-r border-[var(--border-color)] bg-[var(--bg-primary)] md:bg-transparent
           transform transition-transform duration-300 ease-in-out p-6
           ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
-        `}>
+        `}
+        >
           <div className="flex justify-between items-center mb-8 md:hidden">
             <div className="text-brand-mint font-bold text-xl">LUCID</div>
-            <button onClick={() => setIsSidebarOpen(false)} className="text-brand-gray" title="Fermer">
+            <button
+              onClick={() => setIsSidebarOpen(false)}
+              className="text-brand-gray"
+              title="Fermer"
+            >
               <X size={24} />
             </button>
           </div>
@@ -706,10 +885,13 @@ export default function AdminPage() {
               {sidebarItems.map((item) => (
                 <button
                   key={item.id}
-                  onClick={() => { setActiveTab(item.id); setIsSidebarOpen(false); }}
+                  onClick={() => {
+                    setActiveTab(item.id);
+                    setIsSidebarOpen(false);
+                  }}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                    activeTab === item.id 
-                      ? 'bg-brand-mint text-[#0D1117]' 
+                    activeTab === item.id
+                      ? 'bg-brand-mint text-[#0D1117]'
                       : 'hover:bg-white/5 text-brand-gray'
                   }`}
                 >
@@ -718,7 +900,7 @@ export default function AdminPage() {
                 </button>
               ))}
             </div>
-            <button 
+            <button
               onClick={logout}
               className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-400 hover:bg-red-400/10 transition-all mt-auto"
             >
@@ -732,7 +914,7 @@ export default function AdminPage() {
         <main className="flex-grow p-4 md:p-8 w-full overflow-x-hidden">
           <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 md:mb-12">
             <div className="flex items-center gap-4 w-full sm:w-auto">
-              <button 
+              <button
                 onClick={() => setIsSidebarOpen(true)}
                 className="md:hidden p-2 rounded-lg bg-white/5 border border-[var(--border-color)] text-brand-mint"
                 title="Ouvrir le menu"
@@ -740,12 +922,17 @@ export default function AdminPage() {
                 <Users size={20} />
               </button>
               <div>
-                <h1 className="text-2xl md:text-3xl font-bold mb-1 md:mb-2">{t('admin.welcome')}</h1>
+                <h1 className="text-2xl md:text-3xl font-bold mb-1 md:mb-2">
+                  {t('admin.welcome')}
+                </h1>
                 <p className="text-brand-gray text-sm md:text-base">{t('admin.welcome.sub')}</p>
               </div>
             </div>
             <div className="flex items-center gap-4 ml-auto sm:ml-0">
-              <button className="p-2 rounded-full hover:bg-white/5 text-brand-gray relative" title="Notifications">
+              <button
+                className="p-2 rounded-full hover:bg-white/5 text-brand-gray relative"
+                title="Notifications"
+              >
                 <Bell size={24} />
                 <span className="absolute top-2 right-2 w-2 h-2 bg-brand-mint rounded-full"></span>
               </button>
@@ -793,14 +980,14 @@ export default function AdminPage() {
       <AnimatePresence>
         {selectedTalent && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setSelectedTalent(null)}
               className="absolute inset-0 bg-black/80 backdrop-blur-sm"
             />
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -817,7 +1004,7 @@ export default function AdminPage() {
                       <p className="text-brand-mint font-medium">{selectedTalent.specialty}</p>
                     </div>
                   </div>
-                  <button 
+                  <button
                     onClick={() => setSelectedTalent(null)}
                     className="p-2 rounded-full hover:bg-white/5 text-brand-gray transition-colors"
                     title="Fermer"
@@ -838,7 +1025,9 @@ export default function AdminPage() {
                     </div>
                     <div className="flex items-center gap-3 text-brand-gray">
                       <Globe size={18} className="text-brand-mint" />
-                      <span className="text-sm underline cursor-pointer">{selectedTalent.portfolio}</span>
+                      <span className="text-sm underline cursor-pointer">
+                        {selectedTalent.portfolio}
+                      </span>
                     </div>
                   </div>
                   <div className="space-y-4">
@@ -854,7 +1043,9 @@ export default function AdminPage() {
                 </div>
 
                 <div className="bg-white/5 rounded-2xl p-6 border border-[var(--border-color)] mb-8">
-                  <h4 className="text-xs font-bold uppercase tracking-widest text-brand-gray mb-4">Documents joints</h4>
+                  <h4 className="text-xs font-bold uppercase tracking-widest text-brand-gray mb-4">
+                    Documents joints
+                  </h4>
                   <div className="flex items-center justify-between p-3 bg-[var(--bg-primary)] rounded-xl border border-[var(--border-color)]">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-red-400/10 rounded-lg flex items-center justify-center text-red-400">
@@ -862,7 +1053,10 @@ export default function AdminPage() {
                       </div>
                       <span className="text-sm font-medium">CV_Thomas_K.pdf</span>
                     </div>
-                    <button className="p-2 text-brand-gray hover:text-brand-mint transition-colors" title="Télécharger">
+                    <button
+                      className="p-2 text-brand-gray hover:text-brand-mint transition-colors"
+                      title="Télécharger"
+                    >
                       <Download size={18} />
                     </button>
                   </div>
@@ -870,13 +1064,13 @@ export default function AdminPage() {
 
                 {selectedTalent.status === 'pending' ? (
                   <div className="flex gap-4">
-                    <button 
+                    <button
                       onClick={() => handleUpdateStatus(selectedTalent.id, 'approved')}
                       className="flex-grow bg-green-500 text-white py-4 rounded-xl font-bold hover:bg-green-600 transition-all shadow-lg shadow-green-500/20"
                     >
                       Approuver le talent
                     </button>
-                    <button 
+                    <button
                       onClick={() => handleUpdateStatus(selectedTalent.id, 'rejected')}
                       className="flex-grow bg-red-500 text-white py-4 rounded-xl font-bold hover:bg-red-600 transition-all shadow-lg shadow-red-500/20"
                     >
@@ -884,9 +1078,13 @@ export default function AdminPage() {
                     </button>
                   </div>
                 ) : (
-                  <div className={`p-4 rounded-xl text-center font-bold uppercase tracking-widest ${
-                    selectedTalent.status === 'approved' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'
-                  }`}>
+                  <div
+                    className={`p-4 rounded-xl text-center font-bold uppercase tracking-widest ${
+                      selectedTalent.status === 'approved'
+                        ? 'bg-green-500/10 text-green-400 border border-green-500/20'
+                        : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                    }`}
+                  >
                     Statut actuel : {selectedTalent.status === 'approved' ? 'Approuvé' : 'Refusé'}
                   </div>
                 )}
@@ -899,14 +1097,14 @@ export default function AdminPage() {
       <AnimatePresence>
         {isProjectModalOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsProjectModalOpen(false)}
               className="absolute inset-0 bg-black/80 backdrop-blur-sm"
             />
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -914,74 +1112,89 @@ export default function AdminPage() {
             >
               <div className="flex justify-between items-center mb-8">
                 <h2 className="text-2xl font-bold">Nouveau Projet</h2>
-                <button onClick={() => setIsProjectModalOpen(false)} className="text-brand-gray hover:text-white" title="Fermer">
+                <button
+                  onClick={() => setIsProjectModalOpen(false)}
+                  className="text-brand-gray hover:text-white"
+                  title="Fermer"
+                >
                   <X size={24} />
                 </button>
               </div>
               <form onSubmit={handleCreateProject} className="space-y-4">
                 <div className="space-y-1">
-                  <label className="text-xs text-brand-gray uppercase font-bold">Titre du projet</label>
-                  <input 
+                  <label className="text-xs text-brand-gray uppercase font-bold">
+                    Titre du projet
+                  </label>
+                  <input
                     required
-                    type="text" 
+                    type="text"
                     value={newProject.title}
-                    onChange={(e) => setNewProject({...newProject, title: e.target.value})}
+                    onChange={(e) => setNewProject({ ...newProject, title: e.target.value })}
                     placeholder="Entrez le titre du projet"
                     className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all"
                   />
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs text-brand-gray uppercase font-bold">Client</label>
-                  <input 
+                  <input
                     required
-                    type="text" 
+                    type="text"
                     value={newProject.client}
-                    onChange={(e) => setNewProject({...newProject, client: e.target.value})}
+                    onChange={(e) => setNewProject({ ...newProject, client: e.target.value })}
                     placeholder="Entrez le nom du client"
                     className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all"
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs text-brand-gray uppercase font-bold">Talent assigné</label>
-                  <select 
+                  <label className="text-xs text-brand-gray uppercase font-bold">
+                    Talent assigné
+                  </label>
+                  <select
                     required
                     value={newProject.talent}
-                    onChange={(e) => setNewProject({...newProject, talent: e.target.value})}
+                    onChange={(e) => setNewProject({ ...newProject, talent: e.target.value })}
                     aria-label="Talent assigné"
                     className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all"
                   >
                     <option value="">Sélectionner un talent</option>
-                    {requests.filter(r => r.status === 'approved').map(r => (
-                      <option key={r.id} value={r.name}>{r.name} ({r.specialty})</option>
-                    ))}
+                    {requests
+                      .filter((r) => r.status === 'approved')
+                      .map((r) => (
+                        <option key={r.id} value={r.name}>
+                          {r.name} ({r.specialty})
+                        </option>
+                      ))}
                   </select>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <label className="text-xs text-brand-gray uppercase font-bold">Budget</label>
-                    <input 
+                    <input
                       required
-                      type="text" 
+                      type="text"
                       placeholder="e.g. 1 500 €"
                       value={newProject.budget}
-                      onChange={(e) => setNewProject({...newProject, budget: e.target.value})}
+                      onChange={(e) => setNewProject({ ...newProject, budget: e.target.value })}
                       className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all"
                     />
                   </div>
                   <div className="space-y-1">
                     <label className="text-xs text-brand-gray uppercase font-bold">Deadline</label>
-                    <input 
+                    <input
                       required
-                      type="text" 
+                      type="text"
                       placeholder="JJ/MM/AAAA"
                       value={newProject.deadline}
-                      onChange={(e) => setNewProject({...newProject, deadline: e.target.value})}
+                      onChange={(e) => setNewProject({ ...newProject, deadline: e.target.value })}
                       aria-label="Date limite du projet"
                       className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all"
                     />
                   </div>
                 </div>
-                <button type="submit" className="w-full bg-brand-mint text-[#0D1117] py-4 rounded-xl font-bold hover:scale-[1.02] transition-all mt-4">
+                <button
+                  type="submit"
+                  className="w-full bg-brand-mint text-[#0D1117] py-4 rounded-xl font-bold hover:scale-[1.02] transition-all mt-4"
+                >
                   Créer le projet
                 </button>
               </form>

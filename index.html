@@ -1,14 +1,28 @@
 <!doctype html>
-<html lang="en">
+<html lang="fr">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Lucid-Agency</title>
-     <link rel="icon" type="image/png" href="/logo.png"  />
+
+    <!-- ✅ Protection XSS basique côté navigateur -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block" />
+
+    <!-- ✅ Empêche l'inclusion dans une iframe (clickjacking) -->
+    <meta http-equiv="X-Frame-Options" content="DENY" />
+
+    <!-- ✅ Contrôle les infos envoyées dans le referer -->
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+
+    <!-- ✅ SEO de base -->
+    <meta name="description" content="Lucid Agency — Plateforme de mise en relation entre clients et freelancers créatifs." />
+    <meta name="robots" content="index, follow" />
+
+    <title>Lucid Agency</title>
+    <link rel="icon" type="image/png" href="/logo.png" />
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
-

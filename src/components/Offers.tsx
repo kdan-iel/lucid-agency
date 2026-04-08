@@ -47,7 +47,7 @@ export default function Offers() {
 
       <div className="container mx-auto px-6">
         <div className="max-w-3xl mx-auto text-center mb-20">
-          <motion.h2 
+          <motion.h2
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -55,7 +55,7 @@ export default function Offers() {
           >
             {t('offers.title')}
           </motion.h2>
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -73,8 +73,8 @@ export default function Offers() {
               viewport={{ once: true }}
               transition={{ delay: i * 0.1 }}
               className={`group relative bg-[var(--bg-surface)] p-8 md:p-10 rounded-[2.5rem] shadow-2xl flex flex-col border transition-all duration-500 hover:translate-y-[-8px] ${
-                pack.recommended 
-                  ? 'border-brand-mint/30 ring-1 ring-brand-mint/20' 
+                pack.recommended
+                  ? 'border-brand-mint/30 ring-1 ring-brand-mint/20'
                   : 'border-[var(--border-color)] hover:border-brand-mint/20'
               }`}
             >
@@ -85,9 +85,13 @@ export default function Offers() {
               )}
 
               <div className="mb-10">
-                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-8 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3 ${
-                  pack.recommended ? 'bg-brand-mint/10 text-brand-mint' : 'bg-white/5 text-brand-gray'
-                }`}>
+                <div
+                  className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-8 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3 ${
+                    pack.recommended
+                      ? 'bg-brand-mint/10 text-brand-mint'
+                      : 'bg-white/5 text-brand-gray'
+                  }`}
+                >
                   <pack.icon size={32} strokeWidth={1.5} />
                 </div>
                 <h3 className="text-sm font-black tracking-[0.3em] uppercase text-brand-mint mb-3">
@@ -100,7 +104,7 @@ export default function Offers() {
 
               <div className="flex-grow mb-12">
                 <ul className="space-y-5">
-                  {pack.features.map(feature => (
+                  {pack.features.map((feature) => (
                     <li key={feature} className="flex items-start gap-4 group/item">
                       <div className="mt-1.5 p-0.5 rounded-full bg-brand-mint/10 text-brand-mint transition-colors group-hover/item:bg-brand-mint group-hover/item:text-[#0D1117]">
                         <Check size={14} strokeWidth={3} />
@@ -111,7 +115,7 @@ export default function Offers() {
                     </li>
                   ))}
                 </ul>
-                
+
                 <div className="mt-10 pt-8 border-t border-white/5">
                   <p className="text-xs uppercase tracking-widest text-brand-gray font-bold mb-3 opacity-60">
                     {t('offers.included')}

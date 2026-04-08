@@ -17,12 +17,14 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.contact': 'Contact',
     'nav.cta': 'Démarrer un projet',
     'hero.title1': 'Marketing Digital :',
-    'hero.title2': 'Passez de l\'ombre à la lumière.',
-    'hero.subtitle': 'L\'agence qui combine l\'agilité des meilleurs créatifs freelances à la rigueur d\'une stratégie Data-Driven.',
+    'hero.title2': "Passez de l'ombre à la lumière.",
+    'hero.subtitle':
+      "L'agence qui combine l'agilité des meilleurs créatifs freelances à la rigueur d'une stratégie Data-Driven.",
     'hero.cta.primary': 'Démarrer un projet',
     'hero.cta.secondary': 'Voir nos talents',
     'vision.title': 'Soyez LUCID sur votre stratégie.',
-    'vision.body': 'Le marché est bruyant. Pour vous faire entendre, vous n\'avez pas besoin de crier plus fort — vous avez besoin de voir plus clair. Chez LUCID, nous ne vendons pas du \'joli\', nous vendons du rentable. Nous analysons vos données pour piloter nos experts créatifs.',
+    'vision.body':
+      "Le marché est bruyant. Pour vous faire entendre, vous n'avez pas besoin de crier plus fort — vous avez besoin de voir plus clair. Chez LUCID, nous ne vendons pas du 'joli', nous vendons du rentable. Nous analysons vos données pour piloter nos experts créatifs.",
     'vision.stat1.val': '3x',
     'vision.stat1.label': 'ROI moyen constaté',
     'vision.stat2.val': '48h',
@@ -33,11 +35,11 @@ const translations: Record<Language, Record<string, string>> = {
     'method.step1.title': 'ANALYSE',
     'method.step1.body': 'Nous auditons votre marché et vos chiffres avant de bouger.',
     'method.step2.title': 'CASTING',
-    'method.step2.body': 'Nous sélectionnons dans notre réseau l\'expert parfait pour VOTRE besoin.',
+    'method.step2.body': "Nous sélectionnons dans notre réseau l'expert parfait pour VOTRE besoin.",
     'method.step3.title': 'PILOTAGE',
     'method.step3.body': 'Nous gérons la production de A à Z. Vous recevez un projet clé en main.',
-    'talents.title': 'L\'élite des créatifs. Pilotée par nos experts.',
-    'talents.cta': 'Réserver ce talent via l\'Agence',
+    'talents.title': "L'élite des créatifs. Pilotée par nos experts.",
+    'talents.cta': "Réserver ce talent via l'Agence",
     'talents.filter.all': 'Tous',
     'talents.filter.branding': 'Branding',
     'talents.filter.video': 'Vidéo',
@@ -45,20 +47,23 @@ const translations: Record<Language, Record<string, string>> = {
     'talents.filter.photo': 'Photo',
     'talents.more': 'Voir plus',
     'offers.title': 'Nos Solutions sur Mesure',
-    'offers.included': 'Inclus dans l\'offre',
+    'offers.included': "Inclus dans l'offre",
     'offers.audit.name': 'DIAGNOSTIC',
     'offers.audit.type': 'Audit Stratégique',
-    'offers.audit.features': 'Audit de visibilité · Analyse de la concurrence · Roadmap stratégique',
+    'offers.audit.features':
+      'Audit de visibilité · Analyse de la concurrence · Roadmap stratégique',
     'offers.audit.included': 'Présentation détaillée & Recommandations',
     'offers.audit.cta': 'Réserver mon audit',
     'offers.production.name': 'SOLUTIONS',
     'offers.production.type': 'Production Créative',
-    'offers.production.features': 'Identité visuelle · Développement Web · Contenus Social Media · Publicité (Ads)',
+    'offers.production.features':
+      'Identité visuelle · Développement Web · Contenus Social Media · Publicité (Ads)',
     'offers.production.included': 'Casting experts + Pilotage de projet',
     'offers.production.cta': 'Lancer une production',
     'offers.growth.name': 'PARTENAIRE',
     'offers.growth.type': 'Accompagnement Croissance',
-    'offers.growth.features': 'Pilotage Data-Driven · Création continue · Optimisation du ROI · Support prioritaire',
+    'offers.growth.features':
+      'Pilotage Data-Driven · Création continue · Optimisation du ROI · Support prioritaire',
     'offers.growth.included': 'Accès direct aux experts + Reporting Live',
     'offers.growth.badge': 'Le plus populaire',
     'offers.growth.cta': 'Devenir partenaire',
@@ -81,30 +86,40 @@ const translations: Record<Language, Record<string, string>> = {
     'join.benefit3': 'Accédez à des projets premium sélectionnés.',
     'join.cta': 'Soumettre ma candidature',
     'philosophy.vision.title': 'Notre Vision',
-    'philosophy.vision.subtitle': 'Faire de chaque PME africaine une entreprise qui performe digitalement.',
-    'philosophy.vision.body': 'Nous croyons qu’une petite entreprise bien accompagnée peut rivaliser avec n’importe quel acteur de son marché. Le digital est ce levier. Nous sommes l’architecte qui le construit. En Afrique de l’Ouest, le talent existe, la demande existe, le potentiel est immense. Ce qui manque, c’est une structure capable de relier la bonne stratégie, les bons créatifs et les bons outils — au bon moment, pour le bon budget. LUCID Agency est née pour combler ce vide.',
+    'philosophy.vision.subtitle':
+      'Faire de chaque PME africaine une entreprise qui performe digitalement.',
+    'philosophy.vision.body':
+      'Nous croyons qu’une petite entreprise bien accompagnée peut rivaliser avec n’importe quel acteur de son marché. Le digital est ce levier. Nous sommes l’architecte qui le construit. En Afrique de l’Ouest, le talent existe, la demande existe, le potentiel est immense. Ce qui manque, c’est une structure capable de relier la bonne stratégie, les bons créatifs et les bons outils — au bon moment, pour le bon budget. LUCID Agency est née pour combler ce vide.',
     'philosophy.mission.title': 'Notre Mission',
-    'philosophy.mission.subtitle': 'Transformer votre présence digitale en moteur de croissance réelle.',
-    'philosophy.mission.body1': 'Nous ne vendons pas de la visibilité. Nous construisons des systèmes de communication pilotés par la donnée, exécutés par des talents soigneusement sélectionnés, et mesurés à l’aune d’un seul critère : vos résultats.',
-    'philosophy.mission.body2': 'Pour les PME et startups, nous sommes votre département marketing externalisé — stratégique, agile, et accessible.',
-    'philosophy.mission.body3': 'Pour les freelances créatifs, nous sommes la structure qui valorise votre talent et stabilise vos revenus.',
+    'philosophy.mission.subtitle':
+      'Transformer votre présence digitale en moteur de croissance réelle.',
+    'philosophy.mission.body1':
+      'Nous ne vendons pas de la visibilité. Nous construisons des systèmes de communication pilotés par la donnée, exécutés par des talents soigneusement sélectionnés, et mesurés à l’aune d’un seul critère : vos résultats.',
+    'philosophy.mission.body2':
+      'Pour les PME et startups, nous sommes votre département marketing externalisé — stratégique, agile, et accessible.',
+    'philosophy.mission.body3':
+      'Pour les freelances créatifs, nous sommes la structure qui valorise votre talent et stabilise vos revenus.',
     'philosophy.values.title': 'Nos Valeurs',
     'philosophy.values.subtitle': 'Ce qui nous guide chaque jour.',
     'philosophy.values.1.title': '01 — La donnée avant tout',
-    'philosophy.values.1.body': 'Aucune création sans analyse. Chaque décision est fondée sur des données réelles, pas sur des intuitions.',
+    'philosophy.values.1.body':
+      'Aucune création sans analyse. Chaque décision est fondée sur des données réelles, pas sur des intuitions.',
     'philosophy.values.2.title': '02 — L’excellence des talents',
-    'philosophy.values.2.body': 'Nous sélectionnons uniquement les créatifs qui correspondent précisément au projet. Qualité et pertinence, pas volume.',
+    'philosophy.values.2.body':
+      'Nous sélectionnons uniquement les créatifs qui correspondent précisément au projet. Qualité et pertinence, pas volume.',
     'philosophy.values.3.title': '03 — Des résultats mesurables',
-    'philosophy.values.3.body': 'Likes ou ventes — nous choisissons les ventes. Chaque action est tracée, analysée et optimisée pour votre croissance.',
+    'philosophy.values.3.body':
+      'Likes ou ventes — nous choisissons les ventes. Chaque action est tracée, analysée et optimisée pour votre croissance.',
     'philosophy.values.4.title': '04 — La transparence totale',
-    'philosophy.values.4.body': 'Vous savez ce qui est fait, pourquoi c’est fait, et ce que ça produit. Aucune boîte noire, aucune surprise.',
+    'philosophy.values.4.body':
+      'Vous savez ce qui est fait, pourquoi c’est fait, et ce que ça produit. Aucune boîte noire, aucune surprise.',
     'dashboard.nav.overview': 'Tableau de bord',
     'dashboard.nav.missions': 'Missions',
     'dashboard.nav.messages': 'Messages',
     'dashboard.nav.settings': 'Paramètres',
     'dashboard.nav.logout': 'Déconnexion',
     'dashboard.welcome': 'Bonjour, {{name}} 👋',
-    'dashboard.welcome.sub': 'Voici ce qui se passe sur votre espace aujourd\'hui.',
+    'dashboard.welcome.sub': "Voici ce qui se passe sur votre espace aujourd'hui.",
     'dashboard.stats.activeMissions': 'Missions en cours',
     'dashboard.stats.missions': 'Missions disponibles',
     'dashboard.stats.applications': 'Candidatures',
@@ -131,7 +146,7 @@ const translations: Record<Language, Record<string, string>> = {
     'admin.projects.status.onhold': 'En pause',
     'dashboard.missions.title': 'Missions recommandées',
     'dashboard.missions.search': 'Rechercher une mission...',
-    'dashboard.missions.view': 'Voir l\'offre',
+    'dashboard.missions.view': "Voir l'offre",
     'dashboard.messages.title': 'Vos conversations',
     'dashboard.messages.empty': 'Aucun message pour le moment.',
     'dashboard.settings.title': 'Paramètres du compte',
@@ -165,8 +180,8 @@ const translations: Record<Language, Record<string, string>> = {
     'login.placeholder.password': '••••••••',
     'login.button': 'Se connecter',
     'login.error': 'Identifiants incorrects. Veuillez réessayer.',
-    'login.back': 'Retour à l\'accueil',
-    'common.clickToReveal': 'Cliquez pour découvrir...'
+    'login.back': "Retour à l'accueil",
+    'common.clickToReveal': 'Cliquez pour découvrir...',
   },
   EN: {
     'nav.method': 'Method',
@@ -177,11 +192,13 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.cta': 'Start a project',
     'hero.title1': 'Digital Marketing:',
     'hero.title2': 'Step out of the shadows.',
-    'hero.subtitle': 'The agency that combines the agility of top freelance creatives with the rigor of a Data-Driven strategy.',
+    'hero.subtitle':
+      'The agency that combines the agility of top freelance creatives with the rigor of a Data-Driven strategy.',
     'hero.cta.primary': 'Start a project',
     'hero.cta.secondary': 'Meet our talents',
     'vision.title': 'Be LUCID about your strategy.',
-    'vision.body': 'The market is noisy. To be heard, you don\'t need to shout louder — you need to see clearer. At LUCID, we don\'t sell \'pretty\', we sell profitable. We analyze your data to drive our creative experts.',
+    'vision.body':
+      "The market is noisy. To be heard, you don't need to shout louder — you need to see clearer. At LUCID, we don't sell 'pretty', we sell profitable. We analyze your data to drive our creative experts.",
     'vision.stat1.val': '3x',
     'vision.stat1.label': 'Average measured ROI',
     'vision.stat2.val': '48h',
@@ -212,18 +229,20 @@ const translations: Record<Language, Record<string, string>> = {
     'offers.audit.cta': 'Book my audit',
     'offers.production.name': 'SOLUTIONS',
     'offers.production.type': 'Creative Production',
-    'offers.production.features': 'Visual identity · Web development · Social Media content · Advertising (Ads)',
+    'offers.production.features':
+      'Visual identity · Web development · Social Media content · Advertising (Ads)',
     'offers.production.included': 'Expert casting + Project management',
     'offers.production.cta': 'Start a production',
     'offers.growth.name': 'PARTNER',
     'offers.growth.type': 'Growth Partnership',
-    'offers.growth.features': 'Data-Driven steering · Continuous creation · ROI optimization · Priority support',
+    'offers.growth.features':
+      'Data-Driven steering · Continuous creation · ROI optimization · Priority support',
     'offers.growth.included': 'Direct expert access + Live reporting',
     'offers.growth.badge': 'Most popular',
     'offers.growth.cta': 'Become a partner',
     'results.title': 'Measurable results.',
-    'results.subtitle': 'We don\'t choose likes, we choose sales.',
-    'contact.title': 'Let\'s start your project.',
+    'results.subtitle': "We don't choose likes, we choose sales.",
+    'contact.title': "Let's start your project.",
     'contact.reassurance': 'Response within 24h — First audit included free.',
     'contact.name': 'Full name',
     'contact.company': 'Company',
@@ -241,22 +260,30 @@ const translations: Record<Language, Record<string, string>> = {
     'join.cta': 'Submit my application',
     'philosophy.vision.title': 'Our Vision',
     'philosophy.vision.subtitle': 'To make every African SME a digitally performing business.',
-    'philosophy.vision.body': 'We believe that a well-supported small business can compete with any player in its market. Digital is that lever. We are the architect who builds it. In West Africa, talent exists, demand exists, the potential is immense. What is missing is a structure capable of connecting the right strategy, the right creatives, and the right tools — at the right time, for the right budget. LUCID Agency was born to fill this void.',
+    'philosophy.vision.body':
+      'We believe that a well-supported small business can compete with any player in its market. Digital is that lever. We are the architect who builds it. In West Africa, talent exists, demand exists, the potential is immense. What is missing is a structure capable of connecting the right strategy, the right creatives, and the right tools — at the right time, for the right budget. LUCID Agency was born to fill this void.',
     'philosophy.mission.title': 'Our Mission',
     'philosophy.mission.subtitle': 'To transform your digital presence into a real growth engine.',
-    'philosophy.mission.body1': "We don't sell visibility. We build data-driven communication systems, executed by carefully selected talents, and measured by a single criterion: your results.",
-    'philosophy.mission.body2': 'For SMEs and startups, we are your outsourced marketing department — strategic, agile, and accessible.',
-    'philosophy.mission.body3': 'For creative freelancers, we are the structure that values your talent and stabilizes your income.',
+    'philosophy.mission.body1':
+      "We don't sell visibility. We build data-driven communication systems, executed by carefully selected talents, and measured by a single criterion: your results.",
+    'philosophy.mission.body2':
+      'For SMEs and startups, we are your outsourced marketing department — strategic, agile, and accessible.',
+    'philosophy.mission.body3':
+      'For creative freelancers, we are the structure that values your talent and stabilizes your income.',
     'philosophy.values.title': 'Our Values',
     'philosophy.values.subtitle': 'What guides us every day.',
     'philosophy.values.1.title': '01 — Data First',
-    'philosophy.values.1.body': 'No creation without analysis. Every decision is based on real data, not intuitions.',
+    'philosophy.values.1.body':
+      'No creation without analysis. Every decision is based on real data, not intuitions.',
     'philosophy.values.2.title': '02 — Talent Excellence',
-    'philosophy.values.2.body': 'We only select creatives who precisely match the project. Quality and relevance, not volume.',
+    'philosophy.values.2.body':
+      'We only select creatives who precisely match the project. Quality and relevance, not volume.',
     'philosophy.values.3.title': '03 — Measurable Results',
-    'philosophy.values.3.body': 'Likes or sales — we choose sales. Every action is tracked, analyzed, and optimized for your growth.',
+    'philosophy.values.3.body':
+      'Likes or sales — we choose sales. Every action is tracked, analyzed, and optimized for your growth.',
     'philosophy.values.4.title': '04 — Total Transparency',
-    'philosophy.values.4.body': "You know what is being done, why it's being done, and what it produces. No black box, no surprises.",
+    'philosophy.values.4.body':
+      "You know what is being done, why it's being done, and what it produces. No black box, no surprises.",
     'dashboard.nav.overview': 'Dashboard',
     'dashboard.nav.missions': 'Missions',
     'dashboard.nav.messages': 'Messages',
@@ -325,8 +352,8 @@ const translations: Record<Language, Record<string, string>> = {
     'login.button': 'Log In',
     'login.error': 'Incorrect credentials. Please try again.',
     'login.back': 'Back to home',
-    'common.clickToReveal': 'Click to reveal...'
-  }
+    'common.clickToReveal': 'Click to reveal...',
+  },
 };
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
@@ -352,9 +379,7 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <LanguageContext.Provider value={{ lang, setLang, t }}>
-      {children}
-    </LanguageContext.Provider>
+    <LanguageContext.Provider value={{ lang, setLang, t }}>{children}</LanguageContext.Provider>
   );
 };
 

@@ -23,7 +23,7 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
   return (
     <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
       <Navbar />
-      
+
       <div className="pt-32 pb-24 flex items-center justify-center px-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -37,9 +37,7 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
             <h1 className="text-3xl font-bold mb-2">
               {role === 'admin' ? t('login.title.admin') : t('login.title.freelancer')}
             </h1>
-            <p className="text-brand-gray">
-              {t('login.subtitle')}
-            </p>
+            <p className="text-brand-gray">{t('login.subtitle')}</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -48,7 +46,10 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
                 {t('login.label.username')}
               </label>
               <div className="relative">
-                <User className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-gray" size={18} />
+                <User
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-gray"
+                  size={18}
+                />
                 <input
                   type="text"
                   value={username}
@@ -65,7 +66,10 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
                 {t('login.label.password')}
               </label>
               <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-gray" size={18} />
+                <Lock
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-gray"
+                  size={18}
+                />
                 <input
                   type="password"
                   value={password}
@@ -77,9 +81,7 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
               </div>
             </div>
 
-            {error && (
-              <p className="text-red-400 text-sm font-medium text-center">{error}</p>
-            )}
+            {error && <p className="text-red-400 text-sm font-medium text-center">{error}</p>}
 
             <button
               type="submit"

@@ -43,9 +43,7 @@ export default function Results() {
           <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-6 text-[var(--text-primary)]">
             {t('results.title')}
           </h2>
-          <p className="text-brand-gray text-lg max-w-2xl mx-auto">
-            {t('results.subtitle')}
-          </p>
+          <p className="text-brand-gray text-lg max-w-2xl mx-auto">{t('results.subtitle')}</p>
         </div>
 
         {/* Metrics */}
@@ -61,7 +59,9 @@ export default function Results() {
             >
               <div className="flex justify-center mb-6">{metric.icon}</div>
               <div className="text-5xl font-bold text-brand-mint mb-2">{metric.value}</div>
-              <div className="text-brand-gray font-medium uppercase tracking-wider text-sm">{metric.label}</div>
+              <div className="text-brand-gray font-medium uppercase tracking-wider text-sm">
+                {metric.label}
+              </div>
             </motion.div>
           ))}
         </div>
@@ -76,7 +76,9 @@ export default function Results() {
               viewport={{ once: true }}
               className="bg-[var(--bg-surface)] p-10 rounded-3xl border border-[var(--border-color)] relative"
             >
-              <div className="text-brand-mint text-6xl font-serif absolute top-6 left-6 opacity-20">"</div>
+              <div className="text-brand-mint text-6xl font-serif absolute top-6 left-6 opacity-20">
+                "
+              </div>
               <p className="text-xl text-[var(--text-primary)] italic mb-8 relative z-10">
                 {testimonial.quote}
               </p>
