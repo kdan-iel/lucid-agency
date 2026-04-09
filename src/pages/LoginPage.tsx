@@ -43,7 +43,7 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
       } else if (msg.includes('Email not confirmed')) {
         setError('Veuillez confirmer votre email avant de vous connecter.');
       } else {
-        setError('Une erreur est survenue. Veuillez réessayer.');
+        setError('Une erreur est survenue. Veuillez reessayer.');
       }
     } finally {
       setIsLoading(false);
