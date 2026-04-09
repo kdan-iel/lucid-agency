@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { Lock, Mail, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import Navbar from '../components/Navbar';
+import { checkRateLimit, getRateLimitWait, validatePassword } from '../utils/security';
 
 export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
   const { login, resetPassword, loading, clearError } = useAuth();
@@ -20,6 +21,14 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    // ✅ Rate limiting — max 5 tentatives de login par minute
+    if (!checkRateLimit('login_attempt', 5, 60_000)) {
+      const wait = getRateLimitWait('login_attempt', 60_000);
+      setError(\`Trop de tentatives. Réessayez dans \${wait} secondes.\`);
+      return;
+    }
+
     setIsLoading(true);
     clearError();
 

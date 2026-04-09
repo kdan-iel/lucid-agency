@@ -358,24 +358,43 @@ const translations: Record<Language, Record<string, string>> = {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
+// ✅ Validation stricte — seules FR et EN sont acceptées
+function isSafeLang(value: string | null): value is Language {
+  return value === 'FR' || value === 'EN';
+}
+
 export const LanguageProvider = ({ children }: { children: ReactNode }) => {
   const [lang, setLangState] = useState<Language>('FR');
 
   useEffect(() => {
-    const saved = localStorage.getItem('lucid_lang') as Language;
-    if (saved && (saved === 'FR' || saved === 'EN')) {
-      setLangState(saved);
+    try {
+      // ✅ localStorage OK pour préférence de langue (donnée non sensible)
+      // ✅ Valeur strictement validée avant usage — évite toute pollution
+      const saved = localStorage.getItem('lucid_lang');
+      if (isSafeLang(saved)) {
+        setLangState(saved);
+        document.documentElement.lang = saved.toLowerCase();
+      }
+    } catch {
+      // Si localStorage bloqué, on reste sur FR par défaut
     }
   }, []);
 
   const setLang = (newLang: Language) => {
+    // ✅ Double vérification au runtime
+    if (!isSafeLang(newLang)) return;
     setLangState(newLang);
-    localStorage.setItem('lucid_lang', newLang);
+    try {
+      localStorage.setItem('lucid_lang', newLang);
+    } catch {
+      // Silencieux
+    }
     document.documentElement.lang = newLang.toLowerCase();
   };
 
-  const t = (key: string) => {
-    return translations[lang][key] || key;
+  // ✅ Fonction t() — retourne la clé brute si traduction manquante (jamais undefined)
+  const t = (key: string): string => {
+    return translations[lang][key] ?? key;
   };
 
   return (

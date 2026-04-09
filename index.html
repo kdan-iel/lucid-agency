@@ -4,21 +4,50 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <!-- ✅ Protection XSS basique côté navigateur -->
-    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
-    <meta http-equiv="X-XSS-Protection" content="1; mode=block" />
+    <!-- ✅ CSP stricte — bloque les injections XSS et scripts externes non autorisés -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="
+        default-src 'self';
+        script-src 'self';
+        style-src 'self' 'unsafe-inline';
+        img-src 'self' https: data: blob:;
+        font-src 'self' data:;
+        connect-src 'self' https://*.supabase.co https://*.supabase.in wss://*.supabase.co;
+        frame-src 'none';
+        object-src 'none';
+        base-uri 'self';
+        form-action 'self';
+        upgrade-insecure-requests;
+      "
+    />
 
-    <!-- ✅ Empêche l'inclusion dans une iframe (clickjacking) -->
+    <!-- ✅ Empêche le MIME sniffing -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+
+    <!-- ✅ Bloque le clickjacking via iframe -->
     <meta http-equiv="X-Frame-Options" content="DENY" />
 
-    <!-- ✅ Contrôle les infos envoyées dans le referer -->
+    <!-- ✅ XSS auditor (anciens navigateurs) -->
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block" />
+
+    <!-- ✅ Contrôle referer — ne fuite pas l'URL complète -->
     <meta name="referrer" content="strict-origin-when-cross-origin" />
 
-    <!-- ✅ SEO de base -->
-    <meta name="description" content="Lucid Agency — Plateforme de mise en relation entre clients et freelancers créatifs." />
+    <!-- ✅ Désactive détection de numéro de téléphone sur iOS (privacy) -->
+    <meta name="format-detection" content="telephone=no" />
+
+    <!-- SEO -->
+    <meta name="description" content="LUCID Agency — Plateforme de mise en relation entre clients et freelancers créatifs en Afrique de l'Ouest." />
     <meta name="robots" content="index, follow" />
 
-    <title>Lucid Agency</title>
+    <!-- Open Graph -->
+    <meta property="og:title" content="LUCID Agency" />
+    <meta property="og:description" content="Marketing Digital : Passez de l'ombre à la lumière." />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="/logo.png" />
+
+    <title>LUCID Agency</title>
     <link rel="icon" type="image/png" href="/logo.png" />
   </head>
   <body>

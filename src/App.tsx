@@ -20,6 +20,7 @@ import AdminPage from './pages/AdminPage';
 import LoginPage from './pages/LoginPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import NotFoundPage from './pages/NotFoundPage';
+import { useSessionTimeout } from './hooks/useSessionTimeout';
 
 function LandingPage() {
   return (
@@ -43,7 +44,10 @@ const VALID_PATHS = ['/', '/join', '/dashboard', '/admin', '/login', '/reset-pas
 
 function AppContent() {
   const [path, setPath] = useState(window.location.pathname);
-  const { loading } = useAuth();
+  const { loading, session } = useAuth();
+
+  // ✅ Déconnexion automatique après 30 min d'inactivité
+  useSessionTimeout(!!session);
 
   useEffect(() => {
     const handleLocationChange = () => setPath(window.location.pathname);

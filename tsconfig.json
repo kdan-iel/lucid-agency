@@ -5,19 +5,20 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "jsx": "react-jsx",
 
-    // ✅ Mode strict activé
+    // ✅ Mode strict complet
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noImplicitReturns": true,
     "noImplicitAny": true,
     "noFallthroughCasesInSwitch": true,
+    "exactOptionalPropertyTypes": true,
 
-    // ✅ Plus de JS non typé
+    // ✅ Pas de JS non typé
     "allowJs": false,
     "skipLibCheck": false,
 
-    // ✅ Résolution des modules
+    // ✅ Résolution modules
     "moduleResolution": "bundler",
     "isolatedModules": true,
     "moduleDetection": "force",
@@ -26,14 +27,15 @@
     "esModuleInterop": true,
     "resolveJsonModule": true,
 
-    // ✅ Alias de chemins
+    // ✅ Alias
     "paths": {
       "@/*": ["./*"],
       "@/components/*": ["./src/components/*"],
       "@/pages/*": ["./src/pages/*"],
       "@/context/*": ["./src/context/*"],
       "@/schemas/*": ["./src/schemas/*"],
-      "@/utils/*": ["./src/utils/*"]
+      "@/utils/*": ["./src/utils/*"],
+      "@/hooks/*": ["./src/hooks/*"]
     }
   },
   "include": ["src"],

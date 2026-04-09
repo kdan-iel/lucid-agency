@@ -2,6 +2,7 @@ import { motion } from 'motion/react';
 import { useLanguage } from '../context/LanguageContext';
 import { useState, FormEvent } from 'react';
 import Navbar from '../components/Navbar';
+import { checkRateLimit, getRateLimitWait } from '../utils/security';
 import Footer from '../components/Footer';
 import { z } from 'zod';
 import { joinFormSchema, JoinFormInput } from '../schemas';
@@ -43,6 +44,13 @@ export default function JoinPage() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setServerError(null);
+
+    // ✅ Rate limiting — max 3 inscriptions par 10 minutes
+    if (!checkRateLimit('join_submit', 3, 600_000)) {
+      const wait = getRateLimitWait('join_submit', 600_000);
+      setServerError('Trop de tentatives. Réessayez dans ' + Math.ceil(wait / 60) + ' minutes.');
+      return;
+    }
 
     // ✅ Validation Zod
     const result = joinFormSchema.safeParse(form);

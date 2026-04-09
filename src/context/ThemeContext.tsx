@@ -9,28 +9,44 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+// ✅ Validation stricte de la valeur lue — évite toute injection via localStorage
+function isSafeTheme(value: string | null): value is Theme {
+  return value === 'dark' || value === 'light';
+}
+
 export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   const [theme, setThemeState] = useState<Theme>('dark');
 
   useEffect(() => {
-    const saved = localStorage.getItem('lucid_theme') as Theme;
-    if (saved && (saved === 'dark' || saved === 'light')) {
-      setThemeState(saved);
-      document.documentElement.classList.toggle('light', saved === 'light');
-    } else {
-      // Default to dark as per initial design
-      document.documentElement.classList.add('dark');
+    try {
+      // ✅ localStorage OK pour les préférences UI non sensibles
+      // ✅ Valeur strictement validée avant usage
+      const saved = localStorage.getItem('lucid_theme');
+      const safeTheme = isSafeTheme(saved) ? saved : 'dark';
+      setThemeState(safeTheme);
+      document.documentElement.classList.toggle('light', safeTheme === 'light');
+    } catch {
+      // Si localStorage est bloqué (mode privé strict), on reste sur dark
+      setThemeState('dark');
     }
   }, []);
 
   const toggleTheme = () => {
-    const newTheme = theme === 'dark' ? 'light' : 'dark';
+    const newTheme: Theme = theme === 'dark' ? 'light' : 'dark';
     setThemeState(newTheme);
-    localStorage.setItem('lucid_theme', newTheme);
+    try {
+      localStorage.setItem('lucid_theme', newTheme);
+    } catch {
+      // Silencieux si storage indisponible
+    }
     document.documentElement.classList.toggle('light', newTheme === 'light');
   };
 
-  return <ThemeContext.Provider value={{ theme, toggleTheme }}>{children}</ThemeContext.Provider>;
+  return (
+    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+      {children}
+    </ThemeContext.Provider>
+  );
 };
 
 export const useTheme = () => {
