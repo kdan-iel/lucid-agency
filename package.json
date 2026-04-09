@@ -13,7 +13,7 @@
     "audit": "npm audit --audit-level=moderate"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.101.1",
+    "@supabase/supabase-js": "^2.39.7",
     "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-react": "^5.0.4",
     "lucide-react": "^0.546.0",
@@ -34,6 +34,7 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "prettier": "^3.8.1",
     "tailwindcss": "^4.1.14",
+    "terser": "^5.46.1",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
   }

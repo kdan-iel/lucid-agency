@@ -68,7 +68,7 @@ export default function ContactForm() {
     const result = contactFormSchema.safeParse(form);
     if (!result.success) {
       const fieldErrors: Partial<Record<keyof ContactFormInput, string>> = {};
-      result.error.errors.forEach((err) => {
+      result.error.issues.forEach((err) => {
         const field = err.path[0] as keyof ContactFormInput;
         fieldErrors[field] = err.message;
       });
