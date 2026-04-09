@@ -25,7 +25,7 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
     // ✅ Rate limiting — max 5 tentatives de login par minute
     if (!checkRateLimit('login_attempt', 5, 60_000)) {
       const wait = getRateLimitWait('login_attempt', 60_000);
-      setError(`Trop de tentatives. Réessayez dans ${wait} secondes.`);
+      setError(`Trop de tentatives. Reessayez dans ${wait} secondes.`);
       return;
     }
 
@@ -58,7 +58,7 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
       await resetPassword(resetEmail);
       setResetSent(true);
     } catch {
-      setError('Impossible d\'envoyer le lien. Vérifiez l\'email.');
+      setError("Impossible d'envoyer le lien. Verifiez l'email.");
     } finally {
       setIsLoading(false);
     }
