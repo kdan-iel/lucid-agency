@@ -1,8 +1,11 @@
 import { LanguageProvider } from './context/LanguageContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ToastProvider } from './components/Toast';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import BackToTop from './components/BackToTop';
 import { useEffect, useState } from 'react';
+import { useSessionTimeout } from './hooks/useSessionTimeout';
 
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
@@ -20,7 +23,8 @@ import AdminPage from './pages/AdminPage';
 import LoginPage from './pages/LoginPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import NotFoundPage from './pages/NotFoundPage';
-import { useSessionTimeout } from './hooks/useSessionTimeout';
+import PrivacyPage from './pages/PrivacyPage';
+import LegalPage from './pages/LegalPage';
 
 function LandingPage() {
   return (
@@ -36,11 +40,12 @@ function LandingPage() {
         <ContactForm />
       </main>
       <Footer />
+      <BackToTop />
     </div>
   );
 }
 
-const VALID_PATHS = ['/', '/join', '/dashboard', '/admin', '/login', '/reset-password'];
+const VALID_PATHS = ['/', '/join', '/dashboard', '/admin', '/login', '/reset-password', '/privacy', '/legal'];
 
 function AppContent() {
   const [path, setPath] = useState(window.location.pathname);
@@ -89,39 +94,34 @@ function AppContent() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[var(--bg-primary)]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-mint" />
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-mint" />
+          <p className="text-brand-gray text-sm">Chargement...</p>
+        </div>
       </div>
     );
   }
 
   const renderContent = () => {
     switch (path) {
-      case '/join':
-        return <JoinPage />;
-
+      case '/':          return <LandingPage />;
+      case '/join':      return <JoinPage />;
+      case '/login':     return <LoginPage role="freelancer" />;
+      case '/reset-password': return <ResetPasswordPage />;
+      case '/privacy':   return <PrivacyPage />;
+      case '/legal':     return <LegalPage />;
       case '/dashboard':
         return (
           <ProtectedRoute requiredRole="freelancer">
             <DashboardPage />
           </ProtectedRoute>
         );
-
       case '/admin':
         return (
           <ProtectedRoute requiredRole="admin">
             <AdminPage />
           </ProtectedRoute>
         );
-
-      case '/login':
-        return <LoginPage role="freelancer" />;
-
-      case '/reset-password':
-        return <ResetPasswordPage />;
-
-      case '/':
-        return <LandingPage />;
-
       default:
         return <NotFoundPage />;
     }
@@ -130,7 +130,9 @@ function AppContent() {
   return (
     <ThemeProvider>
       <LanguageProvider>
-        {renderContent()}
+        <ToastProvider>
+          {renderContent()}
+        </ToastProvider>
       </LanguageProvider>
     </ThemeProvider>
   );
