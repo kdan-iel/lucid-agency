@@ -3,6 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LUCID Agency</title>
+    <link rel="icon" type="image/png" href="/logo.png" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:..." rel="stylesheet">
 
     <!-- ✅ CSP stricte — bloque les injections XSS et scripts externes non autorisés -->
     <meta http-equiv="Content-Security-Policy"
@@ -14,7 +22,7 @@ font-src 'self' https://fonts.gstatic.com data:;
 img-src 'self' data: https:;
 connect-src 'self' ws: wss: https:;
 ">
-    />
+    
 
     <!-- ✅ Empêche le MIME sniffing -->
     <meta http-equiv="X-Content-Type-Options" content="nosniff" />
@@ -41,13 +49,5 @@ connect-src 'self' ws: wss: https:;
     <meta property="og:type" content="website" />
     <meta property="og:image" content="/logo.png" />
 
-    <title>LUCID Agency</title>
-    <link rel="icon" type="image/png" href="/logo.png" />
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
-
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:..." rel="stylesheet">
+    
 </html>
