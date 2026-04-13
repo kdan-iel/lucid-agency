@@ -1,0 +1,270 @@
+# ============================================================
+# PIPELINE 1 : CI — Qualité & Sécurité
+# Déclenché sur : chaque push et pull request
+# ============================================================
+
+name: CI — Quality & Security
+
+on:
+  push:
+    branches: [main, develop, 'feature/**', 'fix/**']
+  pull_request:
+    branches: [main, develop]
+
+# ✅ Empêche plusieurs runs simultanés sur la même branche
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+  # Variables Supabase fictives pour les builds CI (pas de vraies clés ici)
+  VITE_SUPABASE_URL: https://placeholder.supabase.co
+  VITE_SUPABASE_ANON_KEY: placeholder_anon_key_for_ci_only
+
+jobs:
+  # ────────────────────────────────────────────────────────
+  # JOB 1 : TypeScript — Vérification des types
+  # ────────────────────────────────────────────────────────
+  typecheck:
+    name: 🔷 TypeScript Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run TypeScript check
+        run: npm run type-check
+
+  # ────────────────────────────────────────────────────────
+  # JOB 2 : Lint — Qualité du code
+  # ────────────────────────────────────────────────────────
+  lint:
+    name: 🔍 ESLint + Prettier
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npx eslint src --ext .ts,.tsx --max-warnings 0
+
+      - name: Check Prettier formatting
+        run: npx prettier --check src
+
+  # ────────────────────────────────────────────────────────
+  # JOB 3 : Tests unitaires & composants
+  # ────────────────────────────────────────────────────────
+  test:
+    name: 🧪 Unit & Component Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests with coverage
+        run: npm run test:coverage
+        env:
+          VITE_SUPABASE_URL: ${{ env.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ env.VITE_SUPABASE_ANON_KEY }}
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 7
+
+      # ✅ Échoue si coverage < 70%
+      - name: Check coverage thresholds
+        run: npm run test:coverage -- --reporter=verbose
+
+  # ────────────────────────────────────────────────────────
+  # JOB 4 : Audit sécurité des dépendances npm
+  # ────────────────────────────────────────────────────────
+  security-audit:
+    name: 🔐 Dependency Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # ✅ Échoue si vulnérabilité critique ou haute détectée
+      - name: Run npm audit
+        run: npm audit --audit-level=high
+
+      # ✅ Scan avec Snyk (optionnel — nécessite SNYK_TOKEN dans secrets)
+      # - name: Snyk security scan
+      #   uses: snyk/actions/node@master
+      #   env:
+      #     SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      #   with:
+      #     args: --severity-threshold=high
+
+  # ────────────────────────────────────────────────────────
+  # JOB 5 : Scan de secrets — vérifie qu'aucune clé n'est committée
+  # ────────────────────────────────────────────────────────
+  secrets-scan:
+    name: 🕵️ Secret Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Historique complet pour scanner tous les commits
+
+      # ✅ Trufflehog — détecte les secrets dans le code et l'historique git
+      - name: TruffleHog secret scan
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --only-verified
+
+      # ✅ Vérification manuelle des patterns dangereux
+      - name: Check for hardcoded secrets patterns
+        run: |
+          echo "🔍 Scanning for hardcoded secrets..."
+          
+          # Liste des patterns à détecter
+          PATTERNS=(
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+"
+            "service_role"
+            "SUPABASE_SERVICE_ROLE"
+            "sk-[a-zA-Z0-9]{48}"
+            "AIza[0-9A-Za-z\-_]{35}"
+            "password\s*=\s*['\"][^'\"]{8,}"
+          )
+          
+          FOUND=0
+          for pattern in "${PATTERNS[@]}"; do
+            if grep -rE "$pattern" src/ --include="*.ts" --include="*.tsx" --include="*.js" 2>/dev/null; then
+              echo "⚠️ Potential secret found matching pattern: $pattern"
+              FOUND=1
+            fi
+          done
+          
+          if [ $FOUND -eq 1 ]; then
+            echo "❌ Potential secrets detected! Review the output above."
+            exit 1
+          fi
+          
+          echo "✅ No hardcoded secrets detected"
+
+  # ────────────────────────────────────────────────────────
+  # JOB 6 : Build de vérification
+  # ────────────────────────────────────────────────────────
+  build:
+    name: 🏗️ Production Build
+    runs-on: ubuntu-latest
+    needs: [typecheck, lint, test]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build for production
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ env.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ env.VITE_SUPABASE_ANON_KEY }}
+
+      # ✅ Vérifier que le build produit les fichiers attendus
+      - name: Verify build output
+        run: |
+          echo "📦 Checking build output..."
+          ls -la dist/
+          test -f dist/index.html || (echo "❌ index.html missing" && exit 1)
+          test -d dist/assets || (echo "❌ assets/ missing" && exit 1)
+          
+          # Vérifier que les source maps ne sont pas exposées en prod
+          SOURCE_MAPS=$(find dist/ -name "*.map" 2>/dev/null | wc -l)
+          if [ "$SOURCE_MAPS" -gt 0 ]; then
+            echo "⚠️ Warning: $SOURCE_MAPS source map(s) found in production build"
+          else
+            echo "✅ No source maps in production build"
+          fi
+          
+          echo "✅ Build verification passed"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-build
+          path: dist/
+          retention-days: 3
+
+  # ────────────────────────────────────────────────────────
+  # JOB 7 : Résumé final
+  # ────────────────────────────────────────────────────────
+  ci-summary:
+    name: ✅ CI Summary
+    runs-on: ubuntu-latest
+    needs: [typecheck, lint, test, security-audit, secrets-scan, build]
+    if: always()
+    steps:
+      - name: Check all jobs passed
+        run: |
+          echo "typecheck:      ${{ needs.typecheck.result }}"
+          echo "lint:           ${{ needs.lint.result }}"
+          echo "test:           ${{ needs.test.result }}"
+          echo "security-audit: ${{ needs.security-audit.result }}"
+          echo "secrets-scan:   ${{ needs.secrets-scan.result }}"
+          echo "build:          ${{ needs.build.result }}"
+          
+          if [[ "${{ needs.typecheck.result }}" != "success" ]] || \
+             [[ "${{ needs.lint.result }}" != "success" ]] || \
+             [[ "${{ needs.test.result }}" != "success" ]] || \
+             [[ "${{ needs.security-audit.result }}" != "success" ]] || \
+             [[ "${{ needs.secrets-scan.result }}" != "success" ]] || \
+             [[ "${{ needs.build.result }}" != "success" ]]; then
+            echo "❌ CI FAILED — One or more jobs failed"
+            exit 1
+          fi
+          echo "✅ All CI checks passed — Ready for deployment"

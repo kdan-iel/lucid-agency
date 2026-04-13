@@ -1,0 +1,128 @@
+# ============================================================
+# PIPELINE 4 : PR CHECK — Vérifications sur les Pull Requests
+# Déclenché sur : ouverture/mise à jour d'une PR
+# ============================================================
+
+name: PR Quality Check
+
+on:
+  pull_request:
+    branches: [main, develop]
+    types: [opened, synchronize, reopened]
+
+jobs:
+  # ────────────────────────────────────────────────────────
+  # JOB 1 : Vérifier la taille de la PR
+  # ────────────────────────────────────────────────────────
+  pr-size:
+    name: 📏 PR Size Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check PR size
+        run: |
+          CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | wc -l)
+          LINES=$(git diff origin/${{ github.base_ref }}...HEAD --stat | tail -1)
+          
+          echo "Files changed: $CHANGED"
+          echo "Stats: $LINES"
+          
+          if [ $CHANGED -gt 50 ]; then
+            echo "⚠️ Large PR: $CHANGED files changed. Consider splitting into smaller PRs."
+          else
+            echo "✅ PR size is acceptable"
+          fi
+
+  # ────────────────────────────────────────────────────────
+  # JOB 2 : Vérifier que les tests passent sur la PR
+  # ────────────────────────────────────────────────────────
+  test-pr:
+    name: 🧪 Tests on PR
+    runs-on: ubuntu-latest
+    env:
+      VITE_SUPABASE_URL: https://placeholder.supabase.co
+      VITE_SUPABASE_ANON_KEY: placeholder_key
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm run test:ci
+
+      - name: Comment test results on PR
+        uses: actions/github-script@v7
+        if: always()
+        with:
+          script: |
+            const status = '${{ job.status }}';
+            const emoji = status === 'success' ? '✅' : '❌';
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## ${emoji} Test Results\n**Status:** ${status}\n**Commit:** ${context.sha.slice(0,7)}`
+            });
+
+  # ────────────────────────────────────────────────────────
+  # JOB 3 : Preview deploy sur Vercel
+  # ────────────────────────────────────────────────────────
+  preview-deploy:
+    name: 👁️ Preview Deployment
+    runs-on: ubuntu-latest
+    env:
+      VITE_SUPABASE_URL: https://placeholder.supabase.co
+      VITE_SUPABASE_ANON_KEY: placeholder_key
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Deploy preview
+        id: preview
+        run: |
+          vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+          vercel build --token=${{ secrets.VERCEL_TOKEN }}
+          URL=$(vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }})
+          echo "url=$URL" >> $GITHUB_OUTPUT
+          echo "✅ Preview URL: $URL"
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+
+      - name: Comment preview URL on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 👁️ Preview Deployment\n**URL:** ${{ steps.preview.outputs.url }}\n**Branch:** ${context.payload.pull_request.head.ref}\n**Commit:** ${context.sha.slice(0,7)}`
+            });

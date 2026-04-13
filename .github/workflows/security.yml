@@ -1,0 +1,331 @@
+# ============================================================
+# PIPELINE 2 : SECURITY — Audit de sécurité approfondi
+# Déclenché sur : push sur main + schedule hebdomadaire
+# ============================================================
+
+name: Security Audit
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    # ✅ Chaque lundi à 8h UTC — audit hebdomadaire automatique
+    - cron: '0 8 * * 1'
+  workflow_dispatch:  # Permet de lancer manuellement depuis GitHub
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # ────────────────────────────────────────────────────────
+  # JOB 1 : Audit complet des dépendances
+  # ────────────────────────────────────────────────────────
+  dependency-audit:
+    name: 📦 Full Dependency Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: npm audit — critical & high
+        run: npm audit --audit-level=high --json > audit-report.json || true
+
+      - name: Parse and display audit results
+        run: |
+          echo "=== NPM AUDIT REPORT ==="
+          node -e "
+            const report = require('./audit-report.json');
+            const vulns = report.vulnerabilities || {};
+            const counts = { critical: 0, high: 0, moderate: 0, low: 0 };
+            
+            Object.values(vulns).forEach(v => {
+              if (v.severity) counts[v.severity] = (counts[v.severity] || 0) + 1;
+            });
+            
+            console.log('Critical:', counts.critical);
+            console.log('High:    ', counts.high);
+            console.log('Moderate:', counts.moderate);
+            console.log('Low:     ', counts.low);
+            
+            if (counts.critical > 0 || counts.high > 0) {
+              console.log('\n❌ SECURITY AUDIT FAILED — Critical or High vulnerabilities found');
+              process.exit(1);
+            }
+            console.log('\n✅ No critical or high vulnerabilities');
+          "
+
+      - name: Upload audit report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: npm-audit-report
+          path: audit-report.json
+
+  # ────────────────────────────────────────────────────────
+  # JOB 2 : Analyse statique de sécurité (CodeQL)
+  # ────────────────────────────────────────────────────────
+  codeql-analysis:
+    name: 🔬 CodeQL Static Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ✅ CodeQL — Détecte les vulnérabilités XSS, injection, etc.
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript, typescript
+          queries: security-and-quality
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: '/language:javascript'
+
+  # ────────────────────────────────────────────────────────
+  # JOB 3 : Vérification des headers de sécurité
+  # ────────────────────────────────────────────────────────
+  security-headers-check:
+    name: 🛡️ Security Headers Verification
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check vercel.json security headers
+        run: |
+          echo "🔍 Verifying security headers in vercel.json..."
+          
+          REQUIRED_HEADERS=(
+            "Strict-Transport-Security"
+            "X-Content-Type-Options"
+            "X-Frame-Options"
+            "Content-Security-Policy"
+            "Referrer-Policy"
+            "Permissions-Policy"
+          )
+          
+          MISSING=0
+          for header in "${REQUIRED_HEADERS[@]}"; do
+            if grep -q "$header" vercel.json; then
+              echo "✅ $header — présent"
+            else
+              echo "❌ $header — MANQUANT"
+              MISSING=1
+            fi
+          done
+          
+          # Vérifier que COEP dangereux n'est pas présent
+          if grep -q "Cross-Origin-Embedder-Policy.*require-corp" vercel.json; then
+            echo "⚠️ COEP require-corp détecté — peut bloquer les ressources externes"
+          fi
+          
+          if [ $MISSING -eq 1 ]; then
+            echo "❌ Des headers de sécurité obligatoires sont manquants"
+            exit 1
+          fi
+          
+          echo "✅ Tous les headers de sécurité sont présents"
+
+      - name: Check CSP is not too permissive
+        run: |
+          echo "🔍 Checking CSP strictness..."
+          
+          # Vérifier que unsafe-eval n'est pas dans la CSP
+          if grep -q "unsafe-eval" vercel.json; then
+            echo "⚠️ 'unsafe-eval' détecté dans la CSP — à éviter en production"
+          else
+            echo "✅ Pas d'unsafe-eval dans la CSP"
+          fi
+          
+          # Vérifier que wildcard * n'est pas dans script-src
+          if grep -oP "script-src[^;]*" vercel.json | grep -q " \*"; then
+            echo "❌ Wildcard (*) dans script-src — très dangereux"
+            exit 1
+          else
+            echo "✅ Pas de wildcard dans script-src"
+          fi
+
+  # ────────────────────────────────────────────────────────
+  # JOB 4 : Scan du code pour patterns dangereux
+  # ────────────────────────────────────────────────────────
+  code-security-scan:
+    name: 🕵️ Code Pattern Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Scan for dangerous patterns
+        run: |
+          echo "🔍 Scanning source code for dangerous patterns..."
+          ISSUES=0
+          
+          # 1. Vérifier eval()
+          if grep -rn "eval(" src/ --include="*.ts" --include="*.tsx" | grep -v "// safe\|//safe\|test\|spec"; then
+            echo "❌ eval() detected in source code"
+            ISSUES=$((ISSUES + 1))
+          else
+            echo "✅ No eval() found"
+          fi
+          
+          # 2. Vérifier dangerouslySetInnerHTML
+          if grep -rn "dangerouslySetInnerHTML" src/ --include="*.tsx"; then
+            echo "❌ dangerouslySetInnerHTML detected"
+            ISSUES=$((ISSUES + 1))
+          else
+            echo "✅ No dangerouslySetInnerHTML found"
+          fi
+          
+          # 3. Vérifier innerHTML direct
+          if grep -rn "\.innerHTML\s*=" src/ --include="*.ts" --include="*.tsx"; then
+            echo "❌ Direct innerHTML assignment detected"
+            ISSUES=$((ISSUES + 1))
+          else
+            echo "✅ No direct innerHTML assignment found"
+          fi
+          
+          # 4. Vérifier new Function()
+          if grep -rn "new Function(" src/ --include="*.ts" --include="*.tsx"; then
+            echo "❌ new Function() detected"
+            ISSUES=$((ISSUES + 1))
+          else
+            echo "✅ No new Function() found"
+          fi
+          
+          # 5. Vérifier localStorage avec des données sensibles
+          if grep -rn "localStorage.setItem.*token\|localStorage.setItem.*jwt\|localStorage.setItem.*password\|localStorage.setItem.*auth" src/ --include="*.ts" --include="*.tsx" -i | grep -v "ThemeContext\|LanguageContext"; then
+            echo "❌ Sensitive data in localStorage detected"
+            ISSUES=$((ISSUES + 1))
+          else
+            echo "✅ No sensitive data in localStorage"
+          fi
+          
+          # 6. Vérifier console.log avec des données sensibles
+          if grep -rn "console\.log.*password\|console\.log.*token\|console\.log.*secret\|console\.log.*key" src/ --include="*.ts" --include="*.tsx" -i; then
+            echo "⚠️ Possible sensitive data in console.log"
+          else
+            echo "✅ No sensitive data logged"
+          fi
+          
+          # 7. Vérifier http:// en dur (pas https)
+          if grep -rn "http://" src/ --include="*.ts" --include="*.tsx" | grep -v "localhost\|127.0.0.1\|comment\|//"; then
+            echo "⚠️ Non-HTTPS URLs detected in source"
+          else
+            echo "✅ No insecure HTTP URLs"
+          fi
+          
+          if [ $ISSUES -gt 0 ]; then
+            echo ""
+            echo "❌ $ISSUES security issue(s) found — Fix before merging"
+            exit 1
+          fi
+          
+          echo ""
+          echo "✅ All security pattern checks passed"
+
+  # ────────────────────────────────────────────────────────
+  # JOB 5 : Vérifier que .env n'est pas committé
+  # ────────────────────────────────────────────────────────
+  env-leak-check:
+    name: 🔑 Environment Variables Leak Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check .env files are not committed
+        run: |
+          echo "🔍 Checking for committed .env files..."
+          
+          # Vérifier si des .env sont dans le repo
+          ENV_FILES=$(git ls-files | grep -E "^\.env$|\.env\.local$|\.env\.production$|\.env\.development$" || true)
+          
+          if [ -n "$ENV_FILES" ]; then
+            echo "❌ Environment files found in repository:"
+            echo "$ENV_FILES"
+            echo "Remove them immediately with: git rm --cached <file>"
+            exit 1
+          fi
+          
+          echo "✅ No .env files committed"
+
+      - name: Verify .gitignore covers .env files
+        run: |
+          echo "🔍 Verifying .gitignore..."
+          
+          PATTERNS=(".env" ".env.local" ".env.*.local" "*.env")
+          MISSING=0
+          
+          for pattern in "${PATTERNS[@]}"; do
+            if grep -q "$pattern" .gitignore; then
+              echo "✅ $pattern — in .gitignore"
+            else
+              echo "⚠️ $pattern — NOT in .gitignore"
+              MISSING=$((MISSING + 1))
+            fi
+          done
+          
+          if [ $MISSING -gt 0 ]; then
+            echo "⚠️ Some .env patterns missing from .gitignore — add them"
+          fi
+
+  # ────────────────────────────────────────────────────────
+  # JOB 6 : Rapport de sécurité final
+  # ────────────────────────────────────────────────────────
+  security-report:
+    name: 📊 Security Report
+    runs-on: ubuntu-latest
+    needs: [dependency-audit, security-headers-check, code-security-scan, env-leak-check]
+    if: always()
+    steps:
+      - name: Generate security report
+        run: |
+          echo "=================================================="
+          echo "         LUCID AGENCY — SECURITY REPORT"
+          echo "=================================================="
+          echo "Date:     $(date -u '+%Y-%m-%d %H:%M UTC')"
+          echo "Branch:   ${{ github.ref_name }}"
+          echo "Commit:   ${{ github.sha }}"
+          echo ""
+          echo "Results:"
+          echo "  Dependency Audit:    ${{ needs.dependency-audit.result }}"
+          echo "  Security Headers:    ${{ needs.security-headers-check.result }}"
+          echo "  Code Scan:           ${{ needs.code-security-scan.result }}"
+          echo "  Env Leak Check:      ${{ needs.env-leak-check.result }}"
+          echo ""
+          
+          FAILED=0
+          for result in \
+            "${{ needs.dependency-audit.result }}" \
+            "${{ needs.security-headers-check.result }}" \
+            "${{ needs.code-security-scan.result }}" \
+            "${{ needs.env-leak-check.result }}"; do
+            [ "$result" != "success" ] && FAILED=$((FAILED + 1))
+          done
+          
+          if [ $FAILED -gt 0 ]; then
+            echo "❌ SECURITY AUDIT FAILED — $FAILED check(s) failed"
+            exit 1
+          fi
+          echo "✅ ALL SECURITY CHECKS PASSED"
