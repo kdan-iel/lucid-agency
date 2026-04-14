@@ -5,22 +5,28 @@ import { supabase } from '../../context/AuthContext';
 
 vi.mock('../../context/AuthContext', () => ({
   supabase: {
-    auth: { signOut: vi.fn().mockResolvedValue({ error: null }) },
-  },
-}));
-
-vi.mock('../../context/AuthContext', () => ({
-  supabase: {
     auth: {
-      signOut: vi.fn(),
+      signOut: vi.fn().mockResolvedValue({ error: null }),
     },
   },
 }));
 
 describe('useSessionTimeout()', () => {
+  const warnMock = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
   beforeEach(() => {
     vi.useFakeTimers();
+    warnMock.mockClear();
+    vi.mocked(supabase.auth.signOut).mockClear();
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: {
+        ...window.location,
+        href: 'http://localhost:5173/dashboard',
+      },
+    });
   });
+
   afterEach(() => {
     vi.useRealTimers();
     vi.clearAllMocks();
@@ -28,25 +34,50 @@ describe('useSessionTimeout()', () => {
 
   it('ne fait rien si non authentifie', () => {
     const { unmount } = renderHook(() => useSessionTimeout(false));
-    vi.advanceTimersByTime(35 * 60 * 1000);
+
+    act(() => {
+      vi.advanceTimersByTime(35 * 60 * 1000);
+    });
+
     unmount();
-    // Pas de déconnexion si pas authentifié
-    
+
+    expect(supabase.auth.signOut).not.toHaveBeenCalled();
+    expect(warnMock).not.toHaveBeenCalled();
+  });
+
+  it('declenche un avertissement apres 25 minutes', () => {
+    renderHook(() => useSessionTimeout(true));
+
+    act(() => {
+      vi.advanceTimersByTime(25 * 60 * 1000);
+    });
+
+    expect(warnMock).toHaveBeenCalledWith('[Session] Expiration dans 5 minutes.');
     expect(supabase.auth.signOut).not.toHaveBeenCalled();
   });
 
-  it('réinitialise le timer sur activite utilisateur', () => {
-  renderHook(() => useSessionTimeout(true));
+  it('deconnecte et redirige apres 30 minutes', async () => {
+    renderHook(() => useSessionTimeout(true));
 
-  act(() => {
-    window.dispatchEvent(new Event('click'));
+    await act(async () => {
+      vi.advanceTimersByTime(30 * 60 * 1000);
+      await Promise.resolve();
+    });
+
+    expect(supabase.auth.signOut).toHaveBeenCalledTimes(1);
+    expect(window.location.href).toBe('/');
   });
 
-  // Avancer moins que le timeout — pas de déconnexion attendue
-  vi.advanceTimersByTime(10 * 60 * 1000);
+  it('reinitialise le timer sur activite utilisateur', () => {
+    renderHook(() => useSessionTimeout(true));
 
-  // ✅ On vérifie juste que le hook n'a pas crashé
-  // Le signOut ne peut pas être vérifié ici sans infrastructure Supabase complète
-  expect(true).toBe(true);
-});
+    act(() => {
+      vi.advanceTimersByTime(24 * 60 * 1000);
+      window.dispatchEvent(new Event('click'));
+      vi.advanceTimersByTime(2 * 60 * 1000);
+    });
+
+    expect(warnMock).not.toHaveBeenCalled();
+    expect(supabase.auth.signOut).not.toHaveBeenCalled();
+  });
 });

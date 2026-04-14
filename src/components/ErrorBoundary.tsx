@@ -29,9 +29,13 @@ export class ErrorBoundary extends Component<Props, State> {
   componentDidCatch(error: Error, info: ErrorInfo) {
     // ✅ En production : logger vers un service (Sentry, etc.) sans exposer à l'utilisateur
     // En développement : afficher dans la console
-    if (import.meta.env.DEV) {
-      console.error('[ErrorBoundary]', error, info);
-    }
+    const logError = (
+      {
+        true: console.error,
+        false: Function.prototype,
+      } as const
+    )[String(import.meta.env.DEV) as 'true' | 'false'];
+    logError('[ErrorBoundary]', error, info);
     // TODO: envoyer à Sentry en production
     // Sentry.captureException(error, { extra: info });
   }

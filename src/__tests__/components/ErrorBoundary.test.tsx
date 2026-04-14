@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { ErrorBoundary } from '../../components/ErrorBoundary';
 import { cleanup } from '@testing-library/react';
 
@@ -10,6 +10,19 @@ const ThrowError = ({ shouldThrow }: { shouldThrow: boolean }) => {
 };
 
 vi.spyOn(console, 'error').mockImplementation(() => {});
+
+const reloadMock = vi.fn();
+
+beforeEach(() => {
+  reloadMock.mockReset();
+  Object.defineProperty(window, 'location', {
+    configurable: true,
+    value: {
+      ...window.location,
+      reload: reloadMock,
+    },
+  });
+});
 
 afterEach(() => {
   cleanup();
@@ -50,6 +63,18 @@ describe('ErrorBoundary', () => {
       </ErrorBoundary>
     );
     expect(screen.getAllByRole('button', { name: /recharger/i }).length).toBeGreaterThan(0);
+  });
+
+  it('recharge la page au clic sur le bouton', () => {
+    render(
+      <ErrorBoundary>
+        <ThrowError shouldThrow={true} />
+      </ErrorBoundary>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /recharger/i }));
+
+    expect(reloadMock).toHaveBeenCalledTimes(1);
   });
 
   it('affiche le fallback custom si fourni', () => {

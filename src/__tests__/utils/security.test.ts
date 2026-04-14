@@ -45,6 +45,9 @@ describe('sanitizeUrl()', () => {
   it('accepte les URLs https valides', () => {
     expect(sanitizeUrl('https://google.com')).toBeTruthy();
   });
+  it('accepte aussi les URLs http valides', () => {
+    expect(sanitizeUrl('http://example.com/path')).toBe('http://example.com/path');
+  });
   it('bloque javascript:', () => {
     expect(sanitizeUrl('javascript:alert(1)')).toBeNull();
   });
@@ -76,6 +79,52 @@ describe('checkRateLimit()', () => {
     checkRateLimit(k1, 1, 60000);
     checkRateLimit(k1, 1, 60000);
     expect(checkRateLimit(k2, 1, 60000)).toBe(true);
+  });
+  it('reinitialise la fenetre apres expiration', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-01T00:00:00Z'));
+
+    const key = 'rl-window-reset';
+    expect(checkRateLimit(key, 1, 1000)).toBe(true);
+    expect(checkRateLimit(key, 1, 1000)).toBe(false);
+
+    vi.advanceTimersByTime(1001);
+
+    expect(checkRateLimit(key, 1, 1000)).toBe(true);
+
+    vi.useRealTimers();
+  });
+});
+
+describe('getRateLimitWait()', () => {
+  it('retourne 0 pour une cle inexistante', () => {
+    expect(getRateLimitWait('missing-rate-limit-key')).toBe(0);
+  });
+
+  it('retourne le temps restant arrondi quand la fenetre est active', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-01T00:00:00Z'));
+
+    const key = 'rl-active-wait';
+    checkRateLimit(key, 2, 5000);
+    vi.advanceTimersByTime(1200);
+
+    expect(getRateLimitWait(key, 5000)).toBe(4);
+
+    vi.useRealTimers();
+  });
+
+  it('retourne 0 quand la fenetre est deja expiree', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-01T00:00:00Z'));
+
+    const key = 'rl-expired-wait';
+    checkRateLimit(key, 2, 1000);
+    vi.advanceTimersByTime(1500);
+
+    expect(getRateLimitWait(key, 1000)).toBe(0);
+
+    vi.useRealTimers();
   });
 });
 
@@ -138,5 +187,43 @@ describe('CSRF Token', () => {
     const token = generateCsrfToken();
     storeCsrfToken(token);
     expect(getCsrfToken()).toBe(token);
+  });
+  it('ignore silencieusement les erreurs de sessionStorage a l ecriture', () => {
+    const originalSessionStorage = window.sessionStorage;
+    Object.defineProperty(window, 'sessionStorage', {
+      configurable: true,
+      value: {
+        ...originalSessionStorage,
+        setItem: vi.fn(() => {
+          throw new Error('storage unavailable');
+        }),
+      },
+    });
+
+    expect(() => storeCsrfToken('token')).not.toThrow();
+
+    Object.defineProperty(window, 'sessionStorage', {
+      configurable: true,
+      value: originalSessionStorage,
+    });
+  });
+  it('retourne null si sessionStorage echoue a la lecture', () => {
+    const originalSessionStorage = window.sessionStorage;
+    Object.defineProperty(window, 'sessionStorage', {
+      configurable: true,
+      value: {
+        ...originalSessionStorage,
+        getItem: vi.fn(() => {
+          throw new Error('storage unavailable');
+        }),
+      },
+    });
+
+    expect(getCsrfToken()).toBeNull();
+
+    Object.defineProperty(window, 'sessionStorage', {
+      configurable: true,
+      value: originalSessionStorage,
+    });
   });
 });

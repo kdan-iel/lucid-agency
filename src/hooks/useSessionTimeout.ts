@@ -18,7 +18,6 @@ export function useSessionTimeout(isAuthenticated: boolean) {
   };
 
   const resetTimer = useCallback(() => {
-    if (!isAuthenticated) return;
     clearTimers();
 
     // Avertissement à 25 min
