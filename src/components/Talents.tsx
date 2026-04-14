@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLanguage } from '../context/LanguageContext';
-import { Search, X, ExternalLink } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 
 const talents = [
   { name: 'Thomas K.', category: 'Branding', expertise: 'Directeur Artistique', skills: ['Branding Minimaliste', 'UI Design', 'Motion'], initials: 'TK', color: '#00FFA3', rate: '85 000 FCFA/j', bio: 'Directeur artistique avec 7 ans d\'expérience. Spécialisé dans les identités visuelles premium pour startups et PME africaines.' },

@@ -1,7 +1,6 @@
 import { motion } from 'motion/react';
 import { useLanguage } from '../context/LanguageContext';
 import { useState, FormEvent, useEffect } from 'react';
-import { z } from 'zod';
 import { contactFormSchema, ContactFormInput } from '../schemas';
 import { supabase } from '../context/AuthContext';
 import {

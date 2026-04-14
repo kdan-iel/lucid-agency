@@ -1,4 +1,4 @@
-import '@testing-library/jest-dom';
+import '@testing-library/jest-dom/vitest';
 import { vi } from 'vitest';
 
 // ✅ Mock Supabase pour tous les tests — évite les vraies requêtes réseau
@@ -49,7 +49,7 @@ Object.defineProperty(window, 'crypto', {
 });
 
 // ✅ Mock IntersectionObserver (utilisé par Navbar et Results)
-global.IntersectionObserver = vi.fn().mockImplementation(() => ({
+globalThis.IntersectionObserver = vi.fn().mockImplementation(() => ({
   observe: vi.fn(),
   unobserve: vi.fn(),
   disconnect: vi.fn(),

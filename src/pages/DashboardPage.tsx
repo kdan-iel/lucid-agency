@@ -5,8 +5,8 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../context/AuthContext';
 import {
   LayoutDashboard, Briefcase, MessageSquare, Settings, LogOut,
-  Bell, Search, X, CheckCircle, Clock, MapPin, Calendar,
-  DollarSign, Download, ChevronRight, Eye, EyeOff,
+  Bell, Search, X, CheckCircle, MapPin, Calendar,
+  DollarSign, ChevronRight, Eye, EyeOff,
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import { Phone as WhatsAppIcon } from 'lucide-react';

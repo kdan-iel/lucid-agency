@@ -4,7 +4,6 @@ import { useState, FormEvent } from 'react';
 import Navbar from '../components/Navbar';
 import { checkRateLimit, getRateLimitWait } from '../utils/security';
 import Footer from '../components/Footer';
-import { z } from 'zod';
 import { joinFormSchema, JoinFormInput } from '../schemas';
 import { supabase } from '../context/AuthContext';
 

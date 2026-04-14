@@ -4,10 +4,10 @@ import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../context/AuthContext';
 import {
-  Users, Briefcase, MessageSquare, Settings, LogOut, Bell,
+  Users, Briefcase, MessageSquare, Settings, LogOut,
   Search, CheckCircle, Clock, XCircle, MoreVertical, X,
-  Mail, Phone, Globe, Download, ChevronRight, Shield,
-  Settings2, Database, Link as LinkIcon, Eye, EyeOff,
+  Mail, Phone, Globe, ChevronRight, Shield,
+  Database, Eye, EyeOff,
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import { Phone as WhatsAppIcon } from 'lucide-react';
