@@ -66,7 +66,7 @@ describe('joinFormSchema', () => {
     const r = joinFormSchema.safeParse({ ...valid, confirmPassword: 'Different1!' });
     expect(r.success).toBe(false);
     if (!r.success) {
-      const paths = r.error.errors.map(e => e.path[0]);
+      const paths = r.error.issues.map(e => e.path[0]);
       expect(paths).toContain('confirmPassword');
     }
   });

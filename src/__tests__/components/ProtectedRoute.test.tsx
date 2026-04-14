@@ -2,16 +2,22 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { ProtectedRoute } from '../../components/ProtectedRoute';
 
-// Mock useAuth avec différents états
+// ✅ Un seul vi.mock — le mockUseAuth est redéfini dans chaque test
 const mockUseAuth = vi.fn();
 vi.mock('../../context/AuthContext', () => ({
   useAuth: () => mockUseAuth(),
   supabase: {
     auth: {
       getSession: vi.fn().mockResolvedValue({ data: { session: null }, error: null }),
-      onAuthStateChange: vi.fn().mockReturnValue({ data: { subscription: { unsubscribe: vi.fn() } } }),
+      onAuthStateChange: vi.fn().mockReturnValue({
+        data: { subscription: { unsubscribe: vi.fn() } },
+      }),
     },
-    from: vi.fn().mockReturnValue({ select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(), single: vi.fn().mockResolvedValue({ data: null, error: null }) }),
+    from: vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: null, error: null }),
+    }),
   },
 }));
 
@@ -61,6 +67,7 @@ describe('ProtectedRoute', () => {
         <div>Contenu admin autorisé</div>
       </ProtectedRoute>
     );
+    // ✅ Rendu synchrone — pas besoin de waitFor
     expect(screen.getByText('Contenu admin autorisé')).toBeInTheDocument();
   });
 });

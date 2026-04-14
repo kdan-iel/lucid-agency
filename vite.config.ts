@@ -17,6 +17,8 @@ export default defineConfig(({ mode }) => ({
       provider: 'v8',
       reporter: ['text', 'html'],
     },
+    globals: true,
+    setupFiles: './src/setupTests.ts',
   },
 
   server: {
