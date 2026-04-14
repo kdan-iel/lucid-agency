@@ -11,6 +11,13 @@ export default defineConfig(({ mode }) => ({
       '@': path.resolve(__dirname, '.'),
     },
   },
+  test: {
+    environment: 'jsdom',
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html'],
+    },
+  },
 
   server: {
     hmr: process.env.DISABLE_HMR !== 'true',
@@ -45,3 +52,5 @@ export default defineConfig(({ mode }) => ({
     sourcemap: mode !== 'production',
   },
 }));
+
+
