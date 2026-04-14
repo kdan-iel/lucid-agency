@@ -53,9 +53,7 @@ export class ErrorBoundary extends Component<Props, State> {
               L'application a rencontré un problème. Veuillez recharger la page.
             </p>
             {/* ✅ ID d'erreur affiché pour le support — sans stack trace sensible */}
-            <p className="text-xs text-brand-gray/50 mb-8">
-              Code d'erreur : {this.state.errorId}
-            </p>
+            <p className="text-xs text-brand-gray/50 mb-8">Code d'erreur : {this.state.errorId}</p>
             <button
               onClick={() => window.location.reload()}
               className="bg-brand-mint text-[#0D1117] px-8 py-3 rounded-xl font-bold hover:scale-105 transition-all"

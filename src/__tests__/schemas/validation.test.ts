@@ -31,7 +31,10 @@ describe('contactFormSchema', () => {
   });
 
   it('rejette le HTML dans le message', () => {
-    const r = contactFormSchema.safeParse({ ...valid, message: '<script>alert(1)</script> injected content here' });
+    const r = contactFormSchema.safeParse({
+      ...valid,
+      message: '<script>alert(1)</script> injected content here',
+    });
     expect(r.success).toBe(false);
   });
 
@@ -66,7 +69,7 @@ describe('joinFormSchema', () => {
     const r = joinFormSchema.safeParse({ ...valid, confirmPassword: 'Different1!' });
     expect(r.success).toBe(false);
     if (!r.success) {
-      const paths = r.error.issues.map(e => e.path[0]);
+      const paths = r.error.issues.map((e) => e.path[0]);
       expect(paths).toContain('confirmPassword');
     }
   });

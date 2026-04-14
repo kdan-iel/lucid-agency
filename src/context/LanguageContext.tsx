@@ -70,8 +70,10 @@ const translations: Record<Language, Record<string, string>> = {
     'results.roi': 'ROI moyen client',
     'results.reach': 'Personnes touchées',
     'results.conversion': 'Taux de satisfaction',
-    'testimonials.1': '"LUCID a transformé notre présence digitale en moins de 3 mois. Le ROI dépasse toutes nos attentes."',
-    'testimonials.2': '"Une équipe de talents exceptionnels, pilotée avec une rigueur impressionnante. Je recommande sans réserve."',
+    'testimonials.1':
+      '"LUCID a transformé notre présence digitale en moins de 3 mois. Le ROI dépasse toutes nos attentes."',
+    'testimonials.2':
+      '"Une équipe de talents exceptionnels, pilotée avec une rigueur impressionnante. Je recommande sans réserve."',
     'testimonials.1.author': 'Jean Dupont',
     'testimonials.1.role': 'CEO, TechFlow',
     'testimonials.2.author': 'Marie Laurent',
@@ -79,7 +81,7 @@ const translations: Record<Language, Record<string, string>> = {
     'footer.legal': 'Mentions légales',
     'footer.privacy': 'Politique de confidentialité',
     'back.to.top': 'Retour en haut',
-        'results.title': 'Des résultats mesurables.',
+    'results.title': 'Des résultats mesurables.',
     'results.subtitle': 'Nous ne choisissons pas les likes, nous choisissons les ventes.',
     'contact.title': 'Démarrons votre projet.',
     'contact.reassurance': 'Réponse sous 24h — Premier audit offert.',
@@ -255,8 +257,10 @@ const translations: Record<Language, Record<string, string>> = {
     'results.roi': 'Average client ROI',
     'results.reach': 'People reached',
     'results.conversion': 'Satisfaction rate',
-    'testimonials.1': '"LUCID transformed our digital presence in less than 3 months. The ROI exceeds all our expectations."',
-    'testimonials.2': '"An exceptional team of talents, managed with impressive rigor. I recommend without reservation."',
+    'testimonials.1':
+      '"LUCID transformed our digital presence in less than 3 months. The ROI exceeds all our expectations."',
+    'testimonials.2':
+      '"An exceptional team of talents, managed with impressive rigor. I recommend without reservation."',
     'testimonials.1.author': 'Jean Dupont',
     'testimonials.1.role': 'CEO, TechFlow',
     'testimonials.2.author': 'Marie Laurent',
@@ -264,7 +268,7 @@ const translations: Record<Language, Record<string, string>> = {
     'footer.legal': 'Legal Notice',
     'footer.privacy': 'Privacy Policy',
     'back.to.top': 'Back to top',
-        'results.title': 'Measurable results.',
+    'results.title': 'Measurable results.',
     'results.subtitle': "We don't choose likes, we choose sales.",
     'contact.title': "Let's start your project.",
     'contact.reassurance': 'Response within 24h — First audit included free.',

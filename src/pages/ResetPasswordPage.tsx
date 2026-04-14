@@ -15,7 +15,9 @@ export default function ResetPasswordPage() {
 
   useEffect(() => {
     // Supabase injecte le token dans l'URL au clic du lien email
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') {
         setValidSession(true);
       }
@@ -49,7 +51,9 @@ export default function ResetPasswordPage() {
       const { error: updateError } = await supabase.auth.updateUser({ password });
       if (updateError) throw updateError;
       setSuccess(true);
-      setTimeout(() => { window.location.href = '/'; }, 3000);
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 3000);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -99,7 +103,10 @@ export default function ResetPasswordPage() {
                     Nouveau mot de passe
                   </label>
                   <div className="relative">
-                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-gray" size={18} />
+                    <Lock
+                      className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-gray"
+                      size={18}
+                    />
                     <input
                       type={showPassword ? 'text' : 'password'}
                       value={password}
@@ -123,7 +130,10 @@ export default function ResetPasswordPage() {
                     Confirmer le mot de passe
                   </label>
                   <div className="relative">
-                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-gray" size={18} />
+                    <Lock
+                      className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-gray"
+                      size={18}
+                    />
                     <input
                       type={showPassword ? 'text' : 'password'}
                       value={confirm}

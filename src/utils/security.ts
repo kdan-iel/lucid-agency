@@ -55,11 +55,7 @@ const rateLimitStore = new Map<string, RateLimitEntry>();
  * @param maxAttempts - Nombre max de tentatives (défaut: 5)
  * @param windowMs - Fenêtre en ms (défaut: 60s)
  */
-export function checkRateLimit(
-  key: string,
-  maxAttempts = 5,
-  windowMs = 60_000
-): boolean {
+export function checkRateLimit(key: string, maxAttempts = 5, windowMs = 60_000): boolean {
   const now = Date.now();
   const entry = rateLimitStore.get(key);
 
@@ -93,8 +89,7 @@ export function getRateLimitWait(key: string, windowMs = 60_000): number {
 
 /** Valide un email avec regex stricte */
 export function isValidEmail(email: string): boolean {
-  return /^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$/.test(email) &&
-    email.length <= 255;
+  return /^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$/.test(email) && email.length <= 255;
 }
 
 /** Valide la force d'un mot de passe */
@@ -124,9 +119,17 @@ export function generateCsrfToken(): string {
 }
 
 export function storeCsrfToken(token: string): void {
-  try { sessionStorage.setItem('lucid_csrf', token); } catch { /* silencieux */ }
+  try {
+    sessionStorage.setItem('lucid_csrf', token);
+  } catch {
+    /* silencieux */
+  }
 }
 
 export function getCsrfToken(): string | null {
-  try { return sessionStorage.getItem('lucid_csrf'); } catch { return null; }
+  try {
+    return sessionStorage.getItem('lucid_csrf');
+  } catch {
+    return null;
+  }
 }

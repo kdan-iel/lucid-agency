@@ -1,9 +1,16 @@
 import { describe, it, expect, vi } from 'vitest';
 import {
-  sanitizeText, isHtmlFree, sanitizeUrl,
-  checkRateLimit, getRateLimitWait,
-  isValidEmail, validatePassword, truncate,
-  generateCsrfToken, storeCsrfToken, getCsrfToken,
+  sanitizeText,
+  isHtmlFree,
+  sanitizeUrl,
+  checkRateLimit,
+  getRateLimitWait,
+  isValidEmail,
+  validatePassword,
+  truncate,
+  generateCsrfToken,
+  storeCsrfToken,
+  getCsrfToken,
 } from '../../utils/security';
 
 describe('sanitizeText()', () => {

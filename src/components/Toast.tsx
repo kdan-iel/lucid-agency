@@ -21,11 +21,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   const showToast = useCallback((message: string, type: ToastType = 'info') => {
     const id = Math.random().toString(36).substring(2);
-    setToasts(prev => [...prev, { id, message, type }]);
-    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4000);
+    setToasts((prev) => [...prev, { id, message, type }]);
+    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4000);
   }, []);
 
-  const dismiss = (id: string) => setToasts(prev => prev.filter(t => t.id !== id));
+  const dismiss = (id: string) => setToasts((prev) => prev.filter((t) => t.id !== id));
 
   const icons = {
     success: <CheckCircle size={18} className="text-green-400 flex-shrink-0" />,
@@ -44,16 +44,20 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {children}
       <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[200] flex flex-col gap-3 pointer-events-none">
         <AnimatePresence>
-          {toasts.map(toast => (
-            <motion.div key={toast.id}
+          {toasts.map((toast) => (
+            <motion.div
+              key={toast.id}
               initial={{ opacity: 0, y: 20, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -10, scale: 0.95 }}
-              className={`pointer-events-auto flex items-center gap-3 bg-[var(--bg-surface)] border ${borders[toast.type]} rounded-2xl px-5 py-4 shadow-2xl min-w-[280px] max-w-sm`}>
+              className={`pointer-events-auto flex items-center gap-3 bg-[var(--bg-surface)] border ${borders[toast.type]} rounded-2xl px-5 py-4 shadow-2xl min-w-[280px] max-w-sm`}
+            >
               {icons[toast.type]}
               <p className="text-sm text-[var(--text-primary)] flex-grow">{toast.message}</p>
-              <button onClick={() => dismiss(toast.id)}
-                className="text-brand-gray hover:text-[var(--text-primary)] transition-colors ml-2">
+              <button
+                onClick={() => dismiss(toast.id)}
+                className="text-brand-gray hover:text-[var(--text-primary)] transition-colors ml-2"
+              >
                 <X size={16} />
               </button>
             </motion.div>

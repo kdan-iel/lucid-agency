@@ -80,10 +80,14 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
                 <div className="text-5xl mb-4">📧</div>
                 <h2 className="text-2xl font-bold mb-3">Email envoyé !</h2>
                 <p className="text-brand-gray mb-8">
-                  Vérifiez votre boîte mail et cliquez sur le lien pour réinitialiser votre mot de passe.
+                  Vérifiez votre boîte mail et cliquez sur le lien pour réinitialiser votre mot de
+                  passe.
                 </p>
                 <button
-                  onClick={() => { setShowReset(false); setResetSent(false); }}
+                  onClick={() => {
+                    setShowReset(false);
+                    setResetSent(false);
+                  }}
                   className="text-brand-mint font-bold hover:underline"
                 >
                   Retour à la connexion
@@ -97,7 +101,10 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
                 </p>
                 <form onSubmit={handleResetPassword} className="space-y-6">
                   <div className="relative">
-                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-gray" size={18} />
+                    <Mail
+                      className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-gray"
+                      size={18}
+                    />
                     <input
                       type="email"
                       value={resetEmail}
@@ -158,7 +165,10 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
                 Email
               </label>
               <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-gray" size={18} />
+                <Mail
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-gray"
+                  size={18}
+                />
                 <input
                   type="email"
                   value={email}
@@ -177,7 +187,10 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
                 {t('login.label.password')}
               </label>
               <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-gray" size={18} />
+                <Lock
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-gray"
+                  size={18}
+                />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
@@ -218,9 +231,9 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
               </motion.p>
             )}
 
-          <button className="w-full bg-brand-mint text-[#0D1117] py-4 rounded-xl font-bold text-lg hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg shadow-brand-mint/20 disabled:opacity-60 disabled:scale-100">
-            Login
-          </button>
+            <button className="w-full bg-brand-mint text-[#0D1117] py-4 rounded-xl font-bold text-lg hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg shadow-brand-mint/20 disabled:opacity-60 disabled:scale-100">
+              Login
+            </button>
           </form>
 
           <div className="mt-8 pt-8 border-t border-[var(--border-color)] text-center">

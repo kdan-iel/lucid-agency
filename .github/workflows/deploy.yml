@@ -139,6 +139,17 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
+      - name: Verify Vercel secrets
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          [ -n "$VERCEL_TOKEN" ] || (echo "❌ Missing GitHub secret: VERCEL_TOKEN" && exit 1)
+          [ -n "$VERCEL_ORG_ID" ] || (echo "❌ Missing GitHub secret: VERCEL_ORG_ID" && exit 1)
+          [ -n "$VERCEL_PROJECT_ID" ] || (echo "❌ Missing GitHub secret: VERCEL_PROJECT_ID" && exit 1)
+          echo "✅ Required Vercel secrets are present"
+
       - name: Install Vercel CLI
         run: npm install -g vercel@latest
 
@@ -172,6 +183,13 @@ jobs:
     runs-on: ubuntu-latest
     needs: deploy
     steps:
+      - name: Verify smoke test URL secret
+        env:
+          VITE_APP_URL: ${{ secrets.VITE_APP_URL }}
+        run: |
+          [ -n "$VITE_APP_URL" ] || (echo "❌ Missing GitHub secret: VITE_APP_URL" && exit 1)
+          echo "✅ Smoke test URL secret is present"
+
       - name: Wait for deployment to propagate
         run: sleep 15
 

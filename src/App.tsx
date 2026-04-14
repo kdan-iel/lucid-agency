@@ -45,7 +45,16 @@ function LandingPage() {
   );
 }
 
-const VALID_PATHS = ['/', '/join', '/dashboard', '/admin', '/login', '/reset-password', '/privacy', '/legal'];
+const VALID_PATHS = [
+  '/',
+  '/join',
+  '/dashboard',
+  '/admin',
+  '/login',
+  '/reset-password',
+  '/privacy',
+  '/legal',
+];
 
 function AppContent() {
   const [path, setPath] = useState(window.location.pathname);
@@ -104,12 +113,18 @@ function AppContent() {
 
   const renderContent = () => {
     switch (path) {
-      case '/':          return <LandingPage />;
-      case '/join':      return <JoinPage />;
-      case '/login':     return <LoginPage role="freelancer" />;
-      case '/reset-password': return <ResetPasswordPage />;
-      case '/privacy':   return <PrivacyPage />;
-      case '/legal':     return <LegalPage />;
+      case '/':
+        return <LandingPage />;
+      case '/join':
+        return <JoinPage />;
+      case '/login':
+        return <LoginPage role="freelancer" />;
+      case '/reset-password':
+        return <ResetPasswordPage />;
+      case '/privacy':
+        return <PrivacyPage />;
+      case '/legal':
+        return <LegalPage />;
       case '/dashboard':
         return (
           <ProtectedRoute requiredRole="freelancer">
@@ -130,9 +145,7 @@ function AppContent() {
   return (
     <ThemeProvider>
       <LanguageProvider>
-        <ToastProvider>
-          {renderContent()}
-        </ToastProvider>
+        <ToastProvider>{renderContent()}</ToastProvider>
       </LanguageProvider>
     </ThemeProvider>
   );

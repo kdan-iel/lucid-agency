@@ -67,7 +67,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const initAuth = async () => {
       try {
         setLoading(true);
-        const { data: { session: s }, error: e } = await supabase.auth.getSession();
+        const {
+          data: { session: s },
+          error: e,
+        } = await supabase.auth.getSession();
         if (e) throw e;
         setSession(s);
         setUser(s?.user ?? null);
@@ -80,7 +83,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
     initAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, s) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (_event, s) => {
       setSession(s);
       setUser(s?.user ?? null);
       setError(null);
@@ -106,7 +111,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setError(null);
       await supabase.auth.signOut();
-      setSession(null); setUser(null); setProfile(null);
+      setSession(null);
+      setUser(null);
+      setProfile(null);
       window.location.href = '/';
     } catch (err) {
       setError((err as Error).message);
@@ -142,7 +149,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setError(null);
       if (!profile) throw new Error('Aucun profil chargé');
-      const { error: e } = await supabase.from('profiles').update(updates).eq('user_id', profile.user_id);
+      const { error: e } = await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('user_id', profile.user_id);
       if (e) throw e;
       setProfile({ ...profile, ...updates });
     } catch (err) {
@@ -154,7 +164,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const clearError = () => setError(null);
 
   return (
-    <AuthContext.Provider value={{ session, user, profile, loading, error, login, logout, resetPassword, updatePassword, updateProfile, clearError }}>
+    <AuthContext.Provider
+      value={{
+        session,
+        user,
+        profile,
+        loading,
+        error,
+        login,
+        logout,
+        resetPassword,
+        updatePassword,
+        updateProfile,
+        clearError,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

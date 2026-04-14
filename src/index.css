@@ -49,7 +49,7 @@
     transition-property: background-color, color;
     transition-duration: 300ms;
   }
-  
+
   ::selection {
     background-color: var(--accent-primary);
     color: var(--bg-primary);

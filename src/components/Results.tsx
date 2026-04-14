@@ -24,23 +24,41 @@ function useCountUp(target: number, duration = 2000, active = false) {
   return count;
 }
 
-function AnimatedMetric({ icon, prefix = '', target, suffix = '', label, delay = 0 }: {
-  icon: React.ReactNode; prefix?: string; target: number; suffix?: string; label: string; delay?: number;
+function AnimatedMetric({
+  icon,
+  prefix = '',
+  target,
+  suffix = '',
+  label,
+  delay = 0,
+}: {
+  icon: React.ReactNode;
+  prefix?: string;
+  target: number;
+  suffix?: string;
+  label: string;
+  delay?: number;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { once: true, margin: '-50px' });
   const count = useCountUp(target, 2000, isInView);
 
   return (
-    <motion.div ref={ref}
+    <motion.div
+      ref={ref}
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ delay }}
-      className="bg-[var(--bg-surface)] p-10 rounded-3xl border border-[var(--border-color)] text-center hover:border-brand-mint/30 transition-all group">
-      <div className="flex justify-center mb-6 group-hover:scale-110 transition-transform">{icon}</div>
+      className="bg-[var(--bg-surface)] p-10 rounded-3xl border border-[var(--border-color)] text-center hover:border-brand-mint/30 transition-all group"
+    >
+      <div className="flex justify-center mb-6 group-hover:scale-110 transition-transform">
+        {icon}
+      </div>
       <div className="text-5xl font-bold text-brand-mint mb-2 tabular-nums">
-        {prefix}{count}{suffix}
+        {prefix}
+        {count}
+        {suffix}
       </div>
       <div className="text-brand-gray font-medium uppercase tracking-wider text-sm">{label}</div>
     </motion.div>
@@ -51,14 +69,43 @@ export default function Results() {
   const { t } = useLanguage();
 
   const metrics = [
-    { icon: <TrendingUp className="text-brand-mint" size={32} />, prefix: '+', target: 120, suffix: '%', label: t('results.roi'), delay: 0 },
-    { icon: <Users className="text-brand-mint" size={32} />, prefix: '', target: 2, suffix: 'M+', label: t('results.reach'), delay: 0.1 },
-    { icon: <Target className="text-brand-mint" size={32} />, prefix: '', target: 95, suffix: '%', label: t('results.conversion'), delay: 0.2 },
+    {
+      icon: <TrendingUp className="text-brand-mint" size={32} />,
+      prefix: '+',
+      target: 120,
+      suffix: '%',
+      label: t('results.roi'),
+      delay: 0,
+    },
+    {
+      icon: <Users className="text-brand-mint" size={32} />,
+      prefix: '',
+      target: 2,
+      suffix: 'M+',
+      label: t('results.reach'),
+      delay: 0.1,
+    },
+    {
+      icon: <Target className="text-brand-mint" size={32} />,
+      prefix: '',
+      target: 95,
+      suffix: '%',
+      label: t('results.conversion'),
+      delay: 0.2,
+    },
   ];
 
   const testimonials = [
-    { quote: t('testimonials.1'), author: t('testimonials.1.author'), role: t('testimonials.1.role') },
-    { quote: t('testimonials.2'), author: t('testimonials.2.author'), role: t('testimonials.2.role') },
+    {
+      quote: t('testimonials.1'),
+      author: t('testimonials.1.author'),
+      role: t('testimonials.1.role'),
+    },
+    {
+      quote: t('testimonials.2'),
+      author: t('testimonials.2.author'),
+      role: t('testimonials.2.role'),
+    },
   ];
 
   return (
@@ -69,7 +116,8 @@ export default function Results() {
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-4xl md:text-5xl font-bold tracking-tight mb-6 text-[var(--text-primary)]">
+            className="text-4xl md:text-5xl font-bold tracking-tight mb-6 text-[var(--text-primary)]"
+          >
             {t('results.title')}
           </motion.h2>
           <p className="text-brand-gray text-lg max-w-2xl mx-auto">{t('results.subtitle')}</p>
@@ -85,12 +133,16 @@ export default function Results() {
         {/* Témoignages */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {testimonials.map((testimonial, i) => (
-            <motion.div key={i}
+            <motion.div
+              key={i}
               initial={{ opacity: 0, x: i % 2 === 0 ? -20 : 20 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
-              className="bg-[var(--bg-surface)] p-10 rounded-3xl border border-[var(--border-color)] relative hover:border-brand-mint/20 transition-all">
-              <div className="text-brand-mint text-6xl font-serif absolute top-6 left-8 opacity-20 select-none">"</div>
+              className="bg-[var(--bg-surface)] p-10 rounded-3xl border border-[var(--border-color)] relative hover:border-brand-mint/20 transition-all"
+            >
+              <div className="text-brand-mint text-6xl font-serif absolute top-6 left-8 opacity-20 select-none">
+                "
+              </div>
               <p className="text-lg text-[var(--text-primary)] italic mb-8 relative z-10 leading-relaxed">
                 {testimonial.quote}
               </p>
