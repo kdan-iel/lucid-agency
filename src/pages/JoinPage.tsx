@@ -5,7 +5,6 @@ import Navbar from '../components/Navbar';
 import { checkRateLimit, getRateLimitWait } from '../utils/security';
 import Footer from '../components/Footer';
 import { freelancerSpecialties, joinFormSchema, JoinFormInput } from '../schemas';
-import { supabase } from '../context/AuthContext';
 
 // État initial du formulaire
 const initialForm: JoinFormInput = {
@@ -79,59 +78,32 @@ export default function JoinPage() {
     try {
       setStatus('loading');
 
-      // ✅ Étape 1 : Créer le compte Supabase Auth
-      // Le mot de passe est hashé automatiquement par Supabase (bcrypt)
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: result.data.email,
-        password: result.data.password,
-        options: {
-          // Données passées au trigger (si configuré)
-          data: {
-            first_name: result.data.firstName,
-            last_name: result.data.lastName,
-            role: 'freelancer',
-          },
-        },
-      });
+      // ✅ NOUVEAU : Envoyer à Google Drive EN PREMIER
+      const { submitFreelancerToGoogleDrive } = await import('../utils/googleDriveSubmit');
 
-      if (authError) throw authError;
-      if (!authData.user) throw new Error('Erreur lors de la création du compte');
-
-      // ✅ Étape 2 : Créer le profil dans la table profiles
-      const { error: profileError } = await supabase.from('profiles').insert({
-        user_id: authData.user.id,
+      await submitFreelancerToGoogleDrive({
+        firstName: result.data.firstName.trim(),
+        lastName: result.data.lastName.trim(),
         email: result.data.email.toLowerCase().trim(),
-        first_name: result.data.firstName.trim(),
-        last_name: result.data.lastName.trim(),
-        role: 'freelancer',
-      });
-
-      if (profileError) throw profileError;
-
-      // ✅ Étape 3 : Créer l'entrée freelancer
-      const { error: freelancerError } = await supabase.from('freelancers').insert({
-        user_id: authData.user.id,
         specialty: result.data.specialty.trim(),
-        portfolio_url: result.data.portfolio?.trim() || null,
-        bio: result.data.message?.trim() || null,
-        status: 'pending', // En attente de validation admin
+        portfolio: result.data.portfolio?.trim() || '',
+        message: result.data.message?.trim() || '',
       });
 
-      if (freelancerError) throw freelancerError;
-
+      // ✅ SUCCÈS : Google Drive a réussi, c'est ce qui compte
       setStatus('success');
       setForm(initialForm);
     } catch (err) {
-      console.error('Erreur inscription:', err);
       setStatus('error');
 
-      // Message d'erreur lisible
       const message = (err as Error).message;
-      if (message.includes('already registered')) {
-        setServerError('Cet email est déjà utilisé.');
+      if (message.includes('Configuration')) {
+        setServerError('Configuration serveur manquante. Contacte le support.');
       } else {
-        setServerError('Une erreur est survenue. Veuillez réessayer.');
+        setServerError('Impossible de sauvegarder ton inscription. Réessaye.');
       }
+
+      setTimeout(() => setStatus('idle'), 5000);
     }
   };
 
@@ -148,9 +120,6 @@ export default function JoinPage() {
           >
             <div className="text-6xl mb-6">✅</div>
             <h2 className="text-3xl font-bold mb-4">Candidature envoyée !</h2>
-            <p className="text-brand-gray text-lg mb-2">
-              Vérifie ta boîte mail pour confirmer ton adresse email.
-            </p>
             <p className="text-brand-gray">
               Notre équipe examinera ta candidature et te contactera sous 48h.
             </p>
@@ -315,7 +284,8 @@ export default function JoinPage() {
                   <label className="text-xs font-bold uppercase tracking-widest text-brand-gray ml-1">
                     Spécialité <span className="text-red-400">*</span>
                   </label>
-                  <select aria-label="Specialite"
+                  <select
+                    aria-label="Specialite"
                     name="specialty"
                     value={form.specialty}
                     onChange={handleChange}

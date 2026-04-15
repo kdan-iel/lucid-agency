@@ -1,6 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { motion } from 'motion/react';
-import { supabase } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { type ContactFormInput, contactFormSchema } from '../schemas';
 import {
@@ -12,6 +11,7 @@ import {
 } from '../utils/security';
 
 const CUSTOM_BUDGET_OPTION = 'Plus de 500 000 FCFA';
+const DEFAULT_PROJECT_TYPE = 'Logo / Branding';
 
 const BUDGET_OPTIONS = [
   '5 000 a 25 000 FCFA',
@@ -48,7 +48,7 @@ const initialForm: ContactFormInput = {
   name: '',
   company: '',
   email: '',
-  type: 'Logo / Branding',
+  type: DEFAULT_PROJECT_TYPE,
   budget: BUDGET_OPTIONS[0],
   budgetDetails: '',
   message: '',
@@ -96,7 +96,7 @@ export default function ContactForm() {
     if (!checkRateLimit('contact_submit', 3, 60_000)) {
       const wait = getRateLimitWait('contact_submit', 60_000);
       setRateLimitWait(wait);
-      setServerError(`Trop de tentatives. Reessayez dans ${wait} secondes.`);
+      setServerError(`Trop de tentatives. Réessayez dans ${wait} secondes.`);
       return;
     }
 
@@ -125,17 +125,20 @@ export default function ContactForm() {
           ? result.data.budgetDetails?.trim() || result.data.budget
           : result.data.budget;
 
-      const { error } = await supabase.from('contact_submissions').insert({
+      // ✅ Envoyer à Google Drive
+      const { submitContactToGoogleDrive } = await import('../utils/googleDriveSubmit');
+
+      await submitContactToGoogleDrive({
         name: result.data.name.trim(),
-        company: result.data.company?.trim() || null,
+        company: result.data.company?.trim() || '',
         email: result.data.email.toLowerCase().trim(),
-        type: result.data.type,
-        budget: normalizedBudget,
+        type: result.data.type ?? DEFAULT_PROJECT_TYPE,
+        budget: normalizedBudget ?? BUDGET_OPTIONS[0],
+        budgetDetails: result.data.budgetDetails?.trim() || '',
         message: result.data.message.trim(),
       });
 
-      if (error) throw error;
-
+      // ✅ SUCCÈS
       setStatus('success');
       setForm(initialForm);
 
@@ -143,10 +146,9 @@ export default function ContactForm() {
       storeCsrfToken(newToken);
 
       setTimeout(() => setStatus('idle'), 6000);
-    } catch (err) {
-      console.error('Erreur envoi contact:', err);
+    } catch {
       setStatus('error');
-      setServerError('Une erreur est survenue. Veuillez reessayer.');
+      setServerError('Une erreur est survenue. Veuillez réessayer.');
       setTimeout(() => setStatus('idle'), 5000);
     }
   };

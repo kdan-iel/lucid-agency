@@ -28,7 +28,13 @@ interface PublicTalent {
 
 const specialtyMeta: Record<
   SpecialtyKey,
-  { labelFr: string; labelEn: string; color: string; fallbackSkillFr: string; fallbackSkillEn: string }
+  {
+    labelFr: string;
+    labelEn: string;
+    color: string;
+    fallbackSkillFr: string;
+    fallbackSkillEn: string;
+  }
 > = {
   graphisme: {
     labelFr: 'Graphisme',
@@ -209,9 +215,7 @@ export default function Talents() {
   const categories = useMemo(
     () => [
       { key: 'all' as const, label: t('talents.filter.all') },
-      ...(
-        Object.keys(specialtyMeta) as SpecialtyKey[]
-      ).map((key) => ({
+      ...(Object.keys(specialtyMeta) as SpecialtyKey[]).map((key) => ({
         key,
         label: lang === 'FR' ? specialtyMeta[key].labelFr : specialtyMeta[key].labelEn,
       })),
@@ -516,7 +520,9 @@ export default function Talents() {
               </div>
 
               <div className="flex items-center justify-between p-4 rounded-2xl bg-brand-mint/5 border border-brand-mint/20 mb-4">
-                <span className="text-sm text-brand-gray font-medium">{emptyCopy.indicativeRate}</span>
+                <span className="text-sm text-brand-gray font-medium">
+                  {emptyCopy.indicativeRate}
+                </span>
                 <span className="font-bold text-brand-mint">{selectedTalent.rate}</span>
               </div>
 
