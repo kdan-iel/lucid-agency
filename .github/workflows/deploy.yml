@@ -29,7 +29,6 @@ env:
   # Placeholders de build uniquement. Le runtime Vercel gère ses propres variables.
   VITE_SUPABASE_URL: https://placeholder.supabase.co
   VITE_SUPABASE_ANON_KEY: placeholder_anon_key_for_ci_only
-  DEPLOY_ENV: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || 'production' }}
 
 jobs:
   # ────────────────────────────────────────────────────────
@@ -75,7 +74,7 @@ jobs:
           VITE_SUPABASE_URL: ${{ env.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ env.VITE_SUPABASE_ANON_KEY }}
           VITE_APP_URL: ${{ secrets.VITE_APP_URL }}
-          VITE_APP_ENV: ${{ env.DEPLOY_ENV }}
+          VITE_APP_ENV: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || 'production' }}
           NODE_ENV: production
 
       - name: Verify build integrity
@@ -160,26 +159,28 @@ jobs:
         run: npm install -g vercel@latest
 
       - name: Pull Vercel environment
-        run: vercel pull --yes --environment=${{ env.DEPLOY_ENV }} --token=${{ secrets.VERCEL_TOKEN }}
+        run: vercel pull --yes --environment=$DEPLOY_ENV --token=${{ secrets.VERCEL_TOKEN }}
         env:
+          DEPLOY_ENV: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || 'production' }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
       - name: Build via Vercel
         run: |
-          if [ "${{ env.DEPLOY_ENV }}" = "production" ]; then
+          if [ "$DEPLOY_ENV" = "production" ]; then
             vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
           else
             vercel build --token=${{ secrets.VERCEL_TOKEN }}
           fi
         env:
+          DEPLOY_ENV: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || 'production' }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
       - name: Deploy to production
         id: deploy
         run: |
-          if [ "${{ env.DEPLOY_ENV }}" = "production" ]; then
+          if [ "$DEPLOY_ENV" = "production" ]; then
             URL=$(vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }})
           else
             URL=$(vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }})
@@ -187,6 +188,7 @@ jobs:
           echo "url=$URL" >> $GITHUB_OUTPUT
           echo "✅ Deployed to: $URL"
         env:
+          DEPLOY_ENV: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || 'production' }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
@@ -260,7 +262,7 @@ jobs:
         run: |
           if [[ "${{ needs.deploy.result }}" == "success" && "${{ needs.smoke-test.result }}" == "success" ]]; then
             echo "🚀 ✅ DEPLOYMENT SUCCESSFUL"
-            echo "Target: ${{ env.DEPLOY_ENV }}"
+            echo "Target: $DEPLOY_ENV"
             echo "URL: ${{ needs.deploy.outputs.deployed_url }}"
             echo "Commit: ${{ github.sha }}"
             echo "By: ${{ github.actor }}"
@@ -269,3 +271,5 @@ jobs:
             echo "Deploy:     ${{ needs.deploy.result }}"
             echo "Smoke test: ${{ needs.smoke-test.result }}"
           fi
+        env:
+          DEPLOY_ENV: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || 'production' }}
