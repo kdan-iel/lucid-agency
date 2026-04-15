@@ -55,14 +55,12 @@ export default function JoinPage() {
     e.preventDefault();
     setServerError(null);
 
-    // ✅ Rate limiting — max 3 inscriptions par 10 minutes
     if (!checkRateLimit('join_submit', 3, 600_000)) {
       const wait = getRateLimitWait('join_submit', 600_000);
       setServerError('Trop de tentatives. Réessayez dans ' + Math.ceil(wait / 60) + ' minutes.');
       return;
     }
 
-    // ✅ Validation Zod
     const result = joinFormSchema.safeParse(form);
 
     if (!result.success) {
@@ -78,7 +76,6 @@ export default function JoinPage() {
     try {
       setStatus('loading');
 
-      // ✅ NOUVEAU : Envoyer à Google Drive EN PREMIER
       const { submitFreelancerToGoogleDrive } = await import('../utils/googleDriveSubmit');
 
       await submitFreelancerToGoogleDrive({
@@ -90,7 +87,6 @@ export default function JoinPage() {
         message: result.data.message?.trim() || '',
       });
 
-      // ✅ SUCCÈS : Google Drive a réussi, c'est ce qui compte
       setStatus('success');
       setForm(initialForm);
     } catch (err) {
@@ -120,9 +116,11 @@ export default function JoinPage() {
           >
             <div className="text-6xl mb-6">✅</div>
             <h2 className="text-3xl font-bold mb-4">Candidature envoyée !</h2>
-            <p className="text-brand-gray">
+            <p className="text-brand-gray text-lg mb-2">
               Notre équipe examinera ta candidature et te contactera sous 48h.
             </p>
+            {/* <p className="text-brand-gray">
+            </p> */}
           </motion.div>
         </main>
         <Footer />
