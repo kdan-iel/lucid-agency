@@ -20,13 +20,13 @@ const initialForm: JoinFormInput = {
 };
 
 const specialtyLabels: Record<(typeof freelancerSpecialties)[number], string> = {
-  graphisme: 'Graphisme',
-  video: 'Video',
-  redaction: 'Redaction',
-  webdev: 'Webdev',
-  photo: 'Photo',
-  marketing: 'Marketing',
-  autre: 'Autre',
+  graphisme: 'Designer graphique',
+  video: 'Videaste / Monteur video',
+  redaction: 'Redacteur / Copywriter',
+  webdev: 'Developpeur web',
+  photo: 'Photographe',
+  marketing: 'Specialiste marketing digital',
+  autre: 'Autre expertise',
 };
 
 export default function JoinPage() {
@@ -315,7 +315,7 @@ export default function JoinPage() {
                   <label className="text-xs font-bold uppercase tracking-widest text-brand-gray ml-1">
                     Spécialité <span className="text-red-400">*</span>
                   </label>
-                  <select
+                  <select aria-label="Specialite"
                     name="specialty"
                     value={form.specialty}
                     onChange={handleChange}
@@ -323,7 +323,7 @@ export default function JoinPage() {
                       errors.specialty ? 'border-red-400' : 'border-white/10'
                     }`}
                   >
-                    <option value="">Choisir une specialite</option>
+                    <option value="">Choisir votre specialite</option>
                     {freelancerSpecialties.map((specialty) => (
                       <option key={specialty} value={specialty}>
                         {specialtyLabels[specialty]}
