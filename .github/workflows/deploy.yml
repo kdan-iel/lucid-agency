@@ -132,7 +132,7 @@ jobs:
     outputs:
       deployed_url: ${{ steps.deploy.outputs.url }}
     environment:
-      name: ${{ env.DEPLOY_ENV }}
+      name: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || 'production' }}
       url: ${{ steps.deploy.outputs.url }}
 
     steps:
