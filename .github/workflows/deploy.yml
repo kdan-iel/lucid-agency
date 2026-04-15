@@ -22,10 +22,13 @@ on:
 # ✅ Un seul déploiement à la fois
 concurrency:
   group: deploy-${{ github.ref }}
-  cancel-in-progress: false  # Ne pas annuler un déploiement en cours
+  cancel-in-progress: false # Ne pas annuler un déploiement en cours
 
 env:
   NODE_VERSION: '20'
+  # Placeholders de build uniquement. Le runtime Vercel gère ses propres variables.
+  VITE_SUPABASE_URL: https://placeholder.supabase.co
+  VITE_SUPABASE_ANON_KEY: placeholder_anon_key_for_ci_only
 
 jobs:
   # ────────────────────────────────────────────────────────
@@ -68,20 +71,20 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_SUPABASE_URL: ${{ env.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ env.VITE_SUPABASE_ANON_KEY }}
           VITE_APP_URL: ${{ secrets.VITE_APP_URL }}
-          VITE_APP_ENV: production
+          VITE_APP_ENV: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || 'production' }}
           NODE_ENV: production
 
       - name: Verify build integrity
         run: |
           echo "📦 Verifying build..."
-          
+
           # Fichiers obligatoires
           test -f dist/index.html || (echo "❌ index.html missing" && exit 1)
           test -d dist/assets || (echo "❌ assets/ missing" && exit 1)
-          
+
           # HTML valide — pas de contenu hors balises html
           python3 -c "
           with open('dist/index.html') as f:
@@ -94,11 +97,11 @@ jobs:
                   exit(1)
           print('✅ HTML structure valid')
           "
-          
+
           # Pas de source maps exposées
           MAPS=$(find dist/ -name "*.map" 2>/dev/null | wc -l)
           echo "Source maps: $MAPS (should be 0 in production)"
-          
+
           # Taille du bundle principal
           BUNDLE=$(find dist/assets -name "index-*.js" | head -1)
           if [ -n "$BUNDLE" ]; then
@@ -108,7 +111,7 @@ jobs:
               echo "⚠️ Main bundle > 600KB — consider code splitting"
             fi
           fi
-          
+
           echo "✅ Build integrity verified"
 
       - name: Upload build artifact
@@ -125,8 +128,10 @@ jobs:
     name: 🚀 Deploy to Vercel
     runs-on: ubuntu-latest
     needs: build
+    outputs:
+      deployed_url: ${{ steps.deploy.outputs.url }}
     environment:
-      name: production
+      name: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || 'production' }}
       url: ${{ steps.deploy.outputs.url }}
 
     steps:
@@ -154,24 +159,36 @@ jobs:
         run: npm install -g vercel@latest
 
       - name: Pull Vercel environment
-        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+        run: vercel pull --yes --environment=$DEPLOY_ENV --token=${{ secrets.VERCEL_TOKEN }}
         env:
+          DEPLOY_ENV: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || 'production' }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
       - name: Build via Vercel
-        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+        run: |
+          if [ "$DEPLOY_ENV" = "production" ]; then
+            vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+          else
+            vercel build --token=${{ secrets.VERCEL_TOKEN }}
+          fi
         env:
+          DEPLOY_ENV: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || 'production' }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
       - name: Deploy to production
         id: deploy
         run: |
-          URL=$(vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }})
+          if [ "$DEPLOY_ENV" = "production" ]; then
+            URL=$(vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }})
+          else
+            URL=$(vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }})
+          fi
           echo "url=$URL" >> $GITHUB_OUTPUT
           echo "✅ Deployed to: $URL"
         env:
+          DEPLOY_ENV: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || 'production' }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
@@ -183,21 +200,14 @@ jobs:
     runs-on: ubuntu-latest
     needs: deploy
     steps:
-      - name: Verify smoke test URL secret
-        env:
-          VITE_APP_URL: ${{ secrets.VITE_APP_URL }}
-        run: |
-          [ -n "$VITE_APP_URL" ] || (echo "❌ Missing GitHub secret: VITE_APP_URL" && exit 1)
-          echo "✅ Smoke test URL secret is present"
-
       - name: Wait for deployment to propagate
         run: sleep 15
 
       - name: Test homepage loads
         run: |
-          URL="${{ secrets.VITE_APP_URL }}"
+          URL="${{ needs.deploy.outputs.deployed_url }}"
           echo "Testing: $URL"
-          
+
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
           if [ "$STATUS" != "200" ]; then
             echo "❌ Homepage returned HTTP $STATUS"
@@ -207,11 +217,11 @@ jobs:
 
       - name: Verify security headers on live site
         run: |
-          URL="${{ secrets.VITE_APP_URL }}"
+          URL="${{ needs.deploy.outputs.deployed_url }}"
           echo "🔍 Checking security headers on $URL..."
-          
+
           HEADERS=$(curl -s -I "$URL")
-          
+
           check_header() {
             if echo "$HEADERS" | grep -qi "$1"; then
               echo "✅ $1 present"
@@ -219,7 +229,7 @@ jobs:
               echo "⚠️ $1 missing from response"
             fi
           }
-          
+
           check_header "Strict-Transport-Security"
           check_header "X-Content-Type-Options"
           check_header "X-Frame-Options"
@@ -227,8 +237,8 @@ jobs:
 
       - name: Verify SPA routing works
         run: |
-          URL="${{ secrets.VITE_APP_URL }}"
-          
+          URL="${{ needs.deploy.outputs.deployed_url }}"
+
           # Les routes SPA doivent retourner 200 (pas 404)
           for route in "/join" "/login" "/privacy" "/legal"; do
             STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$URL$route")
@@ -252,7 +262,8 @@ jobs:
         run: |
           if [[ "${{ needs.deploy.result }}" == "success" && "${{ needs.smoke-test.result }}" == "success" ]]; then
             echo "🚀 ✅ DEPLOYMENT SUCCESSFUL"
-            echo "URL: ${{ secrets.VITE_APP_URL }}"
+            echo "Target: $DEPLOY_ENV"
+            echo "URL: ${{ needs.deploy.outputs.deployed_url }}"
             echo "Commit: ${{ github.sha }}"
             echo "By: ${{ github.actor }}"
           else
@@ -260,3 +271,5 @@ jobs:
             echo "Deploy:     ${{ needs.deploy.result }}"
             echo "Smoke test: ${{ needs.smoke-test.result }}"
           fi
+        env:
+          DEPLOY_ENV: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || 'production' }}
