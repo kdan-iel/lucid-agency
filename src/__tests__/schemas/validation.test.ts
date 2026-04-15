@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { contactFormSchema, joinFormSchema } from '../../schemas/index';
 
 describe('contactFormSchema', () => {
@@ -8,7 +8,8 @@ describe('contactFormSchema', () => {
     message: 'Bonjour, je veux lancer un projet.',
     company: 'TechFlow',
     type: 'Site Web',
-    budget: '500K – 1M FCFA',
+    budget: '100 000 a 200 000 FCFA',
+    budgetDetails: '',
   };
 
   it('valide un formulaire correct', () => {
@@ -46,6 +47,24 @@ describe('contactFormSchema', () => {
   it('accepte un champ company vide (optionnel)', () => {
     const r = contactFormSchema.safeParse({ ...valid, company: '' });
     expect(r.success).toBe(true);
+  });
+
+  it('accepte un budget precise quand le client choisit plus de 500 000 FCFA', () => {
+    const r = contactFormSchema.safeParse({
+      ...valid,
+      budget: 'Plus de 500 000 FCFA',
+      budgetDetails: '750 000 FCFA',
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it('rejette plus de 500 000 FCFA sans precision', () => {
+    const r = contactFormSchema.safeParse({
+      ...valid,
+      budget: 'Plus de 500 000 FCFA',
+      budgetDetails: '',
+    });
+    expect(r.success).toBe(false);
   });
 });
 

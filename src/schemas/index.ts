@@ -30,11 +30,25 @@ export const contactFormSchema = z.object({
 
   budget: z.string().optional(),
 
+  budgetDetails: z
+    .string()
+    .max(50, 'Maximum 50 caracteres')
+    .optional()
+    .or(z.literal('')),
+
   message: z
     .string()
     .min(10, 'Minimum 10 caracteres')
     .max(5000, 'Maximum 5000 caracteres')
     .refine((val) => !/<[^>]*>/g.test(val), 'Le HTML nest pas autorise'),
+}).superRefine((data, ctx) => {
+  if (data.budget === 'Plus de 500 000 FCFA' && !data.budgetDetails?.trim()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['budgetDetails'],
+      message: 'Veuillez preciser votre budget',
+    });
+  }
 });
 
 export type ContactFormInput = z.infer<typeof contactFormSchema>;

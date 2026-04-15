@@ -1,34 +1,69 @@
+import { useEffect, useState, type FormEvent } from 'react';
 import { motion } from 'motion/react';
-import { useLanguage } from '../context/LanguageContext';
-import { useState, FormEvent, useEffect } from 'react';
-import { contactFormSchema, ContactFormInput } from '../schemas';
 import { supabase } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
+import { type ContactFormInput, contactFormSchema } from '../schemas';
 import {
   checkRateLimit,
-  getRateLimitWait,
   generateCsrfToken,
-  storeCsrfToken,
   getCsrfToken,
+  getRateLimitWait,
+  storeCsrfToken,
 } from '../utils/security';
+
+const CUSTOM_BUDGET_OPTION = 'Plus de 500 000 FCFA';
+
+const BUDGET_OPTIONS = [
+  '5 000 a 25 000 FCFA',
+  '25 000 a 50 000 FCFA',
+  '50 000 a 100 000 FCFA',
+  '100 000 a 200 000 FCFA',
+  '200 000 a 350 000 FCFA',
+  '350 000 a 500 000 FCFA',
+  CUSTOM_BUDGET_OPTION,
+] as const;
+
+const BUDGET_OPTION_LABELS: Record<'FR' | 'EN', Record<(typeof BUDGET_OPTIONS)[number], string>> = {
+  FR: {
+    '5 000 a 25 000 FCFA': '5 000 a 25 000 FCFA',
+    '25 000 a 50 000 FCFA': '25 000 a 50 000 FCFA',
+    '50 000 a 100 000 FCFA': '50 000 a 100 000 FCFA',
+    '100 000 a 200 000 FCFA': '100 000 a 200 000 FCFA',
+    '200 000 a 350 000 FCFA': '200 000 a 350 000 FCFA',
+    '350 000 a 500 000 FCFA': '350 000 a 500 000 FCFA',
+    'Plus de 500 000 FCFA': 'Plus de 500 000 FCFA',
+  },
+  EN: {
+    '5 000 a 25 000 FCFA': '5,000 to 25,000 FCFA',
+    '25 000 a 50 000 FCFA': '25,000 to 50,000 FCFA',
+    '50 000 a 100 000 FCFA': '50,000 to 100,000 FCFA',
+    '100 000 a 200 000 FCFA': '100,000 to 200,000 FCFA',
+    '200 000 a 350 000 FCFA': '200,000 to 350,000 FCFA',
+    '350 000 a 500 000 FCFA': '350,000 to 500,000 FCFA',
+    'Plus de 500 000 FCFA': 'More than 500,000 FCFA',
+  },
+};
 
 const initialForm: ContactFormInput = {
   name: '',
   company: '',
   email: '',
   type: 'Logo / Branding',
-  budget: '< 500K FCFA',
+  budget: BUDGET_OPTIONS[0],
+  budgetDetails: '',
   message: '',
 };
 
+type ContactFormErrors = Partial<Record<keyof ContactFormInput, string | undefined>>;
+
 export default function ContactForm() {
-  const { t } = useLanguage();
+  const { lang, t } = useLanguage();
   const [form, setForm] = useState<ContactFormInput>(initialForm);
-  const [errors, setErrors] = useState<Partial<Record<keyof ContactFormInput, string>>>({});
+  const [errors, setErrors] = useState<ContactFormErrors>({});
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [serverError, setServerError] = useState<string | null>(null);
   const [rateLimitWait, setRateLimitWait] = useState(0);
 
-  // ✅ Générer un token CSRF au montage du composant
   useEffect(() => {
     const token = generateCsrfToken();
     storeCsrfToken(token);
@@ -38,9 +73,19 @@ export default function ContactForm() {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+
+    setForm((prev) => ({
+      ...prev,
+      [name]: value,
+      ...(name === 'budget' && value !== CUSTOM_BUDGET_OPTION ? { budgetDetails: '' } : {}),
+    }));
+
     if (errors[name as keyof ContactFormInput]) {
       setErrors((prev) => ({ ...prev, [name]: undefined }));
+    }
+
+    if (name === 'budget' && value !== CUSTOM_BUDGET_OPTION && errors.budgetDetails) {
+      setErrors((prev) => ({ ...prev, budgetDetails: undefined }));
     }
   };
 
@@ -48,25 +93,22 @@ export default function ContactForm() {
     e.preventDefault();
     setServerError(null);
 
-    // ✅ Rate limiting côté client — max 3 soumissions par minute
     if (!checkRateLimit('contact_submit', 3, 60_000)) {
       const wait = getRateLimitWait('contact_submit', 60_000);
       setRateLimitWait(wait);
-      setServerError(`Trop de tentatives. Réessayez dans ${wait} secondes.`);
+      setServerError(`Trop de tentatives. Reessayez dans ${wait} secondes.`);
       return;
     }
 
-    // ✅ Vérification token CSRF
     const csrfToken = getCsrfToken();
     if (!csrfToken) {
       setServerError('Session invalide. Veuillez recharger la page.');
       return;
     }
 
-    // ✅ Validation Zod
     const result = contactFormSchema.safeParse(form);
     if (!result.success) {
-      const fieldErrors: Partial<Record<keyof ContactFormInput, string>> = {};
+      const fieldErrors: ContactFormErrors = {};
       result.error.issues.forEach((err) => {
         const field = err.path[0] as keyof ContactFormInput;
         fieldErrors[field] = err.message;
@@ -78,13 +120,17 @@ export default function ContactForm() {
     try {
       setStatus('loading');
 
-      // ✅ Envoi vers Supabase
+      const normalizedBudget =
+        result.data.budget === CUSTOM_BUDGET_OPTION
+          ? result.data.budgetDetails?.trim() || result.data.budget
+          : result.data.budget;
+
       const { error } = await supabase.from('contact_submissions').insert({
         name: result.data.name.trim(),
         company: result.data.company?.trim() || null,
         email: result.data.email.toLowerCase().trim(),
         type: result.data.type,
-        budget: result.data.budget,
+        budget: normalizedBudget,
         message: result.data.message.trim(),
       });
 
@@ -93,7 +139,6 @@ export default function ContactForm() {
       setStatus('success');
       setForm(initialForm);
 
-      // Renouveler le token CSRF après soumission réussie
       const newToken = generateCsrfToken();
       storeCsrfToken(newToken);
 
@@ -101,12 +146,13 @@ export default function ContactForm() {
     } catch (err) {
       console.error('Erreur envoi contact:', err);
       setStatus('error');
-      setServerError('Une erreur est survenue. Veuillez réessayer.');
+      setServerError('Une erreur est survenue. Veuillez reessayer.');
       setTimeout(() => setStatus('idle'), 5000);
     }
   };
 
   const isBlocked = status === 'loading' || rateLimitWait > 0;
+  const isCustomBudget = form.budget === CUSTOM_BUDGET_OPTION;
 
   return (
     <section id="contact" className="py-24 bg-brand-anthracite">
@@ -141,6 +187,7 @@ export default function ContactForm() {
               />
               {errors.name && <p className="text-red-400 text-xs ml-1">{errors.name}</p>}
             </div>
+
             <div className="space-y-2">
               <label className="text-xs font-bold uppercase tracking-widest text-brand-gray ml-1">
                 {t('contact.company')}
@@ -168,7 +215,7 @@ export default function ContactForm() {
               value={form.email}
               onChange={handleChange}
               className={`w-full bg-brand-anthracite border rounded-xl px-4 py-4 text-white focus:border-brand-mint outline-none transition-colors ${errors.email ? 'border-red-400' : 'border-white/10'}`}
-              placeholder="jean@société.com"
+              placeholder="jean@societe.com"
               maxLength={255}
               autoComplete="email"
             />
@@ -187,11 +234,12 @@ export default function ContactForm() {
                 aria-label={t('contact.type')}
                 className="w-full bg-brand-anthracite border border-white/10 rounded-xl px-4 py-4 text-white focus:border-brand-mint outline-none transition-colors appearance-none"
               >
-                {['Logo / Branding', 'Site Web', 'Vidéo', 'Stratégie', 'Autre'].map((o) => (
-                  <option key={o}>{o}</option>
+                {['Logo / Branding', 'Site Web', 'Video', 'Strategie', 'Autre'].map((option) => (
+                  <option key={option}>{option}</option>
                 ))}
               </select>
             </div>
+
             <div className="space-y-2">
               <label className="text-xs font-bold uppercase tracking-widest text-brand-gray ml-1">
                 {t('contact.budget')}
@@ -203,12 +251,34 @@ export default function ContactForm() {
                 aria-label={t('contact.budget')}
                 className="w-full bg-brand-anthracite border border-white/10 rounded-xl px-4 py-4 text-white focus:border-brand-mint outline-none transition-colors appearance-none"
               >
-                {['< 500K FCFA', '500K – 1M FCFA', '1M – 3M FCFA', '+3M FCFA'].map((o) => (
-                  <option key={o}>{o}</option>
+                {BUDGET_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {BUDGET_OPTION_LABELS[lang][option]}
+                  </option>
                 ))}
               </select>
             </div>
           </div>
+
+          {isCustomBudget && (
+            <div className="space-y-2 mb-6">
+              <label className="text-xs font-bold uppercase tracking-widest text-brand-gray ml-1">
+                {t('contact.budget.details')} <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="text"
+                name="budgetDetails"
+                value={form.budgetDetails || ''}
+                onChange={handleChange}
+                className={`w-full bg-brand-anthracite border rounded-xl px-4 py-4 text-white focus:border-brand-mint outline-none transition-colors ${errors.budgetDetails ? 'border-red-400' : 'border-white/10'}`}
+                placeholder={t('contact.budget.details.placeholder')}
+                maxLength={50}
+              />
+              {errors.budgetDetails && (
+                <p className="text-red-400 text-xs ml-1">{errors.budgetDetails}</p>
+              )}
+            </div>
+          )}
 
           <div className="space-y-2 mb-8">
             <label className="text-xs font-bold uppercase tracking-widest text-brand-gray ml-1">
@@ -247,7 +317,7 @@ export default function ContactForm() {
               animate={{ opacity: 1, y: 0 }}
               className="mt-6 text-center text-brand-mint font-bold"
             >
-              ✅ Demande envoyée ! Nous vous recontactons sous 24h.
+              Demande envoyee ! Nous vous recontactons sous 24h.
             </motion.p>
           )}
 
@@ -257,7 +327,7 @@ export default function ContactForm() {
               animate={{ opacity: 1, y: 0 }}
               className="mt-6 text-center text-red-400 font-bold"
             >
-              ❌ {serverError}
+              {serverError}
             </motion.p>
           )}
         </form>
