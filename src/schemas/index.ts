@@ -15,41 +15,39 @@ export type FreelancerSpecialty = (typeof freelancerSpecialties)[number];
 // ============================================================
 // SCHEMA CONTACT FORM
 // ============================================================
-export const contactFormSchema = z.object({
-  name: z
-    .string()
-    .min(2, 'Minimum 2 caracteres')
-    .max(100, 'Maximum 100 caracteres')
-    .regex(/^[a-zA-ZÀ-ÿ\s'\-]+$/, 'Caracteres invalides'),
+export const contactFormSchema = z
+  .object({
+    name: z
+      .string()
+      .min(2, 'Minimum 2 caracteres')
+      .max(100, 'Maximum 100 caracteres')
+      .regex(/^[a-zA-ZÀ-ÿ\s'\-]+$/, 'Caracteres invalides'),
 
-  company: z.string().max(100, 'Maximum 100 caracteres').optional().or(z.literal('')),
+    company: z.string().max(100, 'Maximum 100 caracteres').optional().or(z.literal('')),
 
-  email: z.string().email('Email invalide').max(255),
+    email: z.string().email('Email invalide').max(255),
 
-  type: z.string().optional(),
+    type: z.string().optional(),
 
-  budget: z.string().optional(),
+    budget: z.string().optional(),
 
-  budgetDetails: z
-    .string()
-    .max(50, 'Maximum 50 caracteres')
-    .optional()
-    .or(z.literal('')),
+    budgetDetails: z.string().max(50, 'Maximum 50 caracteres').optional().or(z.literal('')),
 
-  message: z
-    .string()
-    .min(10, 'Minimum 10 caracteres')
-    .max(5000, 'Maximum 5000 caracteres')
-    .refine((val) => !/<[^>]*>/g.test(val), 'Le HTML nest pas autorise'),
-}).superRefine((data, ctx) => {
-  if (data.budget === 'Plus de 500 000 FCFA' && !data.budgetDetails?.trim()) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['budgetDetails'],
-      message: 'Veuillez preciser votre budget',
-    });
-  }
-});
+    message: z
+      .string()
+      .min(10, 'Minimum 10 caracteres')
+      .max(5000, 'Maximum 5000 caracteres')
+      .refine((val) => !/<[^>]*>/g.test(val), 'Le HTML nest pas autorise'),
+  })
+  .superRefine((data, ctx) => {
+    if (data.budget === 'Plus de 500 000 FCFA' && !data.budgetDetails?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['budgetDetails'],
+        message: 'Veuillez preciser votre budget',
+      });
+    }
+  });
 
 export type ContactFormInput = z.infer<typeof contactFormSchema>;
 
