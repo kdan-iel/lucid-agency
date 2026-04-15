@@ -29,7 +29,7 @@ export interface AuthContextType {
   profile: Profile | null;
   loading: boolean;
   error: string | null;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<Profile>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   updatePassword: (newPassword: string) => Promise<void>;
@@ -46,7 +46,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchProfile = async (userId: string) => {
+  const getProfileByUserId = async (userId: string): Promise<Profile | null> => {
     try {
       const { data, error: profileError } = await supabase
         .from('profiles')
@@ -55,12 +55,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single();
       if (profileError && profileError.code !== 'PGRST116') {
         console.error('Erreur profil:', profileError.message);
-        return;
+        return null;
       }
-      setProfile(data as Profile);
+      return (data as Profile) ?? null;
     } catch (err) {
       console.error('fetchProfile error:', err);
+      return null;
     }
+  };
+
+  const fetchProfile = async (userId: string) => {
+    const nextProfile = await getProfileByUserId(userId);
+    setProfile(nextProfile);
+    return nextProfile;
   };
 
   useEffect(() => {
@@ -96,11 +103,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string): Promise<Profile> => {
     try {
       setError(null);
-      const { error: e } = await supabase.auth.signInWithPassword({ email, password });
+      const {
+        data: { user: loggedUser },
+        error: e,
+      } = await supabase.auth.signInWithPassword({ email, password });
       if (e) throw e;
+      if (!loggedUser) throw new Error('Utilisateur introuvable.');
+
+      const nextProfile = await getProfileByUserId(loggedUser.id);
+      if (!nextProfile) throw new Error('Profil introuvable pour ce compte.');
+
+      setProfile(nextProfile);
+      return nextProfile;
     } catch (err) {
       setError((err as Error).message);
       throw err;

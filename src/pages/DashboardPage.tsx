@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import { Phone as WhatsAppIcon } from 'lucide-react';
+import { validatePassword } from '../utils/security';
 
 interface Mission {
   id: number;
@@ -127,6 +128,11 @@ export default function DashboardPage() {
   // ✅ Sauvegarde du profil dans Supabase
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
+    const passwordValidation = validatePassword(passwordForm.new);
+    if (!passwordValidation.valid) {
+      setSettingsError(`Mot de passe invalide : ${passwordValidation.errors.join(', ')}.`);
+      return;
+    }
     setSettingsStatus('saving');
     setSettingsError('');
     try {

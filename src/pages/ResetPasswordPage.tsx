@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { Lock, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import { supabase } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
+import { validatePassword } from '../utils/security';
 
 export default function ResetPasswordPage() {
   const [password, setPassword] = useState('');
@@ -14,7 +15,6 @@ export default function ResetPasswordPage() {
   const [validSession, setValidSession] = useState(false);
 
   useEffect(() => {
-    // Supabase injecte le token dans l'URL au clic du lien email
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event) => {
@@ -29,18 +29,12 @@ export default function ResetPasswordPage() {
     e.preventDefault();
     setError('');
 
-    if (password.length < 8) {
-      setError('Le mot de passe doit contenir au moins 8 caractères.');
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
+      setError(`Mot de passe invalide : ${passwordValidation.errors.join(', ')}.`);
       return;
     }
-    if (!/[A-Z]/.test(password)) {
-      setError('Le mot de passe doit contenir au moins une majuscule.');
-      return;
-    }
-    if (!/[0-9]/.test(password)) {
-      setError('Le mot de passe doit contenir au moins un chiffre.');
-      return;
-    }
+
     if (password !== confirm) {
       setError('Les mots de passe ne correspondent pas.');
       return;
@@ -94,7 +88,9 @@ export default function ResetPasswordPage() {
                   <Lock size={32} />
                 </div>
                 <h1 className="text-3xl font-bold mb-2">Nouveau mot de passe</h1>
-                <p className="text-brand-gray">Choisissez un mot de passe sécurisé.</p>
+                <p className="text-brand-gray">
+                  Choisissez un mot de passe sécurisé avec majuscule, chiffre et caractère spécial.
+                </p>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-6" noValidate>

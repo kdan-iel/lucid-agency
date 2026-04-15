@@ -50,6 +50,7 @@ const VALID_PATHS = [
   '/join',
   '/dashboard',
   '/admin',
+  '/admin/login',
   '/login',
   '/reset-password',
   '/privacy',
@@ -119,6 +120,8 @@ function AppContent() {
         return <JoinPage />;
       case '/login':
         return <LoginPage role="freelancer" />;
+      case '/admin/login':
+        return <LoginPage role="admin" />;
       case '/reset-password':
         return <ResetPasswordPage />;
       case '/privacy':

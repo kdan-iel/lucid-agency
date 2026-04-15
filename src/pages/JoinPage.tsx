@@ -4,7 +4,7 @@ import { useState, FormEvent } from 'react';
 import Navbar from '../components/Navbar';
 import { checkRateLimit, getRateLimitWait } from '../utils/security';
 import Footer from '../components/Footer';
-import { joinFormSchema, JoinFormInput } from '../schemas';
+import { freelancerSpecialties, joinFormSchema, JoinFormInput } from '../schemas';
 import { supabase } from '../context/AuthContext';
 
 // État initial du formulaire
@@ -19,6 +19,16 @@ const initialForm: JoinFormInput = {
   message: '',
 };
 
+const specialtyLabels: Record<(typeof freelancerSpecialties)[number], string> = {
+  graphisme: 'Graphisme',
+  video: 'Video',
+  redaction: 'Redaction',
+  webdev: 'Webdev',
+  photo: 'Photo',
+  marketing: 'Marketing',
+  autre: 'Autre',
+};
+
 export default function JoinPage() {
   const { t } = useLanguage();
 
@@ -30,7 +40,9 @@ export default function JoinPage() {
   const [showConfirm, setShowConfirm] = useState(false);
 
   // Mise à jour d'un champ
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
 
@@ -303,16 +315,21 @@ export default function JoinPage() {
                   <label className="text-xs font-bold uppercase tracking-widest text-brand-gray ml-1">
                     Spécialité <span className="text-red-400">*</span>
                   </label>
-                  <input
-                    type="text"
+                  <select
                     name="specialty"
                     value={form.specialty}
                     onChange={handleChange}
-                    className={`w-full bg-brand-anthracite border rounded-xl px-4 py-4 text-white focus:border-brand-mint outline-none transition-colors ${
+                    className={`w-full bg-brand-anthracite border rounded-xl px-4 py-4 text-white focus:border-brand-mint outline-none transition-colors appearance-none ${
                       errors.specialty ? 'border-red-400' : 'border-white/10'
                     }`}
-                    placeholder="Ex: Designer UI/UX"
-                  />
+                  >
+                    <option value="">Choisir une specialite</option>
+                    {freelancerSpecialties.map((specialty) => (
+                      <option key={specialty} value={specialty}>
+                        {specialtyLabels[specialty]}
+                      </option>
+                    ))}
+                  </select>
                   {errors.specialty && (
                     <p className="text-red-400 text-xs ml-1">{errors.specialty}</p>
                   )}

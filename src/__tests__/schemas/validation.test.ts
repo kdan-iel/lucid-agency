@@ -56,7 +56,7 @@ describe('joinFormSchema', () => {
     email: 'jean@example.com',
     password: 'Secure1!Pass',
     confirmPassword: 'Secure1!Pass',
-    specialty: 'Designer UI/UX',
+    specialty: 'graphisme',
     portfolio: 'https://jean.design',
     message: '',
   };
@@ -86,6 +86,11 @@ describe('joinFormSchema', () => {
 
   it('rejette un portfolio non-URL', () => {
     const r = joinFormSchema.safeParse({ ...valid, portfolio: 'pas-une-url' });
+    expect(r.success).toBe(false);
+  });
+
+  it('rejette une specialite hors liste', () => {
+    const r = joinFormSchema.safeParse({ ...valid, specialty: 'designer' });
     expect(r.success).toBe(false);
   });
 

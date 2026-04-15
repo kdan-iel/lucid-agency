@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import { Phone as WhatsAppIcon } from 'lucide-react';
+import { validatePassword } from '../utils/security';
 
 interface TalentRequest {
   id: string;
@@ -172,6 +173,11 @@ export default function AdminPage() {
     }
     if (passwordForm.new.length < 8) {
       setSettingsError('Minimum 8 caractères.');
+      return;
+    }
+    const passwordValidation = validatePassword(passwordForm.new);
+    if (!passwordValidation.valid) {
+      setSettingsError(`Mot de passe invalide : ${passwordValidation.errors.join(', ')}.`);
       return;
     }
     setSettingsStatus('saving');

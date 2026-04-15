@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { useAuth } from '../context/AuthContext';
+import { supabase, useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { Lock, Mail, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import Navbar from '../components/Navbar';
-import { checkRateLimit, getRateLimitWait } from '../utils/security';
+import { checkRateLimit, getRateLimitWait, isValidEmail } from '../utils/security';
 
 export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
   const { login, resetPassword, clearError } = useAuth();
@@ -18,11 +18,22 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
   const [resetEmail, setResetEmail] = useState('');
   const [resetSent, setResetSent] = useState(false);
 
+  const isAdminLogin = role === 'admin';
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    // ✅ Rate limiting — max 5 tentatives de login par minute
+    if (!email.trim() || !password) {
+      setError('Veuillez renseigner votre email et votre mot de passe.');
+      return;
+    }
+
+    if (!isValidEmail(email.trim())) {
+      setError('Veuillez entrer une adresse email valide.');
+      return;
+    }
+
     if (!checkRateLimit('login_attempt', 5, 60_000)) {
       const wait = getRateLimitWait('login_attempt', 60_000);
       setError(`Trop de tentatives. Reessayez dans ${wait} secondes.`);
@@ -33,15 +44,23 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
     clearError();
 
     try {
-      await login(email, password);
-      // Redirection selon le rôle (gérée par ProtectedRoute + App)
-      window.location.href = role === 'admin' ? '/admin' : '/dashboard';
+      const nextProfile = await login(email.trim().toLowerCase(), password);
+
+      if (isAdminLogin && nextProfile.role !== 'admin') {
+        await supabase.auth.signOut();
+        setError("Ce compte n'a pas accès à l'administration.");
+        return;
+      }
+
+      window.location.href = nextProfile.role === 'admin' ? '/admin' : '/dashboard';
     } catch (err) {
       const msg = (err as Error).message;
       if (msg.includes('Invalid login credentials')) {
         setError('Email ou mot de passe incorrect.');
       } else if (msg.includes('Email not confirmed')) {
         setError('Veuillez confirmer votre email avant de vous connecter.');
+      } else if (msg.includes('Profil introuvable')) {
+        setError('Compte incomplet. Contactez un administrateur.');
       } else {
         setError('Une erreur est survenue. Veuillez reessayer.');
       }
@@ -53,9 +72,20 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (!resetEmail.trim()) {
+      setError('Veuillez renseigner votre email.');
+      return;
+    }
+
+    if (!isValidEmail(resetEmail.trim())) {
+      setError('Veuillez entrer une adresse email valide.');
+      return;
+    }
+
     setIsLoading(true);
     try {
-      await resetPassword(resetEmail);
+      await resetPassword(resetEmail.trim().toLowerCase());
       setResetSent(true);
     } catch {
       setError("Impossible d'envoyer le lien. Verifiez l'email.");
@@ -64,7 +94,6 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
     }
   };
 
-  // --- Vue reset mot de passe ---
   if (showReset) {
     return (
       <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
@@ -138,7 +167,6 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
     );
   }
 
-  // --- Vue connexion principale ---
   return (
     <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
       <Navbar />
@@ -153,13 +181,12 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
               <Lock size={32} />
             </div>
             <h1 className="text-3xl font-bold mb-2">
-              {role === 'admin' ? t('login.title.admin') : t('login.title.freelancer')}
+              {isAdminLogin ? t('login.title.admin') : t('login.title.freelancer')}
             </h1>
             <p className="text-brand-gray">{t('login.subtitle')}</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6" noValidate>
-            {/* Email */}
             <div>
               <label className="block text-sm font-bold mb-2 text-brand-gray uppercase tracking-wider">
                 Email
@@ -181,7 +208,6 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
               </div>
             </div>
 
-            {/* Mot de passe */}
             <div>
               <label className="block text-sm font-bold mb-2 text-brand-gray uppercase tracking-wider">
                 {t('login.label.password')}
@@ -210,7 +236,6 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
               </div>
             </div>
 
-            {/* Lien mot de passe oublié */}
             <div className="text-right">
               <button
                 type="button"
@@ -231,8 +256,12 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
               </motion.p>
             )}
 
-            <button className="w-full bg-brand-mint text-[#0D1117] py-4 rounded-xl font-bold text-lg hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg shadow-brand-mint/20 disabled:opacity-60 disabled:scale-100">
-              Login
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full bg-brand-mint text-[#0D1117] py-4 rounded-xl font-bold text-lg hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg shadow-brand-mint/20 disabled:opacity-60 disabled:scale-100"
+            >
+              {isLoading ? 'Connexion...' : isAdminLogin ? 'Accéder à l’admin' : t('login.button')}
             </button>
           </form>
 
