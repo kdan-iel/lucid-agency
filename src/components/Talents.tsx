@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLanguage } from '../context/LanguageContext';
-import { supabase } from '../context/AuthContext';
 import { Search, X } from 'lucide-react';
 
 type SpecialtyKey =
@@ -28,7 +27,13 @@ interface PublicTalent {
 
 const specialtyMeta: Record<
   SpecialtyKey,
-  { labelFr: string; labelEn: string; color: string; fallbackSkillFr: string; fallbackSkillEn: string }
+  {
+    labelFr: string;
+    labelEn: string;
+    color: string;
+    fallbackSkillFr: string;
+    fallbackSkillEn: string;
+  }
 > = {
   graphisme: {
     labelFr: 'Graphisme',
@@ -131,87 +136,17 @@ export default function Talents() {
   const [visibleCount, setVisibleCount] = useState(6);
   const [selectedTalent, setSelectedTalent] = useState<PublicTalent | null>(null);
   const [talents, setTalents] = useState<PublicTalent[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const loadTalents = async () => {
-      setLoading(true);
-
-      const { data, error } = await supabase
-        .from('freelancers')
-        .select('id, user_id, specialty, skills, rate_per_hour, bio, portfolio_url')
-        .eq('status', 'approved')
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Erreur chargement talents publics:', error);
-        setTalents([]);
-        setLoading(false);
-        return;
-      }
-
-      const userIds = (data ?? []).map((item: any) => item.user_id).filter(Boolean);
-
-      let profilesByUserId = new Map<string, { first_name: string; last_name: string }>();
-
-      if (userIds.length > 0) {
-        const { data: profilesData, error: profilesError } = await supabase
-          .from('profiles')
-          .select('user_id, first_name, last_name')
-          .in('user_id', userIds);
-
-        if (profilesError) {
-          console.error('Erreur chargement profils publics:', profilesError);
-        } else {
-          profilesByUserId = new Map(
-            (profilesData ?? []).map((profile: any) => [
-              profile.user_id,
-              { first_name: profile.first_name, last_name: profile.last_name },
-            ])
-          );
-        }
-      }
-
-      const mapped = (data ?? []).map((item: any) => {
-        const specialty = toSpecialtyKey(item.specialty ?? 'autre');
-        const meta = specialtyMeta[specialty];
-        const profile = profilesByUserId.get(item.user_id);
-        const firstName = profile?.first_name?.trim() || 'Talent';
-        const lastName = profile?.last_name?.trim() || 'LUCID';
-        const fallbackSkill = lang === 'FR' ? meta.fallbackSkillFr : meta.fallbackSkillEn;
-        const rawSkills = Array.isArray(item.skills) ? item.skills.filter(Boolean) : [];
-
-        return {
-          id: item.id,
-          name: `${firstName} ${lastName}`.trim(),
-          category: specialty,
-          expertise: lang === 'FR' ? meta.labelFr : meta.labelEn,
-          skills: rawSkills.length > 0 ? rawSkills.slice(0, 3) : [fallbackSkill],
-          initials: buildInitials(firstName, lastName),
-          color: meta.color,
-          rate: formatRate(item.rate_per_hour ?? null),
-          bio:
-            item.bio?.trim() ||
-            (lang === 'FR'
-              ? 'Profil en cours de completion. Les details seront disponibles tres bientot.'
-              : 'Profile is being completed. More details will be available very soon.'),
-          portfolioUrl: item.portfolio_url ?? null,
-        } satisfies PublicTalent;
-      });
-
-      setTalents(mapped);
-      setLoading(false);
-    };
-
-    loadTalents();
+    setTalents([]);
+    setLoading(false);
   }, [lang]);
 
   const categories = useMemo(
     () => [
       { key: 'all' as const, label: t('talents.filter.all') },
-      ...(
-        Object.keys(specialtyMeta) as SpecialtyKey[]
-      ).map((key) => ({
+      ...(Object.keys(specialtyMeta) as SpecialtyKey[]).map((key) => ({
         key,
         label: lang === 'FR' ? specialtyMeta[key].labelFr : specialtyMeta[key].labelEn,
       })),
@@ -516,7 +451,9 @@ export default function Talents() {
               </div>
 
               <div className="flex items-center justify-between p-4 rounded-2xl bg-brand-mint/5 border border-brand-mint/20 mb-4">
-                <span className="text-sm text-brand-gray font-medium">{emptyCopy.indicativeRate}</span>
+                <span className="text-sm text-brand-gray font-medium">
+                  {emptyCopy.indicativeRate}
+                </span>
                 <span className="font-bold text-brand-mint">{selectedTalent.rate}</span>
               </div>
 

@@ -5,7 +5,6 @@ import Navbar from '../components/Navbar';
 import { checkRateLimit, getRateLimitWait } from '../utils/security';
 import Footer from '../components/Footer';
 import { freelancerSpecialties, joinFormSchema, JoinFormInput } from '../schemas';
-import { supabase } from '../context/AuthContext';
 
 // État initial du formulaire
 const initialForm: JoinFormInput = {
@@ -52,111 +51,57 @@ export default function JoinPage() {
     }
   };
 
- const handleSubmit = async (e: FormEvent) => {
-  e.preventDefault();
-  setServerError(null);
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setServerError(null);
 
-  // ✅ Rate limiting — max 3 inscriptions par 10 minutes
-  if (!checkRateLimit("join_submit", 3, 600_000)) {
-    const wait = getRateLimitWait("join_submit", 600_000);
-    setServerError("Trop de tentatives. Réessayez dans " + Math.ceil(wait / 60) + " minutes.");
-    return;
-  }
+    if (!checkRateLimit('join_submit', 3, 600_000)) {
+      const wait = getRateLimitWait('join_submit', 600_000);
+      setServerError('Trop de tentatives. Réessayez dans ' + Math.ceil(wait / 60) + ' minutes.');
+      return;
+    }
 
-  // ✅ Validation Zod
-  const result = joinFormSchema.safeParse(form);
+    const result = joinFormSchema.safeParse(form);
 
-  if (!result.success) {
-    const fieldErrors: Partial<Record<keyof JoinFormInput, string>> = {};
-    result.error.issues.forEach((err) => {
-      const field = err.path[0] as keyof JoinFormInput;
-      if (!fieldErrors[field]) fieldErrors[field] = err.message;
-    });
-    setErrors(fieldErrors);
-    return;
-  }
+    if (!result.success) {
+      const fieldErrors: Partial<Record<keyof JoinFormInput, string>> = {};
+      result.error.issues.forEach((err) => {
+        const field = err.path[0] as keyof JoinFormInput;
+        if (!fieldErrors[field]) fieldErrors[field] = err.message;
+      });
+      setErrors(fieldErrors);
+      return;
+    }
 
-  try {
-    setStatus("loading");
+    try {
+      setStatus('loading');
 
-    // ✅ NOUVEAU : Envoyer à Google Drive EN PREMIER
-    const { submitFreelancerToGoogleDrive } = await import(
-      "../utils/googleDriveSubmit"
-    );
+      const { submitFreelancerToGoogleDrive } = await import('../utils/googleDriveSubmit');
 
-    await submitFreelancerToGoogleDrive({
-      firstName: result.data.firstName.trim(),
-      lastName: result.data.lastName.trim(),
-      email: result.data.email.toLowerCase().trim(),
-      specialty: result.data.specialty.trim(),
-      portfolio: result.data.portfolio?.trim() || "",
-      message: result.data.message?.trim() || "",
-    });
+      await submitFreelancerToGoogleDrive({
+        firstName: result.data.firstName.trim(),
+        lastName: result.data.lastName.trim(),
+        email: result.data.email.toLowerCase().trim(),
+        specialty: result.data.specialty.trim(),
+        portfolio: result.data.portfolio?.trim() || '',
+        message: result.data.message?.trim() || '',
+      });
 
-    console.log("✅ Données sauvegardées dans Google Drive");
+      setStatus('success');
+      setForm(initialForm);
+    } catch (err) {
+      setStatus('error');
 
-    // ✅ OPTIONNEL : Crée le compte Supabase APRÈS Google Drive
-    // (Si tu veux garder la double sauvegarde)
-    // Sinon, saute cette section et va directement à setStatus("success")
-
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: result.data.email,
-      password: result.data.password,
-      options: {
-        data: {
-          first_name: result.data.firstName,
-          last_name: result.data.lastName,
-          role: "freelancer",
-        },
-      },
-    });
-
-    if (authError) {
-      console.warn("⚠️ Erreur Supabase (non bloquant):", authError.message);
-      // On continue quand même car Google Drive a réussi
-    } else if (authData.user) {
-      // Crée le profil si Supabase réussit
-      try {
-        await supabase.from("profiles").insert({
-          user_id: authData.user.id,
-          email: result.data.email.toLowerCase().trim(),
-          first_name: result.data.firstName.trim(),
-          last_name: result.data.lastName.trim(),
-          role: "freelancer",
-        });
-
-        await supabase.from("freelancers").insert({
-          user_id: authData.user.id,
-          specialty: result.data.specialty.trim(),
-          portfolio_url: result.data.portfolio?.trim() || null,
-          bio: result.data.message?.trim() || null,
-          status: "pending",
-        });
-
-        console.log("✅ Compte Supabase créé avec succès");
-      } catch (profileErr) {
-        console.warn("⚠️ Erreur création profil Supabase:", profileErr);
+      const message = (err as Error).message;
+      if (message.includes('Configuration')) {
+        setServerError('Configuration serveur manquante. Contacte le support.');
+      } else {
+        setServerError('Impossible de sauvegarder ton inscription. Réessaye.');
       }
-    }
 
-    // ✅ SUCCÈS : Google Drive a réussi, c'est ce qui compte
-    setStatus("success");
-    setForm(initialForm);
-
-  } catch (err) {
-    console.error("❌ Erreur:", err);
-    setStatus("error");
-    
-    const message = (err as Error).message;
-    if (message.includes("Configuration")) {
-      setServerError("Configuration serveur manquante. Contacte le support.");
-    } else {
-      setServerError("Impossible de sauvegarder ton inscription. Réessaye.");
+      setTimeout(() => setStatus('idle'), 5000);
     }
-    
-    setTimeout(() => setStatus("idle"), 5000);
-  }
-};
+  };
 
   // ✅ Page succès après inscription
   if (status === 'success') {
@@ -172,11 +117,10 @@ export default function JoinPage() {
             <div className="text-6xl mb-6">✅</div>
             <h2 className="text-3xl font-bold mb-4">Candidature envoyée !</h2>
             <p className="text-brand-gray text-lg mb-2">
-              Vérifie ta boîte mail pour confirmer ton adresse email.
-            </p>
-            <p className="text-brand-gray">
               Notre équipe examinera ta candidature et te contactera sous 48h.
             </p>
+            {/* <p className="text-brand-gray">
+            </p> */}
           </motion.div>
         </main>
         <Footer />
@@ -338,7 +282,8 @@ export default function JoinPage() {
                   <label className="text-xs font-bold uppercase tracking-widest text-brand-gray ml-1">
                     Spécialité <span className="text-red-400">*</span>
                   </label>
-                  <select aria-label="Specialite"
+                  <select
+                    aria-label="Specialite"
                     name="specialty"
                     value={form.specialty}
                     onChange={handleChange}

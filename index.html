@@ -5,24 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>LUCID Agency</title>
     <link rel="icon" type="image/png" href="/logo.png" />
-
-    <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:..." rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:..." rel="stylesheet" />
 
     <!-- ✅ CSP stricte — bloque les injections XSS et scripts externes non autorisés -->
-    <meta http-equiv="Content-Security-Policy"
-content="
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="
 default-src 'self';
 script-src 'self' 'unsafe-eval' 'unsafe-inline';
 style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
 font-src 'self' https://fonts.gstatic.com data:;
 img-src 'self' data: https:;
 connect-src 'self' ws: wss: https:;
-">
-    
+"
+    />
 
     <!-- ✅ Empêche le MIME sniffing -->
     <meta http-equiv="X-Content-Type-Options" content="nosniff" />
@@ -40,7 +36,10 @@ connect-src 'self' ws: wss: https:;
     <meta name="format-detection" content="telephone=no" />
 
     <!-- SEO -->
-    <meta name="description" content="LUCID Agency — Plateforme de mise en relation entre clients et freelancers créatifs en Afrique de l'Ouest." />
+    <meta
+      name="description"
+      content="LUCID Agency — Plateforme de mise en relation entre clients et freelancers créatifs en Afrique de l'Ouest."
+    />
     <meta name="robots" content="index, follow" />
 
     <!-- Open Graph -->
@@ -49,5 +48,8 @@ connect-src 'self' ws: wss: https:;
     <meta property="og:type" content="website" />
     <meta property="og:image" content="/logo.png" />
   </head>
-    
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
 </html>
