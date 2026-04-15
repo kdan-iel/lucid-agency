@@ -86,11 +86,11 @@ const specialtyMeta: Record<
   },
 };
 
-function toSpecialtyKey(value: string): SpecialtyKey {
+function _toSpecialtyKey(value: string): SpecialtyKey {
   return value in specialtyMeta ? (value as SpecialtyKey) : 'autre';
 }
 
-function formatRate(ratePerHour: number | null) {
+function _formatRate(ratePerHour: number | null) {
   if (!ratePerHour) return 'Tarif sur demande';
 
   const rounded = new Intl.NumberFormat('fr-FR', {
@@ -100,7 +100,7 @@ function formatRate(ratePerHour: number | null) {
   return `${rounded} FCFA/h`;
 }
 
-function buildInitials(firstName: string, lastName: string) {
+function _buildInitials(firstName: string, lastName: string) {
   return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase() || 'LU';
 }
 

@@ -7,7 +7,7 @@ const GOOGLE_APPS_SCRIPT_URL = import.meta.env.VITE_GAS_URL;
 const SECRET_TOKEN = import.meta.env.VITE_GAS_TOKEN;
 
 export interface FormSubmissionPayload {
-  formType: "contact" | "freelancer";
+  formType: 'contact' | 'freelancer';
   [key: string]: any;
 }
 
@@ -24,7 +24,7 @@ export async function submitContactToGoogleDrive(data: {
   message: string;
 }) {
   return submitToGoogleDrive({
-    formType: "contact",
+    formType: 'contact',
     ...data,
   });
 }
@@ -41,7 +41,7 @@ export async function submitFreelancerToGoogleDrive(data: {
   message?: string;
 }) {
   return submitToGoogleDrive({
-    formType: "freelancer",
+    formType: 'freelancer',
     ...data,
   });
 }
@@ -51,7 +51,7 @@ export async function submitFreelancerToGoogleDrive(data: {
  */
 async function submitToGoogleDrive(payload: FormSubmissionPayload) {
   if (!GOOGLE_APPS_SCRIPT_URL || !SECRET_TOKEN) {
-    throw new Error("Configuration serveur manquante");
+    throw new Error('Configuration serveur manquante');
   }
 
   try {
@@ -64,18 +64,17 @@ async function submitToGoogleDrive(payload: FormSubmissionPayload) {
     };
 
     await fetch(GOOGLE_APPS_SCRIPT_URL, {
-      method: "POST",
+      method: 'POST',
       body: JSON.stringify(fullPayload),
-      mode: "no-cors",
+      mode: 'no-cors',
     });
 
     return {
       success: true,
-      message: "Données envoyées vers Google Drive",
+      message: 'Données envoyées vers Google Drive',
     };
-
   } catch {
-    throw new Error("Impossible de sauvegarder les données");
+    throw new Error('Impossible de sauvegarder les données');
   }
 }
 
@@ -84,11 +83,11 @@ async function submitToGoogleDrive(payload: FormSubmissionPayload) {
  */
 async function getClientIP(): Promise<string> {
   try {
-    const response = await fetch("https://api.ipify.org?format=json");
+    const response = await fetch('https://api.ipify.org?format=json');
     const data = await response.json();
-    return data.ip || "unknown";
+    return data.ip || 'unknown';
   } catch {
-    return "unknown";
+    return 'unknown';
   }
 }
 
@@ -98,13 +97,13 @@ async function getClientIP(): Promise<string> {
 export async function testGoogleDrive() {
   try {
     await submitContactToGoogleDrive({
-      name: "Test Frontend",
-      company: "Test Corp",
-      email: "test@frontend.com",
-      type: "Logo / Branding",
-      budget: "50 000 a 100 000 FCFA",
-      budgetDetails: "",
-      message: "Message de test depuis le frontend",
+      name: 'Test Frontend',
+      company: 'Test Corp',
+      email: 'test@frontend.com',
+      type: 'Logo / Branding',
+      budget: '50 000 a 100 000 FCFA',
+      budgetDetails: '',
+      message: 'Message de test depuis le frontend',
     });
 
     return true;
