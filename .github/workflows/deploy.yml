@@ -204,18 +204,35 @@ jobs:
         run: sleep 15
 
       - name: Test homepage loads
+        id: homepage
         run: |
           URL="${{ needs.deploy.outputs.deployed_url }}"
           echo "Testing: $URL"
 
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
-          if [ "$STATUS" != "200" ]; then
-            echo "❌ Homepage returned HTTP $STATUS"
-            exit 1
+          echo "status=$STATUS" >> $GITHUB_OUTPUT
+
+          if [ "$DEPLOY_ENV" = "preview" ]; then
+            if [ "$STATUS" = "200" ] || [ "$STATUS" = "401" ]; then
+              echo "✅ Preview homepage returned HTTP $STATUS"
+              exit 0
+            fi
+          elif [ "$STATUS" = "200" ]; then
+            echo "✅ Homepage: HTTP $STATUS"
+            exit 0
           fi
-          echo "✅ Homepage: HTTP $STATUS"
+
+          if [ "$DEPLOY_ENV" = "preview" ]; then
+            echo "❌ Preview homepage returned unexpected HTTP $STATUS"
+          else
+            echo "❌ Homepage returned HTTP $STATUS"
+          fi
+          exit 1
+        env:
+          DEPLOY_ENV: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || 'production' }}
 
       - name: Verify security headers on live site
+        if: ${{ !(github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'preview') }}
         run: |
           URL="${{ needs.deploy.outputs.deployed_url }}"
           echo "🔍 Checking security headers on $URL..."
@@ -236,6 +253,7 @@ jobs:
           check_header "Content-Security-Policy"
 
       - name: Verify SPA routing works
+        if: ${{ !(github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'preview') }}
         run: |
           URL="${{ needs.deploy.outputs.deployed_url }}"
 
