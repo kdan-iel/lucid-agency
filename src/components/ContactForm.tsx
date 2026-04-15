@@ -12,6 +12,7 @@ import {
 } from '../utils/security';
 
 const CUSTOM_BUDGET_OPTION = 'Plus de 500 000 FCFA';
+const DEFAULT_PROJECT_TYPE = 'Logo / Branding';
 
 const BUDGET_OPTIONS = [
   '5 000 a 25 000 FCFA',
@@ -48,7 +49,7 @@ const initialForm: ContactFormInput = {
   name: '',
   company: '',
   email: '',
-  type: 'Logo / Branding',
+  type: DEFAULT_PROJECT_TYPE,
   budget: BUDGET_OPTIONS[0],
   budgetDetails: '',
   message: '',
@@ -89,67 +90,89 @@ export default function ContactForm() {
     }
   };
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    setServerError(null);
+const handleSubmit = async (e: FormEvent) => {
+  e.preventDefault();
+  setServerError(null);
 
-    if (!checkRateLimit('contact_submit', 3, 60_000)) {
-      const wait = getRateLimitWait('contact_submit', 60_000);
-      setRateLimitWait(wait);
-      setServerError(`Trop de tentatives. Reessayez dans ${wait} secondes.`);
-      return;
-    }
+  if (!checkRateLimit("contact_submit", 3, 60_000)) {
+    const wait = getRateLimitWait("contact_submit", 60_000);
+    setRateLimitWait(wait);
+    setServerError(`Trop de tentatives. Réessayez dans ${wait} secondes.`);
+    return;
+  }
 
-    const csrfToken = getCsrfToken();
-    if (!csrfToken) {
-      setServerError('Session invalide. Veuillez recharger la page.');
-      return;
-    }
+  const csrfToken = getCsrfToken();
+  if (!csrfToken) {
+    setServerError("Session invalide. Veuillez recharger la page.");
+    return;
+  }
 
-    const result = contactFormSchema.safeParse(form);
-    if (!result.success) {
-      const fieldErrors: ContactFormErrors = {};
-      result.error.issues.forEach((err) => {
-        const field = err.path[0] as keyof ContactFormInput;
-        fieldErrors[field] = err.message;
-      });
-      setErrors(fieldErrors);
-      return;
-    }
+  const result = contactFormSchema.safeParse(form);
+  if (!result.success) {
+    const fieldErrors: ContactFormErrors = {};
+    result.error.issues.forEach((err) => {
+      const field = err.path[0] as keyof ContactFormInput;
+      fieldErrors[field] = err.message;
+    });
+    setErrors(fieldErrors);
+    return;
+  }
 
+  try {
+    setStatus("loading");
+
+    const normalizedBudget =
+      result.data.budget === CUSTOM_BUDGET_OPTION
+        ? result.data.budgetDetails?.trim() || result.data.budget
+        : result.data.budget;
+
+    // ✅ Envoyer à Google Drive
+    const { submitContactToGoogleDrive } = await import(
+      "../utils/googleDriveSubmit"
+    );
+
+    await submitContactToGoogleDrive({
+      name: result.data.name.trim(),
+      company: result.data.company?.trim() || "",
+      email: result.data.email.toLowerCase().trim(),
+      type: result.data.type ?? DEFAULT_PROJECT_TYPE,
+      budget: normalizedBudget ?? BUDGET_OPTIONS[0],
+      budgetDetails: result.data.budgetDetails?.trim() || "",
+      message: result.data.message.trim(),
+    });
+
+    // Optionnel : sauvegarde secondaire dans Supabase pour audit.
     try {
-      setStatus('loading');
-
-      const normalizedBudget =
-        result.data.budget === CUSTOM_BUDGET_OPTION
-          ? result.data.budgetDetails?.trim() || result.data.budget
-          : result.data.budget;
-
-      const { error } = await supabase.from('contact_submissions').insert({
+      const { error } = await supabase.from("contact_submissions").insert({
         name: result.data.name.trim(),
         company: result.data.company?.trim() || null,
         email: result.data.email.toLowerCase().trim(),
-        type: result.data.type,
-        budget: normalizedBudget,
+        type: result.data.type ?? DEFAULT_PROJECT_TYPE,
+        budget: normalizedBudget ?? BUDGET_OPTIONS[0],
         message: result.data.message.trim(),
       });
 
-      if (error) throw error;
-
-      setStatus('success');
-      setForm(initialForm);
-
-      const newToken = generateCsrfToken();
-      storeCsrfToken(newToken);
-
-      setTimeout(() => setStatus('idle'), 6000);
-    } catch (err) {
-      console.error('Erreur envoi contact:', err);
-      setStatus('error');
-      setServerError('Une erreur est survenue. Veuillez reessayer.');
-      setTimeout(() => setStatus('idle'), 5000);
+      void error;
+    } catch {
+      // Echec secondaire volontairement silencieux.
     }
-  };
+
+    // ✅ SUCCÈS
+    setStatus("success");
+    setForm(initialForm);
+
+    const newToken = generateCsrfToken();
+    storeCsrfToken(newToken);
+
+    setTimeout(() => setStatus("idle"), 6000);
+
+  } catch {
+    setStatus("error");
+    setServerError("Une erreur est survenue. Veuillez réessayer.");
+    setTimeout(() => setStatus("idle"), 5000);
+  }
+};
+
 
   const isBlocked = status === 'loading' || rateLimitWait > 0;
   const isCustomBudget = form.budget === CUSTOM_BUDGET_OPTION;
