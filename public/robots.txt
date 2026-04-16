@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+Allow: /join
+Allow: /privacy
+Allow: /legal
+
+Disallow: /admin
+Disallow: /admin/login
+Disallow: /login
+Disallow: /dashboard
+Disallow: /reset-password
+
+Sitemap: https://www.lucidagence.com/sitemap.xml
