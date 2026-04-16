@@ -1,0 +1,25 @@
+# robots.txt — lucidagence.com
+# Généré le 2026-04-16
+
+User-agent: *
+
+# Autoriser l'indexation des pages publiques
+Allow: /
+Allow: /join
+Allow: /privacy
+Allow: /legal
+
+# Bloquer les espaces privés et flux d'authentification
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /admin/login
+Disallow: /login
+Disallow: /reset-password
+
+# Bloquer les assets inutiles à l'indexation
+Disallow: /assets/
+Disallow: /*.js$
+Disallow: /*.css$
+
+# Sitemap
+Sitemap: https://lucidagence.com/sitemap.xml
