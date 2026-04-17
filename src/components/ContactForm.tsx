@@ -48,6 +48,7 @@ const initialForm: ContactFormInput = {
   name: '',
   company: '',
   email: '',
+  phone: '',
   type: DEFAULT_PROJECT_TYPE,
   budget: BUDGET_OPTIONS[0],
   budgetDetails: '',
@@ -132,6 +133,7 @@ export default function ContactForm() {
         name: result.data.name.trim(),
         company: result.data.company?.trim() || '',
         email: result.data.email.toLowerCase().trim(),
+        phone: result.data.phone?.trim() || '',
         type: result.data.type ?? DEFAULT_PROJECT_TYPE,
         budget: normalizedBudget ?? BUDGET_OPTIONS[0],
         budgetDetails: result.data.budgetDetails?.trim() || '',
@@ -222,6 +224,23 @@ export default function ContactForm() {
               autoComplete="email"
             />
             {errors.email && <p className="text-red-400 text-xs ml-1">{errors.email}</p>}
+          </div>
+
+          <div className="space-y-2 mb-6">
+            <label className="text-xs font-bold uppercase tracking-widest text-brand-gray ml-1">
+              Téléphone <span className="text-red-400">*</span>
+            </label>
+            <input
+              type="tel"
+              name="phone"
+              value={form.phone || ''}
+              onChange={handleChange}
+              className={`w-full bg-brand-anthracite border rounded-xl px-4 py-4 text-white focus:border-brand-mint outline-none transition-colors ${errors.phone ? 'border-red-400' : 'border-white/10'}`}
+              placeholder="Ex: +228 90 00 00 00"
+              maxLength={20}
+              autoComplete="tel"
+            />
+            {errors.phone && <p className="text-red-400 text-xs ml-1">{errors.phone}</p>}
           </div>
 
           <div className="grid md:grid-cols-2 gap-6 mb-6">

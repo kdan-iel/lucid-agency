@@ -27,6 +27,11 @@ export const contactFormSchema = z
 
     email: z.string().email('Email invalide').max(255),
 
+    phone: z
+      .string()
+      .min(7, 'Numéro de téléphone requis')
+      .regex(/^[+\d\s\-().]{7,20}$/, 'Numéro de téléphone invalide'),
+
     type: z.string().optional(),
 
     budget: z.string().optional(),
