@@ -18,6 +18,7 @@ export async function submitContactToGoogleDrive(data: {
   name: string;
   company?: string;
   email: string;
+  phone?: string;
   type: string;
   budget: string;
   budgetDetails?: string;
