@@ -11,7 +11,7 @@ on:
   schedule:
     # ✅ Chaque lundi à 8h UTC — audit hebdomadaire automatique
     - cron: '0 8 * * 1'
-  workflow_dispatch: # Permet de lancer manuellement depuis GitHub
+  workflow_dispatch:  # Permet de lancer manuellement depuis GitHub
 
 env:
   NODE_VERSION: '20'
@@ -113,7 +113,7 @@ jobs:
       - name: Check vercel.json security headers
         run: |
           echo "🔍 Verifying security headers in vercel.json..."
-
+          
           REQUIRED_HEADERS=(
             "Strict-Transport-Security"
             "X-Content-Type-Options"
@@ -122,7 +122,7 @@ jobs:
             "Referrer-Policy"
             "Permissions-Policy"
           )
-
+          
           MISSING=0
           for header in "${REQUIRED_HEADERS[@]}"; do
             if grep -q "$header" vercel.json; then
@@ -132,30 +132,30 @@ jobs:
               MISSING=1
             fi
           done
-
+          
           # Vérifier que COEP dangereux n'est pas présent
           if grep -q "Cross-Origin-Embedder-Policy.*require-corp" vercel.json; then
             echo "⚠️ COEP require-corp détecté — peut bloquer les ressources externes"
           fi
-
+          
           if [ $MISSING -eq 1 ]; then
             echo "❌ Des headers de sécurité obligatoires sont manquants"
             exit 1
           fi
-
+          
           echo "✅ Tous les headers de sécurité sont présents"
 
       - name: Check CSP is not too permissive
         run: |
           echo "🔍 Checking CSP strictness..."
-
+          
           # Vérifier que unsafe-eval n'est pas dans la CSP
           if grep -q "unsafe-eval" vercel.json; then
             echo "⚠️ 'unsafe-eval' détecté dans la CSP — à éviter en production"
           else
             echo "✅ Pas d'unsafe-eval dans la CSP"
           fi
-
+          
           # Vérifier que wildcard * n'est pas dans script-src
           if grep -oP "script-src[^;]*" vercel.json | grep -q " \*"; then
             echo "❌ Wildcard (*) dans script-src — très dangereux"
@@ -178,7 +178,7 @@ jobs:
         run: |
           echo "🔍 Scanning source code for dangerous patterns..."
           ISSUES=0
-
+          
           # 1. Vérifier eval()
           if grep -rn "eval(" src/ --include="*.ts" --include="*.tsx" | grep -v "// safe\|//safe\|test\|spec"; then
             echo "❌ eval() detected in source code"
@@ -186,7 +186,7 @@ jobs:
           else
             echo "✅ No eval() found"
           fi
-
+          
           # 2. Vérifier dangerouslySetInnerHTML
           if grep -rn "dangerouslySetInnerHTML" src/ --include="*.tsx"; then
             echo "❌ dangerouslySetInnerHTML detected"
@@ -194,7 +194,7 @@ jobs:
           else
             echo "✅ No dangerouslySetInnerHTML found"
           fi
-
+          
           # 3. Vérifier innerHTML direct
           if grep -rn "\.innerHTML\s*=" src/ --include="*.ts" --include="*.tsx"; then
             echo "❌ Direct innerHTML assignment detected"
@@ -202,7 +202,7 @@ jobs:
           else
             echo "✅ No direct innerHTML assignment found"
           fi
-
+          
           # 4. Vérifier new Function()
           if grep -rn "new Function(" src/ --include="*.ts" --include="*.tsx"; then
             echo "❌ new Function() detected"
@@ -210,7 +210,7 @@ jobs:
           else
             echo "✅ No new Function() found"
           fi
-
+          
           # 5. Vérifier localStorage avec des données sensibles
           if grep -rn "localStorage.setItem.*token\|localStorage.setItem.*jwt\|localStorage.setItem.*password\|localStorage.setItem.*auth" src/ --include="*.ts" --include="*.tsx" -i | grep -v "ThemeContext\|LanguageContext"; then
             echo "❌ Sensitive data in localStorage detected"
@@ -218,27 +218,27 @@ jobs:
           else
             echo "✅ No sensitive data in localStorage"
           fi
-
+          
           # 6. Vérifier console.log avec des données sensibles
           if grep -rn "console\.log.*password\|console\.log.*token\|console\.log.*secret\|console\.log.*key" src/ --include="*.ts" --include="*.tsx" -i; then
             echo "⚠️ Possible sensitive data in console.log"
           else
             echo "✅ No sensitive data logged"
           fi
-
+          
           # 7. Vérifier http:// en dur (pas https)
           if grep -rn "http://" src/ --include="*.ts" --include="*.tsx" | grep -v "localhost\|127.0.0.1\|comment\|//"; then
             echo "⚠️ Non-HTTPS URLs detected in source"
           else
             echo "✅ No insecure HTTP URLs"
           fi
-
+          
           if [ $ISSUES -gt 0 ]; then
             echo ""
             echo "❌ $ISSUES security issue(s) found — Fix before merging"
             exit 1
           fi
-
+          
           echo ""
           echo "✅ All security pattern checks passed"
 
@@ -257,26 +257,26 @@ jobs:
       - name: Check .env files are not committed
         run: |
           echo "🔍 Checking for committed .env files..."
-
+          
           # Vérifier si des .env sont dans le repo
           ENV_FILES=$(git ls-files | grep -E "^\.env$|\.env\.local$|\.env\.production$|\.env\.development$" || true)
-
+          
           if [ -n "$ENV_FILES" ]; then
             echo "❌ Environment files found in repository:"
             echo "$ENV_FILES"
             echo "Remove them immediately with: git rm --cached <file>"
             exit 1
           fi
-
+          
           echo "✅ No .env files committed"
 
       - name: Verify .gitignore covers .env files
         run: |
           echo "🔍 Verifying .gitignore..."
-
+          
           PATTERNS=(".env" ".env.local" ".env.*.local" "*.env")
           MISSING=0
-
+          
           for pattern in "${PATTERNS[@]}"; do
             if grep -q "$pattern" .gitignore; then
               echo "✅ $pattern — in .gitignore"
@@ -285,7 +285,7 @@ jobs:
               MISSING=$((MISSING + 1))
             fi
           done
-
+          
           if [ $MISSING -gt 0 ]; then
             echo "⚠️ Some .env patterns missing from .gitignore — add them"
           fi
@@ -314,7 +314,7 @@ jobs:
           echo "  Code Scan:           ${{ needs.code-security-scan.result }}"
           echo "  Env Leak Check:      ${{ needs.env-leak-check.result }}"
           echo ""
-
+          
           FAILED=0
           for result in \
             "${{ needs.dependency-audit.result }}" \
@@ -323,7 +323,7 @@ jobs:
             "${{ needs.env-leak-check.result }}"; do
             [ "$result" != "success" ] && FAILED=$((FAILED + 1))
           done
-
+          
           if [ $FAILED -gt 0 ]; then
             echo "❌ SECURITY AUDIT FAILED — $FAILED check(s) failed"
             exit 1

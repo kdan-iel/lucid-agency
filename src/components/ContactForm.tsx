@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { motion } from 'motion/react';
+import { supabase } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { type ContactFormInput, contactFormSchema } from '../schemas';
 import {
@@ -11,7 +12,6 @@ import {
 } from '../utils/security';
 
 const CUSTOM_BUDGET_OPTION = 'Plus de 500 000 FCFA';
-const DEFAULT_PROJECT_TYPE = 'Logo / Branding';
 
 const BUDGET_OPTIONS = [
   '5 000 a 25 000 FCFA',
@@ -48,8 +48,7 @@ const initialForm: ContactFormInput = {
   name: '',
   company: '',
   email: '',
-  phone: '',
-  type: DEFAULT_PROJECT_TYPE,
+  type: 'Logo / Branding',
   budget: BUDGET_OPTIONS[0],
   budgetDetails: '',
   message: '',
@@ -97,7 +96,7 @@ export default function ContactForm() {
     if (!checkRateLimit('contact_submit', 3, 60_000)) {
       const wait = getRateLimitWait('contact_submit', 60_000);
       setRateLimitWait(wait);
-      setServerError(`Trop de tentatives. Réessayez dans ${wait} secondes.`);
+      setServerError(`Trop de tentatives. Reessayez dans ${wait} secondes.`);
       return;
     }
 
@@ -126,21 +125,17 @@ export default function ContactForm() {
           ? result.data.budgetDetails?.trim() || result.data.budget
           : result.data.budget;
 
-      // ✅ Envoyer à Google Drive
-      const { submitContactToGoogleDrive } = await import('../utils/googleDriveSubmit');
-
-      await submitContactToGoogleDrive({
+      const { error } = await supabase.from('contact_submissions').insert({
         name: result.data.name.trim(),
-        company: result.data.company?.trim() || '',
+        company: result.data.company?.trim() || null,
         email: result.data.email.toLowerCase().trim(),
-        phone: result.data.phone?.trim() || '',
-        type: result.data.type ?? DEFAULT_PROJECT_TYPE,
-        budget: normalizedBudget ?? BUDGET_OPTIONS[0],
-        budgetDetails: result.data.budgetDetails?.trim() || '',
+        type: result.data.type,
+        budget: normalizedBudget,
         message: result.data.message.trim(),
       });
 
-      // ✅ SUCCÈS
+      if (error) throw error;
+
       setStatus('success');
       setForm(initialForm);
 
@@ -148,9 +143,10 @@ export default function ContactForm() {
       storeCsrfToken(newToken);
 
       setTimeout(() => setStatus('idle'), 6000);
-    } catch {
+    } catch (err) {
+      console.error('Erreur envoi contact:', err);
       setStatus('error');
-      setServerError('Une erreur est survenue. Veuillez réessayer.');
+      setServerError('Une erreur est survenue. Veuillez reessayer.');
       setTimeout(() => setStatus('idle'), 5000);
     }
   };
@@ -224,23 +220,6 @@ export default function ContactForm() {
               autoComplete="email"
             />
             {errors.email && <p className="text-red-400 text-xs ml-1">{errors.email}</p>}
-          </div>
-
-          <div className="space-y-2 mb-6">
-            <label className="text-xs font-bold uppercase tracking-widest text-brand-gray ml-1">
-              Téléphone <span className="text-red-400">*</span>
-            </label>
-            <input
-              type="tel"
-              name="phone"
-              value={form.phone || ''}
-              onChange={handleChange}
-              className={`w-full bg-brand-anthracite border rounded-xl px-4 py-4 text-white focus:border-brand-mint outline-none transition-colors ${errors.phone ? 'border-red-400' : 'border-white/10'}`}
-              placeholder="Ex: +228 90 00 00 00"
-              maxLength={20}
-              autoComplete="tel"
-            />
-            {errors.phone && <p className="text-red-400 text-xs ml-1">{errors.phone}</p>}
           </div>
 
           <div className="grid md:grid-cols-2 gap-6 mb-6">

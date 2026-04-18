@@ -18,7 +18,7 @@ concurrency:
 
 env:
   NODE_VERSION: '20'
-  # Placeholders de build uniquement. Les jobs CI n'ont pas besoin de vraies clés Supabase.
+  # Variables Supabase fictives pour les builds CI (pas de vraies clés ici)
   VITE_SUPABASE_URL: https://placeholder.supabase.co
   VITE_SUPABASE_ANON_KEY: placeholder_anon_key_for_ci_only
 
@@ -148,7 +148,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Historique complet pour scanner tous les commits
+          fetch-depth: 0  # Historique complet pour scanner tous les commits
 
       # ✅ Trufflehog — détecte les secrets dans le code et l'historique git
       - name: TruffleHog secret scan
@@ -161,7 +161,7 @@ jobs:
       - name: Check for hardcoded secrets patterns
         run: |
           echo "🔍 Scanning for hardcoded secrets..."
-
+          
           # Liste des patterns à détecter
           PATTERNS=(
             "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+"
@@ -171,7 +171,7 @@ jobs:
             "AIza[0-9A-Za-z\-_]{35}"
             "password\s*=\s*['\"][^'\"]{8,}"
           )
-
+          
           FOUND=0
           for pattern in "${PATTERNS[@]}"; do
             if grep -rE "$pattern" src/ --include="*.ts" --include="*.tsx" --include="*.js" 2>/dev/null; then
@@ -179,12 +179,12 @@ jobs:
               FOUND=1
             fi
           done
-
+          
           if [ $FOUND -eq 1 ]; then
             echo "❌ Potential secrets detected! Review the output above."
             exit 1
           fi
-
+          
           echo "✅ No hardcoded secrets detected"
 
   # ────────────────────────────────────────────────────────
@@ -220,7 +220,7 @@ jobs:
           ls -la dist/
           test -f dist/index.html || (echo "❌ index.html missing" && exit 1)
           test -d dist/assets || (echo "❌ assets/ missing" && exit 1)
-
+          
           # Vérifier que les source maps ne sont pas exposées en prod
           SOURCE_MAPS=$(find dist/ -name "*.map" 2>/dev/null | wc -l)
           if [ "$SOURCE_MAPS" -gt 0 ]; then
@@ -228,7 +228,7 @@ jobs:
           else
             echo "✅ No source maps in production build"
           fi
-
+          
           echo "✅ Build verification passed"
 
       - name: Upload build artifact
@@ -255,7 +255,7 @@ jobs:
           echo "security-audit: ${{ needs.security-audit.result }}"
           echo "secrets-scan:   ${{ needs.secrets-scan.result }}"
           echo "build:          ${{ needs.build.result }}"
-
+          
           if [[ "${{ needs.typecheck.result }}" != "success" ]] || \
              [[ "${{ needs.lint.result }}" != "success" ]] || \
              [[ "${{ needs.test.result }}" != "success" ]] || \
