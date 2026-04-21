@@ -6,7 +6,6 @@ import { checkRateLimit, getRateLimitWait } from '../utils/security';
 import Footer from '../components/Footer';
 import { freelancerSpecialties, joinFormSchema, JoinFormInput } from '../schemas';
 import { supabase } from '../lib/supabaseClient';
-import { submitJoinApplication } from '../utils/remoteFunctions';
 
 // État initial du formulaire
 const initialForm: JoinFormInput = {
@@ -15,6 +14,8 @@ const initialForm: JoinFormInput = {
   email: '',
   password: '',
   confirmPassword: '',
+  phoneNumber: '',
+  tarifJour: 25000,
   specialty: '',
   portfolio: '',
   message: '',
@@ -45,7 +46,10 @@ export default function JoinPage() {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    setForm((prev) => ({
+      ...prev,
+      [name]: name === 'tarifJour' ? Number.parseFloat(value) || 0 : value,
+    }));
 
     // Effacer l'erreur du champ modifié
     if (errors[name as keyof JoinFormInput]) {
@@ -80,36 +84,24 @@ export default function JoinPage() {
     try {
       setStatus('loading');
 
-      // ✅ Étape 1 : Créer le compte Supabase Auth
-      // Le mot de passe est hashé automatiquement par Supabase (bcrypt)
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: result.data.email,
-        password: result.data.password,
-        options: {
-          // Données passées au trigger (si configuré)
-          data: {
-            first_name: result.data.firstName,
-            last_name: result.data.lastName,
-            role: 'freelancer',
-          },
+      const response = await supabase.functions.invoke('freelancer-apply', {
+        body: {
+          first_name: result.data.firstName.trim(),
+          last_name: result.data.lastName.trim(),
+          email: result.data.email.toLowerCase().trim(),
+          password: result.data.password,
+          phone_number: result.data.phoneNumber.trim(),
+          tarif_jour: result.data.tarifJour,
+          domaine: result.data.specialty,
+          specialite: result.data.specialty,
+          portfolio_url: result.data.portfolio?.trim() || '',
+          message: result.data.message?.trim() || '',
         },
       });
 
-      if (authError) throw authError;
-      if (!authData.user) throw new Error('Erreur lors de la création du compte');
-
-      // ✅ Étape 2 : déléguer la création du profil et de la candidature au backend distant
-      await submitJoinApplication({
-        userId: authData.user.id,
-        email: result.data.email.toLowerCase().trim(),
-        firstName: result.data.firstName.trim(),
-        lastName: result.data.lastName.trim(),
-        role: 'freelancer',
-        specialty: result.data.specialty.trim(),
-        portfolioUrl: result.data.portfolio?.trim() || null,
-        bio: result.data.message?.trim() || null,
-        status: 'pending',
-      });
+      if (!response.data || response.error) {
+        throw new Error(response.error?.message || 'Failed to submit application');
+      }
 
       setStatus('success');
       setForm(initialForm);
@@ -240,6 +232,58 @@ export default function JoinPage() {
                   placeholder="Ex: jean@email.com"
                 />
                 {errors.email && <p className="text-red-400 text-xs ml-1">{errors.email}</p>}
+              </div>
+
+              {/* Telephone + Tarif */}
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-widest text-brand-gray ml-1">
+                    Numero de telephone <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    name="phoneNumber"
+                    value={form.phoneNumber}
+                    onChange={handleChange}
+                    className={`w-full bg-brand-anthracite border rounded-xl px-4 py-4 text-white focus:border-brand-mint outline-none transition-colors ${
+                      errors.phoneNumber ? 'border-red-400' : 'border-white/10'
+                    }`}
+                    placeholder="+221770000000"
+                  />
+                  <p className="text-xs text-brand-gray ml-1">
+                    Format: +countrycode suivi de 8-15 chiffres
+                  </p>
+                  {errors.phoneNumber && (
+                    <p className="text-red-400 text-xs ml-1">{errors.phoneNumber}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-widest text-brand-gray ml-1">
+                    Tarif journalier (FCFA) <span className="text-red-400">*</span>
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      name="tarifJour"
+                      value={form.tarifJour}
+                      onChange={handleChange}
+                      className={`w-full bg-brand-anthracite border rounded-xl px-4 py-4 text-white focus:border-brand-mint outline-none transition-colors ${
+                        errors.tarifJour ? 'border-red-400' : 'border-white/10'
+                      }`}
+                      placeholder="15000"
+                      min="1000"
+                      max="1000000"
+                    />
+                    <span className="text-brand-gray text-sm whitespace-nowrap">/jour</span>
+                  </div>
+                  <p className="text-xs text-brand-gray ml-1">
+                    Min: 1000 FCFA | Max: 1,000,000 FCFA
+                  </p>
+                  {errors.tarifJour && (
+                    <p className="text-red-400 text-xs ml-1">{errors.tarifJour}</p>
+                  )}
+                </div>
               </div>
 
               {/* Mot de passe + Confirmation */}

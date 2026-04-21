@@ -84,6 +84,16 @@ export const joinFormSchema = z
 
     confirmPassword: z.string(),
 
+    phoneNumber: z
+      .string()
+      .min(1, 'Numero de telephone requis')
+      .regex(/^\+?[1-9]\d{7,14}$/, 'Format: +COUNTRYCODE 8-15 digits'),
+
+    tarifJour: z
+      .number()
+      .min(1000, 'Minimum 1000 FCFA')
+      .max(1000000, 'Maximum 1000000 FCFA'),
+
     specialty: z
       .string()
       .min(1, 'Veuillez choisir une specialite')

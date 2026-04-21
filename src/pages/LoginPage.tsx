@@ -53,6 +53,14 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
         return;
       }
 
+      if (
+        nextProfile.role === 'freelancer' &&
+        (!nextProfile.phone || !nextProfile.tarif_jour)
+      ) {
+        window.location.href = '/complete-profile';
+        return;
+      }
+
       window.location.href = nextProfile.role === 'admin' ? '/admin' : '/dashboard';
     } catch (err) {
       const msg = (err as Error).message;

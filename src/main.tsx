@@ -6,7 +6,6 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) throw new Error('Root element not found');
-
 createRoot(rootElement).render(
   <StrictMode>
     {/* ✅ ErrorBoundary global — capture les crashs React sans exposer les détails */}

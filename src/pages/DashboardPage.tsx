@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
@@ -111,6 +111,12 @@ export default function DashboardPage() {
     'idle'
   );
   const [settingsError, setSettingsError] = useState('');
+
+  useEffect(() => {
+    if (profile && (!profile.phone || !profile.tarif_jour)) {
+      window.location.href = '/complete-profile';
+    }
+  }, [profile]);
 
   const handleApply = (missionId: number) => {
     if (!appliedMissions.includes(missionId)) {

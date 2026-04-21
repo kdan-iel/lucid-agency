@@ -30,6 +30,8 @@ export interface RemoteProfile {
   avatar_url?: string;
   bio?: string;
   phone?: string;
+  tarif_jour?: number;
+  onboarding_completed?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -55,6 +57,9 @@ export interface AdminTalentRequestRecord {
   portfolio_url?: string | null;
   email?: string | null;
   phone?: string | null;
+  phone_number?: string | null;
+  tarif_jour?: number | null;
+  onboarding_completed?: boolean | null;
   first_name?: string | null;
   last_name?: string | null;
 }

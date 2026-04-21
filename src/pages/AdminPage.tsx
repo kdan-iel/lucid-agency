@@ -17,6 +17,7 @@ import {
   Mail,
   Phone,
   Globe,
+  DollarSign,
   ChevronRight,
   Shield,
   Database,
@@ -36,6 +37,9 @@ interface TalentRequest {
   status: 'pending' | 'approved' | 'rejected';
   email: string;
   phone: string;
+  phone_number?: string | null;
+  tarif_jour?: number | null;
+  onboarding_completed?: boolean | null;
   portfolio: string;
   experience: string;
   user_id: string;
@@ -117,7 +121,11 @@ export default function AdminPage() {
         date: new Date(f.created_at).toLocaleDateString('fr-FR'),
         status: f.status,
         email: f.email ?? '',
-        phone: f.phone ?? 'N/A',
+        phone: f.phone ?? f.phone_number ?? 'N/A',
+        phone_number: f.phone_number ?? f.phone ?? null,
+        tarif_jour: f.tarif_jour ?? null,
+        onboarding_completed:
+          f.onboarding_completed ?? Boolean((f.phone_number ?? f.phone) && f.tarif_jour),
         portfolio: f.portfolio_url ?? 'N/A',
         experience: '',
       }));
@@ -274,6 +282,9 @@ export default function AdminPage() {
               <tr className="border-b border-[var(--border-color)] text-brand-gray text-sm">
                 <th className="pb-4 font-medium">{t('admin.talents.table.talent')}</th>
                 <th className="pb-4 font-medium">{t('admin.talents.table.specialty')}</th>
+                <th className="pb-4 font-medium">Telephone</th>
+                <th className="pb-4 font-medium">Tarif jour</th>
+                <th className="pb-4 font-medium">Onboarding</th>
                 <th className="pb-4 font-medium">{t('admin.talents.table.date')}</th>
                 <th className="pb-4 font-medium">{t('admin.talents.table.status')}</th>
                 <th className="pb-4 font-medium text-right">{t('admin.talents.table.actions')}</th>
@@ -295,6 +306,13 @@ export default function AdminPage() {
                     </div>
                   </td>
                   <td className="py-4 text-brand-gray">{row.specialty}</td>
+                  <td className="py-4 text-brand-gray">{row.phone_number || 'N/A'}</td>
+                  <td className="py-4 text-brand-gray">
+                    {row.tarif_jour ? `${row.tarif_jour} FCFA` : 'N/A'}
+                  </td>
+                  <td className="py-4 text-brand-gray">
+                    {row.onboarding_completed ? '✓' : '✗'}
+                  </td>
                   <td className="py-4 text-brand-gray">{row.date}</td>
                   <td className="py-4">
                     {row.status === 'approved' && (
@@ -748,7 +766,17 @@ export default function AdminPage() {
                 </div>
                 <div className="flex items-center gap-3 text-brand-gray">
                   <Phone size={18} className="text-brand-mint" />
-                  <span className="text-sm">{selectedTalent.phone}</span>
+                  <span className="text-sm">
+                    {selectedTalent.phone_number || selectedTalent.phone || 'N/A'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 text-brand-gray">
+                  <DollarSign size={18} className="text-brand-mint" />
+                  <span className="text-sm">
+                    {selectedTalent.tarif_jour
+                      ? `${selectedTalent.tarif_jour} FCFA/jour`
+                      : 'N/A'}
+                  </span>
                 </div>
                 {selectedTalent.portfolio !== 'N/A' && (
                   <div className="flex items-center gap-3 text-brand-gray">

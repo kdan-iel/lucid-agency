@@ -21,6 +21,7 @@ import JoinPage from './pages/JoinPage';
 import DashboardPage from './pages/DashboardPage';
 import AdminPage from './pages/AdminPage';
 import LoginPage from './pages/LoginPage';
+import CompleteProfilePage from './pages/CompleteProfilePage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import NotFoundPage from './pages/NotFoundPage';
 import PrivacyPage from './pages/PrivacyPage';
@@ -52,6 +53,7 @@ const VALID_PATHS = [
   '/admin',
   '/admin/login',
   '/login',
+  '/complete-profile',
   '/reset-password',
   '/privacy',
   '/legal',
@@ -101,7 +103,7 @@ function AppContent() {
     };
   }, [path]);
 
-  if (loading) {
+  if (loading && !session) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[var(--bg-primary)]">
         <div className="flex flex-col items-center gap-4">
@@ -111,7 +113,6 @@ function AppContent() {
       </div>
     );
   }
-
   const renderContent = () => {
     switch (path) {
       case '/':
@@ -132,6 +133,12 @@ function AppContent() {
         return (
           <ProtectedRoute requiredRole="freelancer">
             <DashboardPage />
+          </ProtectedRoute>
+        );
+      case '/complete-profile':
+        return (
+          <ProtectedRoute requiredRole="freelancer">
+            <CompleteProfilePage />
           </ProtectedRoute>
         );
       case '/admin':

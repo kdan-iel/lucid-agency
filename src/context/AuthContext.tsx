@@ -13,6 +13,8 @@ export interface Profile {
   avatar_url?: string;
   bio?: string;
   phone?: string;
+  tarif_jour?: number;
+  onboarding_completed?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -57,38 +59,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
+    let mounted = true;
+
     const initAuth = async () => {
       try {
-        setLoading(true);
-        const {
-          data: { session: s },
-          error: e,
-        } = await supabase.auth.getSession();
-        if (e) throw e;
-        setSession(s);
-        setUser(s?.user ?? null);
-        if (s?.user) await fetchProfile(s.user.id);
-      } catch (err) {
-        setError((err as Error).message);
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (!mounted) return;
+
+        setSession(session);
+        setUser(session?.user ?? null);
+
+        if (session?.user) {
+          const profile = await getProfileByUserId(session.user.id);
+          if (mounted) setProfile(profile);
+        }
+
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     };
+
     initAuth();
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, s) => {
-      setSession(s);
-      setUser(s?.user ?? null);
-      setError(null);
-      if (s?.user) await fetchProfile(s.user.id);
-      else setProfile(null);
-    });
+    const { data: { subscription } } =
+      supabase.auth.onAuthStateChange(async (_event, session) => {
 
-    return () => subscription.unsubscribe();
+        setSession(session);
+        setUser(session?.user ?? null);
+
+        if (session?.user) {
+          const profile = await getProfileByUserId(session.user.id);
+          setProfile(profile);
+        } else {
+          setProfile(null);
+        }
+      });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
-
   const login = async (email: string, password: string): Promise<Profile> => {
     try {
       setError(null);
@@ -182,7 +194,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     </AuthContext.Provider>
   );
 }
-
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) throw new Error('useAuth must be used within an AuthProvider');

@@ -91,9 +91,11 @@ export default function ContactForm() {
     }
   };
 
+console.log("STEP 1 - Starting");
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setServerError(null);
+console.log("STEP 2 - DataCollected");
 
     if (!checkRateLimit('contact_submit', 3, 60_000)) {
       const wait = getRateLimitWait('contact_submit', 60_000);
@@ -101,12 +103,14 @@ export default function ContactForm() {
       setServerError(`Trop de tentatives. Réessayez dans ${wait} secondes.`);
       return;
     }
+console.log("STEP 3 - RateLimit Checked");
 
     const csrfToken = getCsrfToken();
     if (!csrfToken) {
       setServerError('Session invalide. Veuillez recharger la page.');
       return;
     }
+console.log("STEP 4 - GotCsrf Token");
 
     const result = contactFormSchema.safeParse(form);
     if (!result.success) {
@@ -119,6 +123,7 @@ export default function ContactForm() {
       return;
     }
 
+console.log("STEP 5 - FormData Parsed");
     try {
       setStatus('loading');
 
@@ -127,6 +132,7 @@ export default function ContactForm() {
           ? result.data.budgetDetails?.trim() || result.data.budget
           : result.data.budget;
 
+console.log("STEP 6 - Entering await");
       await submitContact({
         name: result.data.name.trim(),
         company: result.data.company?.trim() || '',
@@ -138,6 +144,7 @@ export default function ContactForm() {
         message: result.data.message.trim(),
       });
 
+console.log("STEP 7 -  await over");
       // ✅ SUCCÈS
       setStatus('success');
       setForm(initialForm);
