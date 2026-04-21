@@ -2,7 +2,6 @@ import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
-import { supabase } from '../context/AuthContext';
 import {
   LayoutDashboard,
   Briefcase,
@@ -23,6 +22,7 @@ import {
 import Navbar from '../components/Navbar';
 import { Phone as WhatsAppIcon } from 'lucide-react';
 import { validatePassword } from '../utils/security';
+import { updateFreelancerRecordByUserId } from '../utils/remoteFunctions';
 
 interface Mission {
   id: number;
@@ -144,10 +144,9 @@ export default function DashboardPage() {
       });
       // ✅ Mettre aussi à jour la table freelancers si bio
       if (profile?.role === 'freelancer') {
-        await supabase
-          .from('freelancers')
-          .update({ bio: profileForm.bio.trim() })
-          .eq('user_id', profile.user_id);
+        await updateFreelancerRecordByUserId(profile.user_id, {
+          bio: profileForm.bio.trim(),
+        });
       }
       setSettingsStatus('success');
       setTimeout(() => {

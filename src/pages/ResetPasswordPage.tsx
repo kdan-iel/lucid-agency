@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Lock, Eye, EyeOff, CheckCircle } from 'lucide-react';
-import { supabase } from '../context/AuthContext';
+import { supabase } from '../lib/supabaseClient';
 import Navbar from '../components/Navbar';
 import { validatePassword } from '../utils/security';
 

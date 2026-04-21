@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { supabase, useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { Lock, Mail, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import { checkRateLimit, getRateLimitWait, isValidEmail } from '../utils/security';
+import { supabase } from '../lib/supabaseClient';
 
 export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
   const { login, resetPassword, clearError } = useAuth();

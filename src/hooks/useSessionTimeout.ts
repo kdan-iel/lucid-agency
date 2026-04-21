@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { supabase } from '../context/AuthContext';
+import { supabase } from '../lib/supabaseClient';
 
 const TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes d'inactivité
 const WARNING_MS = 25 * 60 * 1000; // Avertissement à 25 minutes

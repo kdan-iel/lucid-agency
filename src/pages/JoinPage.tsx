@@ -5,6 +5,8 @@ import Navbar from '../components/Navbar';
 import { checkRateLimit, getRateLimitWait } from '../utils/security';
 import Footer from '../components/Footer';
 import { freelancerSpecialties, joinFormSchema, JoinFormInput } from '../schemas';
+import { supabase } from '../lib/supabaseClient';
+import { submitJoinApplication } from '../utils/remoteFunctions';
 
 // État initial du formulaire
 const initialForm: JoinFormInput = {
@@ -55,12 +57,14 @@ export default function JoinPage() {
     e.preventDefault();
     setServerError(null);
 
+    //// ✅ Rate limiting — max 3 inscriptions par 10 minutes
     if (!checkRateLimit('join_submit', 3, 600_000)) {
       const wait = getRateLimitWait('join_submit', 600_000);
       setServerError('Trop de tentatives. Réessayez dans ' + Math.ceil(wait / 60) + ' minutes.');
       return;
     }
 
+    // ✅ Validation Zod
     const result = joinFormSchema.safeParse(form);
 
     if (!result.success) {
@@ -76,30 +80,50 @@ export default function JoinPage() {
     try {
       setStatus('loading');
 
-      const { submitFreelancerToGoogleDrive } = await import('../utils/googleDriveSubmit');
+      // ✅ Étape 1 : Créer le compte Supabase Auth
+      // Le mot de passe est hashé automatiquement par Supabase (bcrypt)
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: result.data.email,
+        password: result.data.password,
+        options: {
+          // Données passées au trigger (si configuré)
+          data: {
+            first_name: result.data.firstName,
+            last_name: result.data.lastName,
+            role: 'freelancer',
+          },
+        },
+      });
 
-      await submitFreelancerToGoogleDrive({
+      if (authError) throw authError;
+      if (!authData.user) throw new Error('Erreur lors de la création du compte');
+
+      // ✅ Étape 2 : déléguer la création du profil et de la candidature au backend distant
+      await submitJoinApplication({
+        userId: authData.user.id,
+        email: result.data.email.toLowerCase().trim(),
         firstName: result.data.firstName.trim(),
         lastName: result.data.lastName.trim(),
-        email: result.data.email.toLowerCase().trim(),
+        role: 'freelancer',
         specialty: result.data.specialty.trim(),
-        portfolio: result.data.portfolio?.trim() || '',
-        message: result.data.message?.trim() || '',
+        portfolioUrl: result.data.portfolio?.trim() || null,
+        bio: result.data.message?.trim() || null,
+        status: 'pending',
       });
 
       setStatus('success');
       setForm(initialForm);
     } catch (err) {
+      console.error('Erreur inscription:', err);
       setStatus('error');
 
+      // Message d'erreur lisible
       const message = (err as Error).message;
-      if (message.includes('Configuration')) {
-        setServerError('Configuration serveur manquante. Contacte le support.');
+      if (message.includes('already registered')) {
+        setServerError('Cet email est déjà utilisé.');
       } else {
-        setServerError('Impossible de sauvegarder ton inscription. Réessaye.');
+        setServerError('Une erreur est survenue. Veuillez réessayer.');
       }
-
-      setTimeout(() => setStatus('idle'), 5000);
     }
   };
 
@@ -117,10 +141,11 @@ export default function JoinPage() {
             <div className="text-6xl mb-6">✅</div>
             <h2 className="text-3xl font-bold mb-4">Candidature envoyée !</h2>
             <p className="text-brand-gray text-lg mb-2">
+              Vérifie ta boîte mail pour confirmer ton adresse email.
+            </p>
+            <p className="text-brand-gray">
               Notre équipe examinera ta candidature et te contactera sous 48h.
             </p>
-            {/* <p className="text-brand-gray">
-            </p> */}
           </motion.div>
         </main>
         <Footer />

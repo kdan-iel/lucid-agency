@@ -1,8 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
-import { supabase } from '../context/AuthContext';
 import {
   Users,
   Briefcase,
@@ -27,6 +26,7 @@ import {
 import Navbar from '../components/Navbar';
 import { Phone as WhatsAppIcon } from 'lucide-react';
 import { validatePassword } from '../utils/security';
+import { listAdminTalentRequests, updateAdminTalentStatus } from '../utils/remoteFunctions';
 
 interface TalentRequest {
   id: string;
@@ -107,24 +107,17 @@ export default function AdminPage() {
   const loadTalents = async () => {
     setLoadingTalents(true);
     try {
-      const { data, error } = await supabase
-        .from('freelancers')
-        .select(
-          `id, specialty, status, bio, portfolio_url, user_id, created_at, profiles(first_name, last_name, email, phone)`
-        )
-        .order('created_at', { ascending: false });
+      const data = await listAdminTalentRequests();
 
-      if (error) throw error;
-
-      const mapped: TalentRequest[] = (data ?? []).map((f: any) => ({
+      const mapped: TalentRequest[] = data.map((f) => ({
         id: f.id,
         user_id: f.user_id,
-        name: `${f.profiles?.first_name ?? ''} ${f.profiles?.last_name ?? ''}`.trim() || 'N/A',
+        name: `${f.first_name ?? ''} ${f.last_name ?? ''}`.trim() || 'N/A',
         specialty: f.specialty,
         date: new Date(f.created_at).toLocaleDateString('fr-FR'),
         status: f.status,
-        email: f.profiles?.email ?? '',
-        phone: f.profiles?.phone ?? 'N/A',
+        email: f.email ?? '',
+        phone: f.phone ?? 'N/A',
         portfolio: f.portfolio_url ?? 'N/A',
         experience: '',
       }));
@@ -137,18 +130,14 @@ export default function AdminPage() {
   };
 
   // Charger au montage
-  useState(() => {
+  useEffect(() => {
     loadTalents();
-  });
+  }, []);
 
   // ✅ Mettre à jour le statut dans Supabase
   const handleUpdateStatus = async (id: string, newStatus: 'approved' | 'rejected') => {
     try {
-      const { error } = await supabase
-        .from('freelancers')
-        .update({ status: newStatus })
-        .eq('id', id);
-      if (error) throw error;
+      await updateAdminTalentStatus(id, newStatus);
       setRequests((prev) => prev.map((r) => (r.id === id ? { ...r, status: newStatus } : r)));
       if (selectedTalent?.id === id)
         setSelectedTalent((prev) => (prev ? { ...prev, status: newStatus } : null));

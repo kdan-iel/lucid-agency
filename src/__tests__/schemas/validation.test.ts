@@ -5,6 +5,7 @@ describe('contactFormSchema', () => {
   const valid = {
     name: 'Jean Dupont',
     email: 'jean@example.com',
+    phone: '+228 90 00 00 00',
     message: 'Bonjour, je veux lancer un projet.',
     company: 'TechFlow',
     type: 'Site Web',

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLanguage } from '../context/LanguageContext';
 import { Search, X } from 'lucide-react';
+import { listPublicTalents } from '../utils/remoteFunctions';
 
 type SpecialtyKey =
   | 'graphisme'
@@ -86,11 +87,11 @@ const specialtyMeta: Record<
   },
 };
 
-function _toSpecialtyKey(value: string): SpecialtyKey {
+function toSpecialtyKey(value: string): SpecialtyKey {
   return value in specialtyMeta ? (value as SpecialtyKey) : 'autre';
 }
 
-function _formatRate(ratePerHour: number | null) {
+function formatRate(ratePerHour: number | null) {
   if (!ratePerHour) return 'Tarif sur demande';
 
   const rounded = new Intl.NumberFormat('fr-FR', {
@@ -100,7 +101,7 @@ function _formatRate(ratePerHour: number | null) {
   return `${rounded} FCFA/h`;
 }
 
-function _buildInitials(firstName: string, lastName: string) {
+function buildInitials(firstName: string, lastName: string) {
   return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase() || 'LU';
 }
 
@@ -136,11 +137,49 @@ export default function Talents() {
   const [visibleCount, setVisibleCount] = useState(6);
   const [selectedTalent, setSelectedTalent] = useState<PublicTalent | null>(null);
   const [talents, setTalents] = useState<PublicTalent[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setTalents([]);
-    setLoading(false);
+    const loadTalents = async () => {
+      setLoading(true);
+      try {
+        const data = await listPublicTalents();
+        const mapped = data.map((item) => {
+          const specialty = toSpecialtyKey(item.specialty ?? 'autre');
+          const meta = specialtyMeta[specialty];
+          const firstName = item.first_name?.trim() || 'Talent';
+          const lastName = item.last_name?.trim() || 'LUCID';
+          const fallbackSkill = lang === 'FR' ? meta.fallbackSkillFr : meta.fallbackSkillEn;
+          const rawSkills = Array.isArray(item.skills) ? item.skills.filter(Boolean) : [];
+
+          return {
+            id: item.id,
+            name: `${firstName} ${lastName}`.trim(),
+            category: specialty,
+            expertise: lang === 'FR' ? meta.labelFr : meta.labelEn,
+            skills: rawSkills.length > 0 ? rawSkills.slice(0, 3) : [fallbackSkill],
+            initials: buildInitials(firstName, lastName),
+            color: meta.color,
+            rate: formatRate(item.rate_per_hour ?? null),
+            bio:
+              item.bio?.trim() ||
+              (lang === 'FR'
+                ? 'Profil en cours de completion. Les details seront disponibles tres bientot.'
+                : 'Profile is being completed. More details will be available very soon.'),
+            portfolioUrl: item.portfolio_url ?? null,
+          } satisfies PublicTalent;
+        });
+
+        setTalents(mapped);
+      } catch (error) {
+        console.error('Erreur chargement talents publics:', error);
+        setTalents([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadTalents();
   }, [lang]);
 
   const categories = useMemo(

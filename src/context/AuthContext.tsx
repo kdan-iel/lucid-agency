@@ -1,13 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { createClient, Session, User } from '@supabase/supabase-js';
-
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
-
-export const supabase = createClient(
-  supabaseUrl || 'https://placeholder.supabase.co',
-  supabaseKey || 'placeholder'
-);
+import { Session, User } from '@supabase/supabase-js';
+import { supabase } from '../lib/supabaseClient';
+import { fetchProfileByUserId, updateProfileRecord } from '../utils/remoteFunctions';
 
 export interface Profile {
   id: string;
@@ -48,15 +42,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const getProfileByUserId = async (userId: string): Promise<Profile | null> => {
     try {
-      const { data, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', userId)
-        .single();
-      if (profileError && profileError.code !== 'PGRST116') {
-        console.error('Erreur profil:', profileError.message);
-        return null;
-      }
+      const data = await fetchProfileByUserId(userId);
       return (data as Profile) ?? null;
     } catch (err) {
       console.error('fetchProfile error:', err);
@@ -166,12 +152,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setError(null);
       if (!profile) throw new Error('Aucun profil chargé');
-      const { error: e } = await supabase
-        .from('profiles')
-        .update(updates)
-        .eq('user_id', profile.user_id);
-      if (e) throw e;
-      setProfile({ ...profile, ...updates });
+      const nextProfile = await updateProfileRecord(profile.user_id, updates);
+      setProfile(nextProfile as Profile);
     } catch (err) {
       setError((err as Error).message);
       throw err;
