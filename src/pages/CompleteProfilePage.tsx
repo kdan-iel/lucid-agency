@@ -3,7 +3,9 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import { supabase } from '../lib/supabaseClient';
+import { useTimeoutRegistry } from '../hooks/useTimeoutRegistry';
+import { toErrorMessage } from '../utils/asyncTools';
+import { completeFreelancerProfile } from '../utils/remoteFunctions';
 
 interface FreelancerData {
   phone_number: string;
@@ -21,8 +23,10 @@ export default function CompleteProfilePage() {
     specialite: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [serverError, setServerError] = useState('');
+  const { clearAll, schedule } = useTimeoutRegistry();
 
   useEffect(() => {
     if (!profile) return;
@@ -47,10 +51,14 @@ export default function CompleteProfilePage() {
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: '' }));
     }
+    if (serverError) {
+      setServerError('');
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    clearAll();
     setServerError('');
     const newErrors: Record<string, string> = {};
 
@@ -69,35 +77,30 @@ export default function CompleteProfilePage() {
       return;
     }
 
-    setStatus('loading');
-
     try {
       if (!session) throw new Error('No session');
+      setIsSubmitting(true);
+      setStatus('idle');
 
-      const { error } = await supabase.functions.invoke('complete-profile', {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: {
-          phone_number: form.phone_number.trim(),
-          tarif_jour: form.tarif_jour,
-          bio: form.bio?.trim() || null,
-          specialite: form.specialite?.trim() || null,
-        },
+      await completeFreelancerProfile(session.access_token, {
+        phoneNumber: form.phone_number.trim(),
+        tarifJour: form.tarif_jour,
+        bio: form.bio?.trim() || null,
+        specialite: form.specialite?.trim() || null,
       });
 
-      if (error) {
-        throw new Error(error.message || 'Failed to complete profile');
-      }
-
       setStatus('success');
-      setTimeout(() => {
+      schedule(() => {
         window.location.href = '/dashboard';
       }, 1500);
     } catch (err) {
+      const message = toErrorMessage(err, 'Impossible de compléter le profil.');
+      console.error('[CompleteProfilePage] submit failure', { message });
       setStatus('error');
-      setServerError((err as Error).message);
-      setTimeout(() => setStatus('idle'), 5000);
+      setServerError(message);
+      schedule(() => setStatus('idle'), 5000);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -239,10 +242,10 @@ export default function CompleteProfilePage() {
 
               <button
                 type="submit"
-                disabled={status === 'loading'}
+                disabled={isSubmitting}
                 className="w-full bg-brand-mint text-[#1A1A2E] py-5 rounded-xl font-bold text-lg hover:scale-[1.01] active:scale-[0.99] transition-all shadow-xl shadow-brand-mint/10 disabled:opacity-60"
               >
-                {status === 'loading' ? 'Enregistrement...' : 'Completer mon profil'}
+                {isSubmitting ? 'Enregistrement...' : 'Completer mon profil'}
               </button>
             </form>
           </div>

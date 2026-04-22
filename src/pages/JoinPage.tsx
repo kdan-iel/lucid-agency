@@ -5,7 +5,8 @@ import Navbar from '../components/Navbar';
 import { checkRateLimit, getRateLimitWait } from '../utils/security';
 import Footer from '../components/Footer';
 import { freelancerSpecialties, joinFormSchema, JoinFormInput } from '../schemas';
-import { supabase } from '../lib/supabaseClient';
+import { submitJoinApplication } from '../utils/remoteFunctions';
+import { toErrorMessage } from '../utils/asyncTools';
 
 // État initial du formulaire
 const initialForm: JoinFormInput = {
@@ -36,7 +37,8 @@ export default function JoinPage() {
 
   const [form, setForm] = useState<JoinFormInput>(initialForm);
   const [errors, setErrors] = useState<Partial<Record<keyof JoinFormInput, string>>>({});
-  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -55,11 +57,16 @@ export default function JoinPage() {
     if (errors[name as keyof JoinFormInput]) {
       setErrors((prev) => ({ ...prev, [name]: undefined }));
     }
+
+    if (serverError) {
+      setServerError(null);
+    }
   };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setServerError(null);
+    setErrors({});
 
     //// ✅ Rate limiting — max 3 inscriptions par 10 minutes
     if (!checkRateLimit('join_submit', 3, 600_000)) {
@@ -82,40 +89,35 @@ export default function JoinPage() {
     }
 
     try {
-      setStatus('loading');
+      setIsSubmitting(true);
+      setStatus('idle');
 
-      const response = await supabase.functions.invoke('freelancer-apply', {
-        body: {
-          first_name: result.data.firstName.trim(),
-          last_name: result.data.lastName.trim(),
-          email: result.data.email.toLowerCase().trim(),
-          password: result.data.password,
-          phone_number: result.data.phoneNumber.trim(),
-          tarif_jour: result.data.tarifJour,
-          domaine: result.data.specialty,
-          specialite: result.data.specialty,
-          portfolio_url: result.data.portfolio?.trim() || '',
-          message: result.data.message?.trim() || '',
-        },
+      await submitJoinApplication({
+        firstName: result.data.firstName.trim(),
+        lastName: result.data.lastName.trim(),
+        email: result.data.email.toLowerCase().trim(),
+        password: result.data.password,
+        phoneNumber: result.data.phoneNumber.trim(),
+        tarifJour: result.data.tarifJour,
+        specialty: result.data.specialty,
+        portfolioUrl: result.data.portfolio?.trim() || '',
+        message: result.data.message?.trim() || '',
       });
-
-      if (!response.data || response.error) {
-        throw new Error(response.error?.message || 'Failed to submit application');
-      }
 
       setStatus('success');
       setForm(initialForm);
     } catch (err) {
-      console.error('Erreur inscription:', err);
+      const message = toErrorMessage(err, 'Une erreur est survenue. Veuillez réessayer.');
+      console.error('[JoinPage] submit failure', { message });
       setStatus('error');
 
-      // Message d'erreur lisible
-      const message = (err as Error).message;
       if (message.includes('already registered')) {
         setServerError('Cet email est déjà utilisé.');
       } else {
-        setServerError('Une erreur est survenue. Veuillez réessayer.');
+        setServerError(message);
       }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -424,10 +426,10 @@ export default function JoinPage() {
               {/* Bouton submit */}
               <button
                 type="submit"
-                disabled={status === 'loading'}
+                disabled={isSubmitting}
                 className="w-full bg-brand-mint text-[#1A1A2E] py-5 rounded-xl font-bold text-lg hover:scale-[1.01] active:scale-[0.99] transition-all shadow-xl shadow-brand-mint/10 disabled:opacity-60 disabled:cursor-not-allowed disabled:scale-100"
               >
-                {status === 'loading' ? 'Envoi en cours...' : t('join.cta')}
+                {isSubmitting ? 'Envoi en cours...' : t('join.cta')}
               </button>
             </form>
           </div>

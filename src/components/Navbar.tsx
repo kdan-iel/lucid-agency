@@ -4,6 +4,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { Menu, X, Globe, Sun, Moon, LayoutDashboard, LogOut, Shield } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { toErrorMessage } from '../utils/asyncTools';
 
 export default function Navbar() {
   const { lang, setLang, t } = useLanguage();
@@ -45,9 +46,13 @@ export default function Navbar() {
     { name: t('nav.contact'), href: '/#contact', section: 'contact' },
   ];
 
-  const handleLogout = async () => {
+  const handleLogout = () => {
     setIsOpen(false);
-    await logout();
+    void logout().catch((error) => {
+      console.error('[Navbar] logout failure', {
+        message: toErrorMessage(error),
+      });
+    });
   };
 
   return (

@@ -4,18 +4,14 @@ import { ProtectedRoute } from '../../components/ProtectedRoute';
 import CompleteProfilePage from '../../pages/CompleteProfilePage';
 
 const mockUseAuth = vi.fn();
-const invokeMock = vi.fn();
+const completeFreelancerProfileMock = vi.fn();
 
 vi.mock('../../context/AuthContext', () => ({
   useAuth: () => mockUseAuth(),
 }));
 
-vi.mock('../../lib/supabaseClient', () => ({
-  supabase: {
-    functions: {
-      invoke: (...args: unknown[]) => invokeMock(...args),
-    },
-  },
+vi.mock('../../utils/remoteFunctions', () => ({
+  completeFreelancerProfile: (...args: unknown[]) => completeFreelancerProfileMock(...args),
 }));
 
 vi.mock('../../components/Navbar', () => ({
@@ -59,7 +55,7 @@ describe('CompleteProfilePage', () => {
       },
       loading: false,
     });
-    invokeMock.mockResolvedValue({ data: { success: true }, error: null });
+    completeFreelancerProfileMock.mockResolvedValue({ success: true });
   });
 
   const submitForm = () => {
@@ -86,7 +82,7 @@ describe('CompleteProfilePage', () => {
     submitForm();
 
     expect(await screen.findByText(/format invalide/i)).toBeInTheDocument();
-    expect(invokeMock).not.toHaveBeenCalled();
+    expect(completeFreelancerProfileMock).not.toHaveBeenCalled();
   });
 
   it('validates tarif_jour range', async () => {
@@ -101,7 +97,7 @@ describe('CompleteProfilePage', () => {
     submitForm();
 
     expect(await screen.findByText(/entre 1000 et 1000000 fcfa/i)).toBeInTheDocument();
-    expect(invokeMock).not.toHaveBeenCalled();
+    expect(completeFreelancerProfileMock).not.toHaveBeenCalled();
   });
 
   it('submits to complete-profile endpoint', async () => {
@@ -116,14 +112,11 @@ describe('CompleteProfilePage', () => {
     submitForm();
 
     await waitFor(() => {
-      expect(invokeMock).toHaveBeenCalledWith('complete-profile', {
-        headers: { Authorization: 'Bearer token-123' },
-        body: {
-          phone_number: '+221770000000',
-          tarif_jour: 25000,
-          bio: null,
-          specialite: null,
-        },
+      expect(completeFreelancerProfileMock).toHaveBeenCalledWith('token-123', {
+        phoneNumber: '+221770000000',
+        tarifJour: 25000,
+        bio: null,
+        specialite: null,
       });
     });
   });
@@ -146,10 +139,7 @@ describe('CompleteProfilePage', () => {
   });
 
   it('shows error message on failure', async () => {
-    invokeMock.mockResolvedValue({
-      data: null,
-      error: { message: 'Failed to complete profile' },
-    });
+    completeFreelancerProfileMock.mockRejectedValue(new Error('Failed to complete profile'));
 
     render(<CompleteProfilePage />);
 
@@ -177,7 +167,7 @@ describe('CompleteProfilePage', () => {
       </ProtectedRoute>
     );
 
-    expect(container).toBeEmptyDOMElement();
+    expect(container).toHaveTextContent(/redirection en cours/i);
     expect(mockLocation.href).toContain('/');
   });
 });

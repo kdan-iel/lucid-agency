@@ -4,6 +4,8 @@ import { Lock, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import Navbar from '../components/Navbar';
 import { validatePassword } from '../utils/security';
+import { useTimeoutRegistry } from '../hooks/useTimeoutRegistry';
+import { runWithAsyncGuard, toErrorMessage } from '../utils/asyncTools';
 
 export default function ResetPasswordPage() {
   const [password, setPassword] = useState('');
@@ -13,6 +15,7 @@ export default function ResetPasswordPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [validSession, setValidSession] = useState(false);
+  const { clearAll, schedule } = useTimeoutRegistry();
 
   useEffect(() => {
     const {
@@ -27,6 +30,7 @@ export default function ResetPasswordPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    clearAll();
     setError('');
 
     const passwordValidation = validatePassword(password);
@@ -42,14 +46,18 @@ export default function ResetPasswordPage() {
 
     setIsLoading(true);
     try {
-      const { error: updateError } = await supabase.auth.updateUser({ password });
-      if (updateError) throw updateError;
+      await runWithAsyncGuard('auth.resetRecoveredPassword', async () => {
+        const { error: updateError } = await supabase.auth.updateUser({ password });
+        if (updateError) throw updateError;
+      });
       setSuccess(true);
-      setTimeout(() => {
+      schedule(() => {
         window.location.href = '/';
       }, 3000);
     } catch (err) {
-      setError((err as Error).message);
+      const message = toErrorMessage(err, 'Impossible de mettre à jour le mot de passe.');
+      console.error('[ResetPasswordPage] update failure', { message });
+      setError(message);
     } finally {
       setIsLoading(false);
     }

@@ -138,10 +138,14 @@ export default function Talents() {
   const [selectedTalent, setSelectedTalent] = useState<PublicTalent | null>(null);
   const [talents, setTalents] = useState<PublicTalent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
+
     const loadTalents = async () => {
       setLoading(true);
+      setLoadError(null);
       try {
         const data = await listPublicTalents();
         const mapped = data.map((item) => {
@@ -170,16 +174,29 @@ export default function Talents() {
           } satisfies PublicTalent;
         });
 
-        setTalents(mapped);
+        if (!cancelled) {
+          setTalents(mapped);
+        }
       } catch (error) {
-        console.error('Erreur chargement talents publics:', error);
-        setTalents([]);
+        const message =
+          error instanceof Error ? error.message : 'Impossible de charger les talents.';
+        console.error('[Talents] load failure', { message });
+        if (!cancelled) {
+          setLoadError(message);
+          setTalents([]);
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
-    loadTalents();
+    void loadTalents();
+
+    return () => {
+      cancelled = true;
+    };
   }, [lang]);
 
   const categories = useMemo(
@@ -273,7 +290,7 @@ export default function Talents() {
               {emptyCopy.title}
             </h3>
             <p className="text-brand-gray leading-relaxed max-w-2xl mx-auto mb-8">
-              {emptyCopy.body}
+              {loadError ?? emptyCopy.body}
             </p>
             <a
               href="/join"

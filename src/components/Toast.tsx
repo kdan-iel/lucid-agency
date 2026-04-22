@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { CheckCircle, XCircle, AlertCircle, X } from 'lucide-react';
+import { useTimeoutRegistry } from '../hooks/useTimeoutRegistry';
 
 type ToastType = 'success' | 'error' | 'info';
 
@@ -18,12 +19,16 @@ const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const { schedule } = useTimeoutRegistry();
 
-  const showToast = useCallback((message: string, type: ToastType = 'info') => {
-    const id = Math.random().toString(36).substring(2);
-    setToasts((prev) => [...prev, { id, message, type }]);
-    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4000);
-  }, []);
+  const showToast = useCallback(
+    (message: string, type: ToastType = 'info') => {
+      const id = Math.random().toString(36).substring(2);
+      setToasts((prev) => [...prev, { id, message, type }]);
+      schedule(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4000);
+    },
+    [schedule]
+  );
 
   const dismiss = (id: string) => setToasts((prev) => prev.filter((t) => t.id !== id));
 

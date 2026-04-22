@@ -23,6 +23,8 @@ import Navbar from '../components/Navbar';
 import { Phone as WhatsAppIcon } from 'lucide-react';
 import { validatePassword } from '../utils/security';
 import { updateFreelancerRecordByUserId } from '../utils/remoteFunctions';
+import { useTimeoutRegistry } from '../hooks/useTimeoutRegistry';
+import { toErrorMessage } from '../utils/asyncTools';
 
 interface Mission {
   id: number;
@@ -111,6 +113,7 @@ export default function DashboardPage() {
     'idle'
   );
   const [settingsError, setSettingsError] = useState('');
+  const { clearAll, schedule } = useTimeoutRegistry();
 
   useEffect(() => {
     if (profile && (!profile.phone || !profile.tarif_jour)) {
@@ -118,11 +121,23 @@ export default function DashboardPage() {
     }
   }, [profile]);
 
+  useEffect(() => {
+    setProfileForm({
+      first_name: profile?.first_name ?? '',
+      last_name: profile?.last_name ?? '',
+      bio: profile?.bio ?? '',
+      phone: profile?.phone ?? '',
+    });
+  }, [profile]);
+
   const handleApply = (missionId: number) => {
-    if (!appliedMissions.includes(missionId)) {
-      setAppliedMissions([...appliedMissions, missionId]);
-      setSelectedMission(null);
-    }
+    setAppliedMissions((previous) => {
+      if (previous.includes(missionId)) {
+        return previous;
+      }
+      return [...previous, missionId];
+    });
+    setSelectedMission(null);
   };
 
   const handleSave = (missionId: number) => {
@@ -134,11 +149,7 @@ export default function DashboardPage() {
   // ✅ Sauvegarde du profil dans Supabase
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    const passwordValidation = validatePassword(passwordForm.new);
-    if (!passwordValidation.valid) {
-      setSettingsError(`Mot de passe invalide : ${passwordValidation.errors.join(', ')}.`);
-      return;
-    }
+    clearAll();
     setSettingsStatus('saving');
     setSettingsError('');
     try {
@@ -155,12 +166,14 @@ export default function DashboardPage() {
         });
       }
       setSettingsStatus('success');
-      setTimeout(() => {
+      schedule(() => {
         setSettingsStatus('idle');
         setActiveSettingsTab('main');
       }, 1500);
     } catch (err) {
-      setSettingsError((err as Error).message);
+      const message = toErrorMessage(err, 'Impossible de mettre à jour le profil.');
+      console.error('[DashboardPage] profile save failure', { message });
+      setSettingsError(message);
       setSettingsStatus('error');
     }
   };
@@ -168,13 +181,15 @@ export default function DashboardPage() {
   // ✅ Mise à jour du mot de passe via Supabase (hashé côté serveur)
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
+    clearAll();
     setSettingsError('');
     if (passwordForm.new !== passwordForm.confirm) {
       setSettingsError('Les mots de passe ne correspondent pas.');
       return;
     }
-    if (passwordForm.new.length < 8) {
-      setSettingsError('Le mot de passe doit contenir au moins 8 caractères.');
+    const passwordValidation = validatePassword(passwordForm.new);
+    if (!passwordValidation.valid) {
+      setSettingsError(`Mot de passe invalide : ${passwordValidation.errors.join(', ')}.`);
       return;
     }
     setSettingsStatus('saving');
@@ -182,12 +197,14 @@ export default function DashboardPage() {
       await updatePassword(passwordForm.new);
       setSettingsStatus('success');
       setPasswordForm({ current: '', new: '', confirm: '' });
-      setTimeout(() => {
+      schedule(() => {
         setSettingsStatus('idle');
         setActiveSettingsTab('main');
       }, 1500);
     } catch (err) {
-      setSettingsError((err as Error).message);
+      const message = toErrorMessage(err, 'Impossible de mettre à jour le mot de passe.');
+      console.error('[DashboardPage] password update failure', { message });
+      setSettingsError(message);
       setSettingsStatus('error');
     }
   };
@@ -727,7 +744,13 @@ export default function DashboardPage() {
               ))}
             </div>
             <button
-              onClick={logout}
+              onClick={() => {
+                void logout().catch((error) => {
+                  console.error('[DashboardPage] logout failure', {
+                    message: toErrorMessage(error),
+                  });
+                });
+              }}
               className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-400 hover:bg-red-400/10 transition-all mt-auto"
             >
               <LogOut size={20} />

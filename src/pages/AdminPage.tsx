@@ -28,6 +28,8 @@ import Navbar from '../components/Navbar';
 import { Phone as WhatsAppIcon } from 'lucide-react';
 import { validatePassword } from '../utils/security';
 import { listAdminTalentRequests, updateAdminTalentStatus } from '../utils/remoteFunctions';
+import { useTimeoutRegistry } from '../hooks/useTimeoutRegistry';
+import { toErrorMessage } from '../utils/asyncTools';
 
 interface TalentRequest {
   id: string;
@@ -87,6 +89,8 @@ export default function AdminPage() {
   );
   const [requests, setRequests] = useState<TalentRequest[]>([]);
   const [loadingTalents, setLoadingTalents] = useState(false);
+  const [talentsError, setTalentsError] = useState('');
+  const [updatingTalentId, setUpdatingTalentId] = useState<string | null>(null);
   const [projects, setProjects] = useState<Project[]>(INITIAL_PROJECTS);
   const [selectedTalent, setSelectedTalent] = useState<TalentRequest | null>(null);
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
@@ -106,10 +110,12 @@ export default function AdminPage() {
     'idle'
   );
   const [settingsError, setSettingsError] = useState('');
+  const { clearAll, schedule } = useTimeoutRegistry();
 
   // ✅ Charger les talents depuis Supabase
   const loadTalents = async () => {
     setLoadingTalents(true);
+    setTalentsError('');
     try {
       const data = await listAdminTalentRequests();
 
@@ -131,7 +137,9 @@ export default function AdminPage() {
       }));
       setRequests(mapped);
     } catch (err) {
-      console.error('Erreur chargement talents:', err);
+      const message = toErrorMessage(err, 'Impossible de charger les candidatures.');
+      console.error('[AdminPage] talents load failure', { message });
+      setTalentsError(message);
     } finally {
       setLoadingTalents(false);
     }
@@ -145,24 +153,34 @@ export default function AdminPage() {
   // ✅ Mettre à jour le statut dans Supabase
   const handleUpdateStatus = async (id: string, newStatus: 'approved' | 'rejected') => {
     try {
+      setUpdatingTalentId(id);
+      setTalentsError('');
       await updateAdminTalentStatus(id, newStatus);
       setRequests((prev) => prev.map((r) => (r.id === id ? { ...r, status: newStatus } : r)));
       if (selectedTalent?.id === id)
         setSelectedTalent((prev) => (prev ? { ...prev, status: newStatus } : null));
     } catch (err) {
-      console.error('Erreur mise à jour statut:', err);
+      const message = toErrorMessage(err, 'Impossible de mettre à jour le statut.');
+      console.error('[AdminPage] talent status failure', { message, id, newStatus });
+      setTalentsError(message);
+    } finally {
+      setUpdatingTalentId(null);
     }
   };
 
   const handleCreateProject = (e: React.FormEvent) => {
     e.preventDefault();
-    setProjects([{ id: projects.length + 1, ...newProject, status: 'in-progress' }, ...projects]);
+    setProjects((previous) => [
+      { id: previous.length + 1, ...newProject, status: 'in-progress' },
+      ...previous,
+    ]);
     setIsProjectModalOpen(false);
     setNewProject({ title: '', client: '', talent: '', budget: '', deadline: '' });
   };
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
+    clearAll();
     setSettingsError('');
     if (passwordForm.new !== passwordForm.confirm) {
       setSettingsError('Les mots de passe ne correspondent pas.');
@@ -182,12 +200,14 @@ export default function AdminPage() {
       await updatePassword(passwordForm.new);
       setSettingsStatus('success');
       setPasswordForm({ new: '', confirm: '' });
-      setTimeout(() => {
+      schedule(() => {
         setSettingsStatus('idle');
         setActiveSettingsTab('main');
       }, 1500);
     } catch (err) {
-      setSettingsError((err as Error).message);
+      const message = toErrorMessage(err, 'Impossible de mettre à jour le mot de passe.');
+      console.error('[AdminPage] password update failure', { message });
+      setSettingsError(message);
       setSettingsStatus('error');
     }
   };
@@ -271,6 +291,8 @@ export default function AdminPage() {
         <div className="text-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-mint mx-auto" />
         </div>
+      ) : talentsError ? (
+        <div className="text-center py-12 text-red-400">{talentsError}</div>
       ) : filteredRequests.length === 0 ? (
         <div className="text-center py-12 text-brand-gray">
           {requests.length === 0 ? 'Aucune candidature reçue pour le moment.' : 'Aucun résultat.'}
@@ -310,9 +332,7 @@ export default function AdminPage() {
                   <td className="py-4 text-brand-gray">
                     {row.tarif_jour ? `${row.tarif_jour} FCFA` : 'N/A'}
                   </td>
-                  <td className="py-4 text-brand-gray">
-                    {row.onboarding_completed ? '✓' : '✗'}
-                  </td>
+                  <td className="py-4 text-brand-gray">{row.onboarding_completed ? '✓' : '✗'}</td>
                   <td className="py-4 text-brand-gray">{row.date}</td>
                   <td className="py-4">
                     {row.status === 'approved' && (
@@ -336,6 +356,7 @@ export default function AdminPage() {
                   </td>
                   <td className="py-4 text-right">
                     <button
+                      disabled={updatingTalentId === row.id}
                       className="p-2 rounded-lg hover:bg-white/10 text-brand-gray"
                       onClick={(e) => {
                         e.stopPropagation();
@@ -665,7 +686,13 @@ export default function AdminPage() {
               ))}
             </div>
             <button
-              onClick={logout}
+              onClick={() => {
+                void logout().catch((error) => {
+                  console.error('[AdminPage] logout failure', {
+                    message: toErrorMessage(error),
+                  });
+                });
+              }}
               className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-400 hover:bg-red-400/10"
             >
               <LogOut size={20} />
@@ -773,9 +800,7 @@ export default function AdminPage() {
                 <div className="flex items-center gap-3 text-brand-gray">
                   <DollarSign size={18} className="text-brand-mint" />
                   <span className="text-sm">
-                    {selectedTalent.tarif_jour
-                      ? `${selectedTalent.tarif_jour} FCFA/jour`
-                      : 'N/A'}
+                    {selectedTalent.tarif_jour ? `${selectedTalent.tarif_jour} FCFA/jour` : 'N/A'}
                   </span>
                 </div>
                 {selectedTalent.portfolio !== 'N/A' && (
@@ -796,16 +821,18 @@ export default function AdminPage() {
               {selectedTalent.status === 'pending' ? (
                 <div className="flex gap-4">
                   <button
+                    disabled={updatingTalentId === selectedTalent.id}
                     onClick={() => handleUpdateStatus(selectedTalent.id, 'approved')}
                     className="flex-grow bg-green-500 text-white py-4 rounded-xl font-bold hover:bg-green-600 transition-all"
                   >
-                    Approuver
+                    {updatingTalentId === selectedTalent.id ? 'Traitement...' : 'Approuver'}
                   </button>
                   <button
+                    disabled={updatingTalentId === selectedTalent.id}
                     onClick={() => handleUpdateStatus(selectedTalent.id, 'rejected')}
                     className="flex-grow bg-red-500 text-white py-4 rounded-xl font-bold hover:bg-red-600 transition-all"
                   >
-                    Refuser
+                    {updatingTalentId === selectedTalent.id ? 'Traitement...' : 'Refuser'}
                   </button>
                 </div>
               ) : (

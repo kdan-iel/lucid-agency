@@ -3,6 +3,8 @@ import { motion } from 'motion/react';
 import { useLanguage } from '../context/LanguageContext';
 import { type ContactFormInput, contactFormSchema } from '../schemas';
 import { submitContact } from '../utils/remoteFunctions';
+import { useTimeoutRegistry } from '../hooks/useTimeoutRegistry';
+import { toErrorMessage } from '../utils/asyncTools';
 import {
   checkRateLimit,
   generateCsrfToken,
@@ -62,14 +64,26 @@ export default function ContactForm() {
   const { lang, t } = useLanguage();
   const [form, setForm] = useState<ContactFormInput>(initialForm);
   const [errors, setErrors] = useState<ContactFormErrors>({});
-  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [rateLimitWait, setRateLimitWait] = useState(0);
+  const { clearAll, schedule } = useTimeoutRegistry();
 
   useEffect(() => {
     const token = generateCsrfToken();
     storeCsrfToken(token);
   }, []);
+
+  useEffect(() => {
+    if (rateLimitWait <= 0) return;
+
+    const timer = window.setTimeout(() => {
+      setRateLimitWait((previous) => Math.max(previous - 1, 0));
+    }, 1000);
+
+    return () => window.clearTimeout(timer);
+  }, [rateLimitWait]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -89,13 +103,17 @@ export default function ContactForm() {
     if (name === 'budget' && value !== CUSTOM_BUDGET_OPTION && errors.budgetDetails) {
       setErrors((prev) => ({ ...prev, budgetDetails: undefined }));
     }
+
+    if (serverError) {
+      setServerError(null);
+    }
   };
 
-console.log("STEP 1 - Starting");
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    clearAll();
     setServerError(null);
-console.log("STEP 2 - DataCollected");
+    setErrors({});
 
     if (!checkRateLimit('contact_submit', 3, 60_000)) {
       const wait = getRateLimitWait('contact_submit', 60_000);
@@ -103,14 +121,12 @@ console.log("STEP 2 - DataCollected");
       setServerError(`Trop de tentatives. Réessayez dans ${wait} secondes.`);
       return;
     }
-console.log("STEP 3 - RateLimit Checked");
 
     const csrfToken = getCsrfToken();
     if (!csrfToken) {
       setServerError('Session invalide. Veuillez recharger la page.');
       return;
     }
-console.log("STEP 4 - GotCsrf Token");
 
     const result = contactFormSchema.safeParse(form);
     if (!result.success) {
@@ -123,16 +139,15 @@ console.log("STEP 4 - GotCsrf Token");
       return;
     }
 
-console.log("STEP 5 - FormData Parsed");
     try {
-      setStatus('loading');
+      setIsSubmitting(true);
+      setStatus('idle');
 
       const normalizedBudget =
         result.data.budget === CUSTOM_BUDGET_OPTION
           ? result.data.budgetDetails?.trim() || result.data.budget
           : result.data.budget;
 
-console.log("STEP 6 - Entering await");
       await submitContact({
         name: result.data.name.trim(),
         company: result.data.company?.trim() || '',
@@ -144,23 +159,25 @@ console.log("STEP 6 - Entering await");
         message: result.data.message.trim(),
       });
 
-console.log("STEP 7 -  await over");
-      // ✅ SUCCÈS
       setStatus('success');
       setForm(initialForm);
 
       const newToken = generateCsrfToken();
       storeCsrfToken(newToken);
 
-      setTimeout(() => setStatus('idle'), 6000);
-    } catch {
+      schedule(() => setStatus('idle'), 6000);
+    } catch (error) {
+      const message = toErrorMessage(error, 'Une erreur est survenue. Veuillez réessayer.');
+      console.error('[ContactForm] submit failure', { message });
       setStatus('error');
-      setServerError('Une erreur est survenue. Veuillez réessayer.');
-      setTimeout(() => setStatus('idle'), 5000);
+      setServerError(message);
+      schedule(() => setStatus('idle'), 5000);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const isBlocked = status === 'loading' || rateLimitWait > 0;
+  const isBlocked = isSubmitting || rateLimitWait > 0;
   const isCustomBudget = form.budget === CUSTOM_BUDGET_OPTION;
 
   return (
@@ -334,7 +351,7 @@ console.log("STEP 7 -  await over");
             disabled={isBlocked}
             className="w-full bg-brand-mint text-[#1A1A2E] py-5 rounded-xl font-bold text-lg hover:scale-[1.01] active:scale-[0.99] transition-all shadow-xl shadow-brand-mint/10 disabled:opacity-60 disabled:cursor-not-allowed disabled:scale-100"
           >
-            {status === 'loading' ? 'Envoi en cours...' : t('contact.submit')}
+            {isSubmitting ? 'Envoi en cours...' : t('contact.submit')}
           </button>
 
           {status === 'success' && (

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 
 interface ProtectedRouteProps {
@@ -8,6 +8,13 @@ interface ProtectedRouteProps {
 
 export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
   const { session, profile, loading } = useAuth();
+
+  useEffect(() => {
+    if (loading) return;
+    if (!session || !profile || profile.role !== requiredRole) {
+      window.location.href = '/';
+    }
+  }, [loading, profile, requiredRole, session]);
 
   if (loading) {
     return (
@@ -20,16 +27,12 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
     );
   }
 
-  // ✅ Pas de session JWT valide → accueil
-  if (!session || !profile) {
-    window.location.href = '/';
-    return null;
-  }
-
-  // ✅ Mauvais rôle → accueil
-  if (profile.role !== requiredRole) {
-    window.location.href = '/';
-    return null;
+  if (!session || !profile || profile.role !== requiredRole) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[var(--bg-primary)]">
+        <p className="text-brand-gray text-sm">Redirection en cours...</p>
+      </div>
+    );
   }
 
   return <>{children}</>;

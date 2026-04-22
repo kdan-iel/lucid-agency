@@ -6,6 +6,7 @@ import { Lock, Mail, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import { checkRateLimit, getRateLimitWait, isValidEmail } from '../utils/security';
 import { supabase } from '../lib/supabaseClient';
+import { runWithAsyncGuard, toErrorMessage } from '../utils/asyncTools';
 
 export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
   const { login, resetPassword, clearError } = useAuth();
@@ -48,15 +49,15 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
       const nextProfile = await login(email.trim().toLowerCase(), password);
 
       if (isAdminLogin && nextProfile.role !== 'admin') {
-        await supabase.auth.signOut();
+        await runWithAsyncGuard('auth.signOutUnauthorizedAdmin', async () => {
+          const { error: signOutError } = await supabase.auth.signOut();
+          if (signOutError) throw signOutError;
+        });
         setError("Ce compte n'a pas accès à l'administration.");
         return;
       }
 
-      if (
-        nextProfile.role === 'freelancer' &&
-        (!nextProfile.phone || !nextProfile.tarif_jour)
-      ) {
+      if (nextProfile.role === 'freelancer' && (!nextProfile.phone || !nextProfile.tarif_jour)) {
         window.location.href = '/complete-profile';
         return;
       }
@@ -73,6 +74,10 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
       } else {
         setError('Une erreur est survenue. Veuillez reessayer.');
       }
+      console.error('[LoginPage] login failure', {
+        message: toErrorMessage(err),
+        role,
+      });
     } finally {
       setIsLoading(false);
     }
@@ -96,8 +101,10 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
     try {
       await resetPassword(resetEmail.trim().toLowerCase());
       setResetSent(true);
-    } catch {
-      setError("Impossible d'envoyer le lien. Verifiez l'email.");
+    } catch (err) {
+      const message = toErrorMessage(err, "Impossible d'envoyer le lien. Verifiez l'email.");
+      console.error('[LoginPage] reset password failure', { message });
+      setError(message);
     } finally {
       setIsLoading(false);
     }

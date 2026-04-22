@@ -1,7 +1,8 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabaseClient';
 import { fetchProfileByUserId, updateProfileRecord } from '../utils/remoteFunctions';
+import { runWithAsyncGuard, toErrorMessage } from '../utils/asyncTools';
 
 export interface Profile {
   id: string;
@@ -41,83 +42,164 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const mountedRef = useRef(true);
+  const profileRequestRef = useRef(0);
 
   const getProfileByUserId = async (userId: string): Promise<Profile | null> => {
     try {
-      const data = await fetchProfileByUserId(userId);
+      const data = await runWithAsyncGuard(
+        'auth.fetchProfile',
+        () => fetchProfileByUserId(userId),
+        {
+          fallbackMessage: 'Impossible de récupérer le profil utilisateur.',
+          metadata: { userId },
+        }
+      );
       return (data as Profile) ?? null;
     } catch (err) {
-      console.error('fetchProfile error:', err);
+      console.error('[Auth] fetchProfile error', {
+        userId,
+        message: toErrorMessage(err),
+      });
       return null;
     }
   };
 
-  const fetchProfile = async (userId: string) => {
+  const syncProfile = async (userId: string | null) => {
+    const requestId = ++profileRequestRef.current;
+
+    if (!userId) {
+      if (mountedRef.current) {
+        setProfile(null);
+      }
+      return null;
+    }
+
     const nextProfile = await getProfileByUserId(userId);
+    if (!mountedRef.current || requestId !== profileRequestRef.current) {
+      return null;
+    }
+
     setProfile(nextProfile);
     return nextProfile;
   };
 
   useEffect(() => {
-    let mounted = true;
+    mountedRef.current = true;
 
     const initAuth = async () => {
+      setLoading(true);
+
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const {
+          data: { session: nextSession },
+          error: sessionError,
+        } = await runWithAsyncGuard('auth.getSession', () => supabase.auth.getSession(), {
+          fallbackMessage: 'Impossible de vérifier votre session.',
+        });
 
-        if (!mounted) return;
-
-        setSession(session);
-        setUser(session?.user ?? null);
-
-        if (session?.user) {
-          const profile = await getProfileByUserId(session.user.id);
-          if (mounted) setProfile(profile);
+        if (sessionError) {
+          throw sessionError;
         }
 
+        if (!mountedRef.current) return;
+
+        setSession(nextSession);
+        setUser(nextSession?.user ?? null);
+
+        await syncProfile(nextSession?.user?.id ?? null);
+      } catch (err) {
+        const message = toErrorMessage(err, 'Impossible d’initialiser la session.');
+        console.error('[Auth] init error', { message });
+        if (mountedRef.current) {
+          setError(message);
+          setSession(null);
+          setUser(null);
+          setProfile(null);
+        }
       } finally {
-        if (mounted) setLoading(false);
+        if (mountedRef.current) setLoading(false);
       }
     };
 
-    initAuth();
+    void initAuth();
 
-    const { data: { subscription } } =
-      supabase.auth.onAuthStateChange(async (_event, session) => {
+    let authEventCounter = 0;
 
-        setSession(session);
-        setUser(session?.user ?? null);
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      authEventCounter += 1;
+      const eventId = authEventCounter;
+      // console.info('[Auth] state change', {
+      //   event: _event,
+      //   hasSession: Boolean(nextSession),
+      // });
 
-        if (session?.user) {
-          const profile = await getProfileByUserId(session.user.id);
-          setProfile(profile);
-        } else {
-          setProfile(null);
+      if (!mountedRef.current) return;
+
+      setSession(nextSession);
+      setUser(nextSession?.user ?? null);
+
+      void (async () => {
+        if (!nextSession?.user) {
+          profileRequestRef.current += 1;
+          if (mountedRef.current) {
+            setProfile(null);
+          }
+          return;
         }
-      });
+
+        const nextProfile = await getProfileByUserId(nextSession.user.id);
+        if (!mountedRef.current || eventId !== authEventCounter) {
+          return;
+        }
+
+        setProfile(nextProfile);
+      })();
+    });
 
     return () => {
-      mounted = false;
+      mountedRef.current = false;
       subscription.unsubscribe();
     };
   }, []);
+
   const login = async (email: string, password: string): Promise<Profile> => {
     try {
       setError(null);
-      const {
-        data: { user: loggedUser },
-        error: e,
-      } = await supabase.auth.signInWithPassword({ email, password });
-      if (e) throw e;
-      if (!loggedUser) throw new Error('Utilisateur introuvable.');
+      const nextProfile = await runWithAsyncGuard(
+        'auth.login',
+        async () => {
+          const {
+            data: { user: loggedUser, session: nextSession },
+            error: signInError,
+          } = await supabase.auth.signInWithPassword({ email, password });
 
-      const nextProfile = await getProfileByUserId(loggedUser.id);
+          if (signInError) throw signInError;
+          if (!loggedUser) throw new Error('Utilisateur introuvable.');
+
+          const fetchedProfile = await getProfileByUserId(loggedUser.id);
+          if (!fetchedProfile) throw new Error('Profil introuvable pour ce compte.');
+
+          if (mountedRef.current) {
+            setSession(nextSession);
+            setUser(loggedUser);
+            setProfile(fetchedProfile);
+          }
+
+          return fetchedProfile;
+        },
+        {
+          fallbackMessage: 'La connexion a expiré. Veuillez réessayer.',
+          metadata: { email },
+        }
+      );
+
       if (!nextProfile) throw new Error('Profil introuvable pour ce compte.');
-
-      setProfile(nextProfile);
       return nextProfile;
     } catch (err) {
-      setError((err as Error).message);
+      setError(toErrorMessage(err));
       throw err;
     }
   };
@@ -125,13 +207,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = async () => {
     try {
       setError(null);
-      await supabase.auth.signOut();
+      await runWithAsyncGuard('auth.logout', async () => {
+        const { error: signOutError } = await supabase.auth.signOut();
+        if (signOutError) throw signOutError;
+      });
       setSession(null);
       setUser(null);
       setProfile(null);
       window.location.href = '/';
     } catch (err) {
-      setError((err as Error).message);
+      setError(toErrorMessage(err));
       throw err;
     }
   };
@@ -139,12 +224,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const resetPassword = async (email: string) => {
     try {
       setError(null);
-      const { error: e } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-      if (e) throw e;
+      await runWithAsyncGuard(
+        'auth.resetPassword',
+        async () => {
+          const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: `${window.location.origin}/reset-password`,
+          });
+          if (resetError) throw resetError;
+        },
+        {
+          fallbackMessage: 'Le lien de réinitialisation n’a pas pu être envoyé.',
+          metadata: { email },
+        }
+      );
     } catch (err) {
-      setError((err as Error).message);
+      setError(toErrorMessage(err));
       throw err;
     }
   };
@@ -152,10 +246,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const updatePassword = async (newPassword: string) => {
     try {
       setError(null);
-      const { error: e } = await supabase.auth.updateUser({ password: newPassword });
-      if (e) throw e;
+      await runWithAsyncGuard(
+        'auth.updatePassword',
+        async () => {
+          const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
+          if (updateError) throw updateError;
+        },
+        {
+          fallbackMessage: 'La mise à jour du mot de passe a expiré.',
+        }
+      );
     } catch (err) {
-      setError((err as Error).message);
+      setError(toErrorMessage(err));
       throw err;
     }
   };
@@ -164,10 +266,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setError(null);
       if (!profile) throw new Error('Aucun profil chargé');
-      const nextProfile = await updateProfileRecord(profile.user_id, updates);
+      const nextProfile = await runWithAsyncGuard(
+        'auth.updateProfile',
+        () => updateProfileRecord(profile.user_id, updates),
+        {
+          fallbackMessage: 'La mise à jour du profil a expiré.',
+          metadata: { userId: profile.user_id },
+        }
+      );
       setProfile(nextProfile as Profile);
     } catch (err) {
-      setError((err as Error).message);
+      setError(toErrorMessage(err));
       throw err;
     }
   };

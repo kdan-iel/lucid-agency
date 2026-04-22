@@ -6,6 +6,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import BackToTop from './components/BackToTop';
 import { useEffect, useState } from 'react';
 import { useSessionTimeout } from './hooks/useSessionTimeout';
+import { useTimeoutRegistry } from './hooks/useTimeoutRegistry';
 
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
@@ -62,6 +63,7 @@ const VALID_PATHS = [
 function AppContent() {
   const [path, setPath] = useState(window.location.pathname);
   const { loading, session } = useAuth();
+  const { schedule, clearAll } = useTimeoutRegistry();
 
   // ✅ Déconnexion automatique après 30 min d'inactivité
   useSessionTimeout(!!session);
@@ -71,7 +73,7 @@ function AppContent() {
     window.addEventListener('popstate', handleLocationChange);
 
     if (window.location.hash) {
-      setTimeout(() => {
+      schedule(() => {
         const el = document.querySelector(window.location.hash);
         if (el) el.scrollIntoView({ behavior: 'smooth' });
       }, 500);
@@ -98,10 +100,11 @@ function AppContent() {
 
     document.addEventListener('click', handleClick);
     return () => {
+      clearAll();
       window.removeEventListener('popstate', handleLocationChange);
       document.removeEventListener('click', handleClick);
     };
-  }, [path]);
+  }, [clearAll, schedule]);
 
   if (loading && !session) {
     return (
