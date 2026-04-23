@@ -1,6 +1,7 @@
 import { motion } from 'motion/react';
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { useTimeoutRegistry } from '../hooks/useTimeoutRegistry';
@@ -15,7 +16,8 @@ interface FreelancerData {
 }
 
 export default function CompleteProfilePage() {
-  const { freelancer, session, refreshAuthState } = useAuth();
+  const { t } = useLanguage();
+  const { freelancer, session, loading, refreshAuthState } = useAuth();
   const [form, setForm] = useState<FreelancerData>({
     phone_number: '',
     tarif_jour: 25000,
@@ -29,30 +31,33 @@ export default function CompleteProfilePage() {
   const { clearAll, schedule } = useTimeoutRegistry();
 
   useEffect(() => {
-    if (!freelancer) return;
+    if (loading || !freelancer) return;
 
-    setForm((prev) => ({
-      ...prev,
-      phone_number: freelancer.phone_number ?? prev.phone_number,
-      tarif_jour: freelancer.tarif_jour ?? prev.tarif_jour,
-      bio: freelancer.bio ?? prev.bio ?? '',
-      specialite: freelancer.specialite ?? prev.specialite ?? '',
+    setForm((previous) => ({
+      ...previous,
+      phone_number: freelancer.phone_number ?? previous.phone_number,
+      tarif_jour: freelancer.tarif_jour ?? previous.tarif_jour,
+      bio: freelancer.bio ?? previous.bio ?? '',
+      specialite: freelancer.specialite ?? previous.specialite ?? '',
     }));
 
     if (freelancer.onboarding_completed && freelancer.phone_number && freelancer.tarif_jour) {
       window.location.href = '/dashboard';
     }
-  }, [freelancer]);
+  }, [freelancer, loading]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setForm((prev) => ({
-      ...prev,
+
+    setForm((previous) => ({
+      ...previous,
       [name]: name === 'tarif_jour' ? Number.parseFloat(value) || 0 : value,
     }));
+
     if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: '' }));
+      setErrors((previous) => ({ ...previous, [name]: '' }));
     }
+
     if (serverError) {
       setServerError('');
     }
@@ -62,25 +67,27 @@ export default function CompleteProfilePage() {
     e.preventDefault();
     clearAll();
     setServerError('');
-    const newErrors: Record<string, string> = {};
+
+    const nextErrors: Record<string, string> = {};
 
     if (!form.phone_number.trim()) {
-      newErrors.phone_number = 'Numero de telephone requis';
+      nextErrors.phone_number = t('completeProfile.error.phoneRequired');
     } else if (!/^\+?[1-9]\d{7,14}$/.test(form.phone_number.trim())) {
-      newErrors.phone_number = 'Format invalide: +COUNTRYCODE 8-15 digits';
+      nextErrors.phone_number = t('completeProfile.error.phoneInvalid');
     }
 
     if (!form.tarif_jour || form.tarif_jour < 1000 || form.tarif_jour > 1000000) {
-      newErrors.tarif_jour = 'Entre 1000 et 1000000 FCFA';
+      nextErrors.tarif_jour = t('completeProfile.error.rateInvalid');
     }
 
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
       return;
     }
 
     try {
-      if (!session) throw new Error('No session');
+      if (!session) throw new Error(t('completeProfile.error.noSession'));
+
       setIsSubmitting(true);
       setStatus('idle');
 
@@ -90,6 +97,7 @@ export default function CompleteProfilePage() {
         bio: form.bio?.trim() || null,
         specialite: form.specialite?.trim() || null,
       });
+
       await refreshAuthState();
 
       setStatus('success');
@@ -97,7 +105,7 @@ export default function CompleteProfilePage() {
         window.location.href = '/dashboard';
       }, 1500);
     } catch (err) {
-      const message = toErrorMessage(err, 'Impossible de compléter le profil.');
+      const message = toErrorMessage(err, t('completeProfile.error.submit'));
       console.error('[CompleteProfilePage] submit failure', { message });
       setStatus('error');
       setServerError(message);
@@ -107,23 +115,55 @@ export default function CompleteProfilePage() {
     }
   };
 
-  if (status === 'success') {
-    return (
-      <div className="bg-brand-darkest min-h-screen flex flex-col">
-        <Navbar />
-        <main className="flex-grow flex items-center justify-center px-6">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="text-center max-w-md"
-          >
+  const renderCenteredState = (title: string, description: string, withSpinner = false) => (
+    <div className="bg-brand-darkest min-h-screen flex flex-col">
+      <Navbar />
+      <main className="flex-grow flex items-center justify-center px-6">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="text-center max-w-md"
+        >
+          {withSpinner ? (
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-mint mx-auto mb-6" />
+          ) : (
             <div className="text-6xl mb-6">✅</div>
-            <h2 className="text-3xl font-bold mb-4">Profil termine !</h2>
-            <p className="text-brand-gray text-lg">Redirection vers le tableau de bord...</p>
-          </motion.div>
-        </main>
-        <Footer />
-      </div>
+          )}
+          <h2 className="text-3xl font-bold mb-4">{title}</h2>
+          <p className="text-brand-gray text-lg">{description}</p>
+        </motion.div>
+      </main>
+      <Footer />
+    </div>
+  );
+
+  if (loading) {
+    return renderCenteredState(
+      t('completeProfile.loading.title'),
+      t('completeProfile.loading.body'),
+      true
+    );
+  }
+
+  if (!session) {
+    return renderCenteredState(
+      t('completeProfile.fallback.title'),
+      t('completeProfile.fallback.body')
+    );
+  }
+
+  if (!freelancer) {
+    return renderCenteredState(
+      t('completeProfile.pending.title'),
+      t('completeProfile.pending.body'),
+      true
+    );
+  }
+
+  if (status === 'success') {
+    return renderCenteredState(
+      t('completeProfile.success.title'),
+      t('completeProfile.success.body')
     );
   }
 
@@ -138,12 +178,9 @@ export default function CompleteProfilePage() {
             className="text-center mb-16"
           >
             <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-6">
-              Completer votre profil
+              {t('completeProfile.title')}
             </h1>
-            <p className="text-brand-gray text-lg">
-              Pour pouvoir acceder au tableau de bord, veuillez renseigner les informations
-              suivantes.
-            </p>
+            <p className="text-brand-gray text-lg">{t('completeProfile.subtitle')}</p>
           </motion.div>
 
           <div className="bg-brand-darkblue p-8 md:p-12 rounded-3xl border border-white/5">
@@ -153,7 +190,7 @@ export default function CompleteProfilePage() {
                   htmlFor="complete-profile-phone"
                   className="text-xs font-bold uppercase tracking-widest text-brand-gray"
                 >
-                  Numero de telephone <span className="text-red-400">*</span>
+                  {t('completeProfile.field.phone')} <span className="text-red-400">*</span>
                 </label>
                 <input
                   id="complete-profile-phone"
@@ -161,7 +198,7 @@ export default function CompleteProfilePage() {
                   name="phone_number"
                   value={form.phone_number}
                   onChange={handleChange}
-                  placeholder="+221770000000"
+                  placeholder={t('completeProfile.field.phonePlaceholder')}
                   className={`w-full bg-brand-anthracite border rounded-xl px-4 py-4 text-white focus:border-brand-mint outline-none transition-colors ${
                     errors.phone_number ? 'border-red-400' : 'border-white/10'
                   }`}
@@ -176,7 +213,7 @@ export default function CompleteProfilePage() {
                   htmlFor="complete-profile-rate"
                   className="text-xs font-bold uppercase tracking-widest text-brand-gray"
                 >
-                  Tarif journalier (FCFA) <span className="text-red-400">*</span>
+                  {t('completeProfile.field.rate')} <span className="text-red-400">*</span>
                 </label>
                 <div className="flex items-center gap-2">
                   <input
@@ -192,7 +229,9 @@ export default function CompleteProfilePage() {
                       errors.tarif_jour ? 'border-red-400' : 'border-white/10'
                     }`}
                   />
-                  <span className="text-brand-gray whitespace-nowrap">/jour</span>
+                  <span className="text-brand-gray whitespace-nowrap">
+                    {t('completeProfile.field.rateSuffix')}
+                  </span>
                 </div>
                 {errors.tarif_jour && <p className="text-red-400 text-xs">{errors.tarif_jour}</p>}
               </div>
@@ -202,7 +241,7 @@ export default function CompleteProfilePage() {
                   htmlFor="complete-profile-bio"
                   className="text-xs font-bold uppercase tracking-widest text-brand-gray"
                 >
-                  Bio (optionnel)
+                  {t('completeProfile.field.bio')}
                 </label>
                 <textarea
                   id="complete-profile-bio"
@@ -210,7 +249,7 @@ export default function CompleteProfilePage() {
                   value={form.bio || ''}
                   onChange={handleChange}
                   rows={3}
-                  placeholder="Parlez-nous de vous et de votre experience..."
+                  placeholder={t('completeProfile.field.bioPlaceholder')}
                   className="w-full bg-brand-anthracite border border-white/10 rounded-xl px-4 py-4 text-white focus:border-brand-mint outline-none transition-colors resize-none"
                 />
               </div>
@@ -220,7 +259,7 @@ export default function CompleteProfilePage() {
                   htmlFor="complete-profile-specialite"
                   className="text-xs font-bold uppercase tracking-widest text-brand-gray"
                 >
-                  Specialite (optionnel)
+                  {t('completeProfile.field.speciality')}
                 </label>
                 <input
                   id="complete-profile-specialite"
@@ -228,7 +267,7 @@ export default function CompleteProfilePage() {
                   name="specialite"
                   value={form.specialite || ''}
                   onChange={handleChange}
-                  placeholder="Ex: Developpeur React, Videoaste..."
+                  placeholder={t('completeProfile.field.specialityPlaceholder')}
                   className="w-full bg-brand-anthracite border border-white/10 rounded-xl px-4 py-4 text-white focus:border-brand-mint outline-none transition-colors"
                 />
               </div>
@@ -239,7 +278,7 @@ export default function CompleteProfilePage() {
                   animate={{ opacity: 1, y: 0 }}
                   className="text-red-400 text-sm text-center font-medium"
                 >
-                  ❌ {serverError}
+                  {serverError}
                 </motion.p>
               )}
 
@@ -248,7 +287,9 @@ export default function CompleteProfilePage() {
                 disabled={isSubmitting}
                 className="w-full bg-brand-mint text-[#1A1A2E] py-5 rounded-xl font-bold text-lg hover:scale-[1.01] active:scale-[0.99] transition-all shadow-xl shadow-brand-mint/10 disabled:opacity-60"
               >
-                {isSubmitting ? 'Enregistrement...' : 'Completer mon profil'}
+                {isSubmitting
+                  ? t('completeProfile.submit.loading')
+                  : t('completeProfile.submit.idle')}
               </button>
             </form>
           </div>

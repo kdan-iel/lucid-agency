@@ -25,7 +25,6 @@ import {
   EyeOff,
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
-import { Phone as WhatsAppIcon } from 'lucide-react';
 import { validatePassword } from '../utils/security';
 import { listAdminFreelancers, validateAdminFreelancer } from '../utils/remoteFunctions';
 import { useTimeoutRegistry } from '../hooks/useTimeoutRegistry';
@@ -47,36 +46,7 @@ interface TalentRequest {
   user_id: string;
 }
 
-interface Project {
-  id: number;
-  title: string;
-  client: string;
-  talent: string;
-  budget: string;
-  status: 'in-progress' | 'completed' | 'on-hold';
-  deadline: string;
-}
-
-const INITIAL_PROJECTS: Project[] = [
-  {
-    id: 1,
-    title: 'Refonte Site Web',
-    client: 'EcoShop',
-    talent: 'Amina L.',
-    budget: '1 200 €',
-    status: 'in-progress',
-    deadline: '15/04/2026',
-  },
-  {
-    id: 2,
-    title: 'Campagne Social Ads',
-    client: 'TechFlow',
-    talent: 'Thomas K.',
-    budget: '3 000 €',
-    status: 'completed',
-    deadline: '20/03/2026',
-  },
-];
+type SettingsTab = 'main' | 'security' | 'system';
 
 export default function AdminPage() {
   const { t } = useLanguage();
@@ -91,19 +61,8 @@ export default function AdminPage() {
   const [loadingTalents, setLoadingTalents] = useState(false);
   const [talentsError, setTalentsError] = useState('');
   const [updatingTalentId, setUpdatingTalentId] = useState<string | null>(null);
-  const [projects, setProjects] = useState<Project[]>(INITIAL_PROJECTS);
   const [selectedTalent, setSelectedTalent] = useState<TalentRequest | null>(null);
-  const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
-  const [newProject, setNewProject] = useState({
-    title: '',
-    client: '',
-    talent: '',
-    budget: '',
-    deadline: '',
-  });
-  const [activeSettingsTab, setActiveSettingsTab] = useState<
-    'main' | 'agency' | 'security' | 'roles' | 'system'
-  >('main');
+  const [activeSettingsTab, setActiveSettingsTab] = useState<SettingsTab>('main');
   const [passwordForm, setPasswordForm] = useState({ new: '', confirm: '' });
   const [showPwd, setShowPwd] = useState(false);
   const [settingsStatus, setSettingsStatus] = useState<'idle' | 'saving' | 'success' | 'error'>(
@@ -112,13 +71,13 @@ export default function AdminPage() {
   const [settingsError, setSettingsError] = useState('');
   const { clearAll, schedule } = useTimeoutRegistry();
 
-  // ✅ Charger les talents depuis Supabase
   const loadTalents = async () => {
     setLoadingTalents(true);
     setTalentsError('');
+
     try {
       if (!session?.access_token) {
-        throw new Error('Session admin invalide.');
+        throw new Error(t('admin.error.invalidSession'));
       }
 
       const { data } = await listAdminFreelancers(session.access_token, {
@@ -126,24 +85,25 @@ export default function AdminPage() {
         offset: 0,
       });
 
-      const mapped: TalentRequest[] = data.map((f) => ({
-        id: f.id,
-        user_id: f.user_id,
-        name: f.profiles?.full_name?.trim() || 'N/A',
-        specialty: f.specialite?.trim() || f.domaine,
-        date: new Date(f.created_at).toLocaleDateString('fr-FR'),
-        status: f.statut,
-        email: f.profiles?.email ?? '',
-        phone: f.phone_number ?? 'N/A',
-        phone_number: f.phone_number ?? null,
-        tarif_jour: f.tarif_jour ?? null,
-        onboarding_completed: Boolean(f.onboarding_completed),
-        portfolio: f.portfolio_url ?? 'N/A',
-        experience: f.bio ?? '',
+      const mapped: TalentRequest[] = data.map((freelancer) => ({
+        id: freelancer.id,
+        user_id: freelancer.user_id,
+        name: freelancer.profiles?.full_name?.trim() || t('admin.common.na'),
+        specialty: freelancer.specialite?.trim() || freelancer.domaine,
+        date: new Date(freelancer.created_at).toLocaleDateString('fr-FR'),
+        status: freelancer.statut,
+        email: freelancer.profiles?.email ?? '',
+        phone: freelancer.phone_number ?? t('admin.common.na'),
+        phone_number: freelancer.phone_number ?? null,
+        tarif_jour: freelancer.tarif_jour ?? null,
+        onboarding_completed: Boolean(freelancer.onboarding_completed),
+        portfolio: freelancer.portfolio_url ?? t('admin.common.na'),
+        experience: freelancer.bio ?? '',
       }));
+
       setRequests(mapped);
     } catch (err) {
-      const message = toErrorMessage(err, 'Impossible de charger les candidatures.');
+      const message = toErrorMessage(err, t('admin.error.loadTalents'));
       console.error('[AdminPage] talents load failure', { message });
       setTalentsError(message);
     } finally {
@@ -151,27 +111,31 @@ export default function AdminPage() {
     }
   };
 
-  // Charger au montage
   useEffect(() => {
     if (!session?.access_token) return;
     void loadTalents();
   }, [session?.access_token]);
 
-  // ✅ Mettre à jour le statut dans Supabase
   const handleUpdateStatus = async (id: string, newStatus: 'validated' | 'rejected') => {
     try {
       if (!session?.access_token) {
-        throw new Error('Session admin invalide.');
+        throw new Error(t('admin.error.invalidSession'));
       }
 
       setUpdatingTalentId(id);
       setTalentsError('');
+
       await validateAdminFreelancer(session.access_token, id, newStatus);
-      setRequests((prev) => prev.map((r) => (r.id === id ? { ...r, status: newStatus } : r)));
-      if (selectedTalent?.id === id)
-        setSelectedTalent((prev) => (prev ? { ...prev, status: newStatus } : null));
+
+      setRequests((previous) =>
+        previous.map((request) => (request.id === id ? { ...request, status: newStatus } : request))
+      );
+
+      if (selectedTalent?.id === id) {
+        setSelectedTalent((previous) => (previous ? { ...previous, status: newStatus } : null));
+      }
     } catch (err) {
-      const message = toErrorMessage(err, 'Impossible de mettre à jour le statut.');
+      const message = toErrorMessage(err, t('admin.error.updateStatus'));
       console.error('[AdminPage] talent status failure', { message, id, newStatus });
       setTalentsError(message);
     } finally {
@@ -179,34 +143,34 @@ export default function AdminPage() {
     }
   };
 
-  const handleCreateProject = (e: React.FormEvent) => {
-    e.preventDefault();
-    setProjects((previous) => [
-      { id: previous.length + 1, ...newProject, status: 'in-progress' },
-      ...previous,
-    ]);
-    setIsProjectModalOpen(false);
-    setNewProject({ title: '', client: '', talent: '', budget: '', deadline: '' });
-  };
-
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
     clearAll();
     setSettingsError('');
+
     if (passwordForm.new !== passwordForm.confirm) {
-      setSettingsError('Les mots de passe ne correspondent pas.');
+      setSettingsError(t('admin.settings.security.errorMismatch'));
       return;
     }
+
     if (passwordForm.new.length < 8) {
-      setSettingsError('Minimum 8 caractères.');
+      setSettingsError(t('admin.settings.security.errorMin'));
       return;
     }
+
     const passwordValidation = validatePassword(passwordForm.new);
     if (!passwordValidation.valid) {
-      setSettingsError(`Mot de passe invalide : ${passwordValidation.errors.join(', ')}.`);
+      setSettingsError(
+        t('admin.settings.security.errorInvalid').replace(
+          '{{errors}}',
+          passwordValidation.errors.join(', ')
+        )
+      );
       return;
     }
+
     setSettingsStatus('saving');
+
     try {
       await updatePassword(passwordForm.new);
       setSettingsStatus('success');
@@ -216,7 +180,7 @@ export default function AdminPage() {
         setActiveSettingsTab('main');
       }, 1500);
     } catch (err) {
-      const message = toErrorMessage(err, 'Impossible de mettre à jour le mot de passe.');
+      const message = toErrorMessage(err, t('admin.settings.security.error'));
       console.error('[AdminPage] password update failure', { message });
       setSettingsError(message);
       setSettingsStatus('error');
@@ -225,11 +189,11 @@ export default function AdminPage() {
 
   const filteredRequests = useMemo(
     () =>
-      requests.filter((r) => {
+      requests.filter((request) => {
         const matchSearch =
-          r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          r.specialty.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchStatus = statusFilter === 'all' || r.status === statusFilter;
+          request.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          request.specialty.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchStatus = statusFilter === 'all' || request.status === statusFilter;
         return matchSearch && matchStatus;
       }),
     [requests, searchQuery, statusFilter]
@@ -246,19 +210,19 @@ export default function AdminPage() {
     {
       id: 'all',
       label: t('admin.stats.activeTalents'),
-      value: requests.filter((r) => r.status === 'validated').length.toString(),
+      value: requests.filter((request) => request.status === 'validated').length.toString(),
       color: 'text-brand-mint',
     },
     {
       id: 'projects',
       label: t('admin.stats.activeProjects'),
-      value: projects.filter((p) => p.status === 'in-progress').length.toString(),
+      value: '0',
       color: 'text-blue-400',
     },
     {
       id: 'pending',
       label: t('admin.stats.pendingRequests'),
-      value: requests.filter((r) => r.status === 'pending').length.toString(),
+      value: requests.filter((request) => request.status === 'pending').length.toString(),
       color: 'text-yellow-400',
     },
   ];
@@ -284,7 +248,7 @@ export default function AdminPage() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Rechercher..."
+              placeholder={t('admin.search.placeholder')}
               className="bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-full py-2 pl-10 pr-4 text-sm focus:outline-none focus:border-brand-mint w-full"
             />
           </div>
@@ -297,11 +261,11 @@ export default function AdminPage() {
             }
             className="bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-2 text-sm text-brand-gray focus:outline-none"
           >
-            <option value="all">Tous</option>
-            <option value="pending">En attente</option>
-            <option value="validated">Validés</option>
-            <option value="rejected">Refusés</option>
-            <option value="suspended">Suspendus</option>
+            <option value="all">{t('admin.filter.all')}</option>
+            <option value="pending">{t('admin.filter.pending')}</option>
+            <option value="validated">{t('admin.filter.validated')}</option>
+            <option value="rejected">{t('admin.filter.rejected')}</option>
+            <option value="suspended">{t('admin.filter.suspended')}</option>
           </select>
         </div>
       </div>
@@ -314,7 +278,9 @@ export default function AdminPage() {
         <div className="text-center py-12 text-red-400">{talentsError}</div>
       ) : filteredRequests.length === 0 ? (
         <div className="text-center py-12 text-brand-gray">
-          {requests.length === 0 ? 'Aucune candidature reçue pour le moment.' : 'Aucun résultat.'}
+          {requests.length === 0
+            ? t('admin.talents.empty.none')
+            : t('admin.talents.empty.filtered')}
         </div>
       ) : (
         <div className="overflow-x-auto">
@@ -323,9 +289,9 @@ export default function AdminPage() {
               <tr className="border-b border-[var(--border-color)] text-brand-gray text-sm">
                 <th className="pb-4 font-medium">{t('admin.talents.table.talent')}</th>
                 <th className="pb-4 font-medium">{t('admin.talents.table.specialty')}</th>
-                <th className="pb-4 font-medium">Telephone</th>
-                <th className="pb-4 font-medium">Tarif jour</th>
-                <th className="pb-4 font-medium">Onboarding</th>
+                <th className="pb-4 font-medium">{t('admin.talents.table.phone')}</th>
+                <th className="pb-4 font-medium">{t('admin.talents.table.dayRate')}</th>
+                <th className="pb-4 font-medium">{t('admin.talents.table.onboarding')}</th>
                 <th className="pb-4 font-medium">{t('admin.talents.table.date')}</th>
                 <th className="pb-4 font-medium">{t('admin.talents.table.status')}</th>
                 <th className="pb-4 font-medium text-right">{t('admin.talents.table.actions')}</th>
@@ -347,11 +313,17 @@ export default function AdminPage() {
                     </div>
                   </td>
                   <td className="py-4 text-brand-gray">{row.specialty}</td>
-                  <td className="py-4 text-brand-gray">{row.phone_number || 'N/A'}</td>
                   <td className="py-4 text-brand-gray">
-                    {row.tarif_jour ? `${row.tarif_jour} FCFA` : 'N/A'}
+                    {row.phone_number || t('admin.common.na')}
                   </td>
-                  <td className="py-4 text-brand-gray">{row.onboarding_completed ? '✓' : '✗'}</td>
+                  <td className="py-4 text-brand-gray">
+                    {row.tarif_jour ? `${row.tarif_jour} FCFA` : t('admin.common.na')}
+                  </td>
+                  <td className="py-4 text-brand-gray">
+                    {row.onboarding_completed
+                      ? t('admin.onboarding.complete')
+                      : t('admin.onboarding.incomplete')}
+                  </td>
                   <td className="py-4 text-brand-gray">{row.date}</td>
                   <td className="py-4">
                     {row.status === 'validated' && (
@@ -375,7 +347,7 @@ export default function AdminPage() {
                     {row.status === 'suspended' && (
                       <span className="flex items-center gap-1 text-orange-400 text-xs font-bold uppercase">
                         <XCircle size={14} />
-                        Suspendu
+                        {t('admin.status.suspended')}
                       </span>
                     )}
                   </td>
@@ -387,6 +359,7 @@ export default function AdminPage() {
                         e.stopPropagation();
                         setSelectedTalent(row);
                       }}
+                      aria-label={t('admin.talents.table.actions')}
                     >
                       <MoreVertical size={18} />
                     </button>
@@ -402,105 +375,67 @@ export default function AdminPage() {
 
   const renderProjects = () => (
     <div className="bg-[var(--bg-surface)] rounded-3xl border border-[var(--border-color)] p-8">
-      <div className="flex justify-between items-center mb-8">
-        <h2 className="text-xl font-bold">{t('admin.nav.projects')}</h2>
-        <button
-          onClick={() => setIsProjectModalOpen(true)}
-          className="bg-brand-mint text-[#0D1117] px-6 py-2 rounded-full font-bold hover:scale-105 transition-all text-sm"
-        >
-          + {t('admin.nav.projects.new')}
-        </button>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-left">
-          <thead>
-            <tr className="border-b border-[var(--border-color)] text-brand-gray text-sm">
-              <th className="pb-4 font-medium">{t('admin.projects.table.project')}</th>
-              <th className="pb-4 font-medium">{t('admin.projects.table.client')}</th>
-              <th className="pb-4 font-medium">{t('admin.projects.table.talent')}</th>
-              <th className="pb-4 font-medium">{t('admin.projects.table.budget')}</th>
-              <th className="pb-4 font-medium">{t('admin.projects.table.status')}</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[var(--border-color)]">
-            {projects.map((project) => (
-              <tr key={project.id} className="hover:bg-white/5 transition-all">
-                <td className="py-4 font-bold">{project.title}</td>
-                <td className="py-4 text-brand-gray">{project.client}</td>
-                <td className="py-4 text-sm">{project.talent}</td>
-                <td className="py-4 text-brand-gray">{project.budget}</td>
-                <td className="py-4">
-                  <select
-                    value={project.status}
-                    onChange={(e) =>
-                      setProjects(
-                        projects.map((p) =>
-                          p.id === project.id
-                            ? { ...p, status: e.target.value as Project['status'] }
-                            : p
-                        )
-                      )
-                    }
-                    className={`text-xs font-bold uppercase px-2 py-1 rounded bg-transparent border border-transparent hover:border-[var(--border-color)] focus:outline-none ${project.status === 'completed' ? 'text-green-400' : project.status === 'in-progress' ? 'text-blue-400' : 'text-yellow-400'}`}
-                  >
-                    <option value="in-progress">{t('admin.projects.status.inprogress')}</option>
-                    <option value="completed">{t('admin.projects.status.completed')}</option>
-                    <option value="on-hold">{t('admin.projects.status.onhold')}</option>
-                  </select>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="text-center py-20 border border-dashed border-[var(--border-color)] rounded-3xl">
+        <h2 className="text-2xl font-bold mb-3">{t('admin.projects.emptyTitle')}</h2>
+        <p className="text-brand-gray max-w-xl mx-auto">{t('admin.projects.emptyBody')}</p>
       </div>
     </div>
   );
 
   const renderMessages = () => {
-    const approved = requests.filter((r) => r.status === 'validated');
+    const approved = requests.filter((request) => request.status === 'validated');
+
     return (
       <div className="bg-[var(--bg-surface)] rounded-3xl border border-[var(--border-color)] p-8">
-        <h2 className="text-2xl font-bold mb-2">Messagerie WhatsApp</h2>
-        <p className="text-brand-gray mb-8">Contactez directement vos talents approuvés.</p>
+        <h2 className="text-2xl font-bold mb-2">{t('admin.messages.title')}</h2>
+        <p className="text-brand-gray mb-8">{t('admin.messages.subtitle')}</p>
         {approved.length === 0 ? (
           <div className="text-center py-20 border-2 border-dashed border-[var(--border-color)] rounded-3xl text-brand-gray">
-            Aucun talent approuvé.
+            {t('admin.messages.empty')}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {approved.map((f) => (
+            {approved.map((freelancer) => (
               <div
-                key={f.id}
+                key={freelancer.id}
                 className="p-6 rounded-2xl border border-[var(--border-color)] bg-white/5 hover:border-brand-mint/30 transition-all"
               >
                 <div className="flex items-center gap-4 mb-6">
                   <div className="w-12 h-12 rounded-full bg-brand-mint/10 flex items-center justify-center text-brand-mint font-bold text-lg">
-                    {f.name.charAt(0)}
+                    {freelancer.name.charAt(0)}
                   </div>
                   <div>
-                    <h3 className="font-bold">{f.name}</h3>
-                    <p className="text-xs text-brand-mint font-medium uppercase">{f.specialty}</p>
+                    <h3 className="font-bold">{freelancer.name}</h3>
+                    <p className="text-xs text-brand-mint font-medium uppercase">
+                      {freelancer.specialty}
+                    </p>
                   </div>
                 </div>
                 <div className="space-y-2 mb-6 text-sm text-brand-gray">
                   <div className="flex items-center gap-2">
                     <Phone size={14} className="text-brand-mint" />
-                    {f.phone}
+                    {freelancer.phone}
                   </div>
                   <div className="flex items-center gap-2">
                     <Mail size={14} className="text-brand-mint" />
-                    <span className="truncate">{f.email}</span>
+                    {freelancer.email || t('admin.common.na')}
                   </div>
                 </div>
-                <a
-                  href={`https://wa.me/${f.phone.replace(/[^0-9]/g, '')}?text=Bonjour%20${encodeURIComponent(f.name)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full bg-brand-mint text-[#0D1117] py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:scale-[1.02] transition-all"
-                >
-                  <WhatsAppIcon size={18} />
-                  Discuter
-                </a>
+                {freelancer.phone_number ? (
+                  <a
+                    href={`https://wa.me/${freelancer.phone_number.replace(/[^\d]/g, '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full bg-brand-mint text-[#0D1117] py-3 rounded-xl font-bold text-sm hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
+                  >
+                    <Phone size={16} />
+                    {t('admin.messages.openWhatsapp')}
+                  </a>
+                ) : (
+                  <div className="w-full border border-[var(--border-color)] text-brand-gray py-3 rounded-xl font-bold text-sm text-center">
+                    {t('admin.messages.noPhone')}
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -521,8 +456,8 @@ export default function AdminPage() {
               className="flex items-center gap-2 hover:text-brand-mint"
             >
               <ChevronRight className="rotate-180" size={24} />
-              {activeSettingsTab === 'security' && 'Sécurité'}
-              {activeSettingsTab === 'system' && 'Système'}
+              {activeSettingsTab === 'security' && t('admin.settings.security.label')}
+              {activeSettingsTab === 'system' && t('admin.settings.system.label')}
             </button>
           )}
         </h2>
@@ -533,14 +468,14 @@ export default function AdminPage() {
           {[
             {
               id: 'security',
-              label: 'Sécurité',
-              desc: 'Mot de passe et authentification.',
+              label: t('admin.settings.security.label'),
+              desc: t('admin.settings.security.desc'),
               icon: <Shield size={20} />,
             },
             {
               id: 'system',
-              label: 'Paramètres Système',
-              desc: 'Maintenance et logs.',
+              label: t('admin.settings.system.label'),
+              desc: t('admin.settings.system.desc'),
               icon: <Database size={20} />,
             },
           ].map((item) => (
@@ -559,41 +494,45 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* ✅ Sécurité via Supabase */}
       {activeSettingsTab === 'security' && (
         <form className="space-y-6 max-w-xl" onSubmit={handlePasswordChange}>
           <div className="space-y-2">
-            <label className="text-sm text-brand-gray">Nouveau mot de passe</label>
+            <label className="text-sm text-brand-gray">
+              {t('admin.settings.security.newLabel')}
+            </label>
             <div className="relative">
               <input
                 type={showPwd ? 'text' : 'password'}
                 value={passwordForm.new}
                 onChange={(e) => setPasswordForm({ ...passwordForm, new: e.target.value })}
-                placeholder="Min. 8 caractères"
+                placeholder={t('admin.settings.security.newPlaceholder')}
                 className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 pr-12 focus:outline-none focus:border-brand-mint"
               />
               <button
                 type="button"
                 onClick={() => setShowPwd(!showPwd)}
                 className="absolute right-4 top-1/2 -translate-y-1/2 text-brand-gray"
+                aria-label={t('admin.settings.security.toggleVisibility')}
               >
                 {showPwd ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
           </div>
           <div className="space-y-2">
-            <label className="text-sm text-brand-gray">Confirmer</label>
+            <label className="text-sm text-brand-gray">
+              {t('admin.settings.security.confirmLabel')}
+            </label>
             <input
               type={showPwd ? 'text' : 'password'}
               value={passwordForm.confirm}
               onChange={(e) => setPasswordForm({ ...passwordForm, confirm: e.target.value })}
-              placeholder="Répétez le mot de passe"
+              placeholder={t('admin.settings.security.confirmPlaceholder')}
               className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint"
             />
           </div>
           {settingsError && <p className="text-red-400 text-sm">{settingsError}</p>}
           {settingsStatus === 'success' && (
-            <p className="text-brand-mint text-sm">✅ Mot de passe mis à jour !</p>
+            <p className="text-brand-mint text-sm">{t('admin.settings.security.success')}</p>
           )}
           <div className="flex gap-4">
             <button
@@ -601,14 +540,16 @@ export default function AdminPage() {
               disabled={settingsStatus === 'saving'}
               className="bg-brand-mint text-[#0D1117] px-8 py-3 rounded-xl font-bold hover:scale-105 disabled:opacity-60"
             >
-              {settingsStatus === 'saving' ? 'Mise à jour...' : 'Mettre à jour'}
+              {settingsStatus === 'saving'
+                ? t('admin.settings.security.saving')
+                : t('admin.settings.security.submit')}
             </button>
             <button
               type="button"
               onClick={() => setActiveSettingsTab('main')}
               className="px-8 py-3 rounded-xl border border-[var(--border-color)] text-brand-gray font-bold hover:bg-white/5"
             >
-              Annuler
+              {t('common.cancel')}
             </button>
           </div>
         </form>
@@ -616,30 +557,32 @@ export default function AdminPage() {
 
       {activeSettingsTab === 'system' && (
         <div className="space-y-8">
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {[
               {
-                label: 'Talents inscrits',
+                label: t('admin.settings.system.totalTalents'),
                 value: requests.length.toString(),
                 color: 'text-brand-mint',
               },
               {
-                label: 'Talents validés',
-                value: requests.filter((r) => r.status === 'validated').length.toString(),
+                label: t('admin.settings.system.validatedTalents'),
+                value: requests
+                  .filter((request) => request.status === 'validated')
+                  .length.toString(),
                 color: 'text-green-400',
               },
               {
-                label: 'En attente',
-                value: requests.filter((r) => r.status === 'pending').length.toString(),
+                label: t('admin.settings.system.pendingTalents'),
+                value: requests.filter((request) => request.status === 'pending').length.toString(),
                 color: 'text-yellow-400',
               },
-            ].map((s, i) => (
+            ].map((item) => (
               <div
-                key={i}
+                key={item.label}
                 className="p-4 rounded-xl border border-[var(--border-color)] bg-white/5"
               >
-                <p className="text-xs text-brand-gray mb-1">{s.label}</p>
-                <p className={`font-bold text-2xl ${s.color}`}>{s.value}</p>
+                <p className="text-xs text-brand-gray mb-1">{item.label}</p>
+                <p className={`font-bold text-2xl ${item.color}`}>{item.value}</p>
               </div>
             ))}
           </div>
@@ -647,7 +590,7 @@ export default function AdminPage() {
             onClick={() => setActiveSettingsTab('main')}
             className="px-8 py-3 rounded-xl border border-[var(--border-color)] text-brand-gray font-bold hover:bg-white/5"
           >
-            Retour
+            {t('admin.settings.back')}
           </button>
         </div>
       )}
@@ -690,7 +633,7 @@ export default function AdminPage() {
         >
           <div className="flex justify-between items-center mb-8 md:hidden">
             <span className="text-brand-mint font-bold text-xl">LUCID</span>
-            <button onClick={() => setIsSidebarOpen(false)}>
+            <button onClick={() => setIsSidebarOpen(false)} aria-label={t('common.close')}>
               <X size={24} className="text-brand-gray" />
             </button>
           </div>
@@ -732,6 +675,7 @@ export default function AdminPage() {
               <button
                 onClick={() => setIsSidebarOpen(true)}
                 className="md:hidden p-2 rounded-lg bg-white/5 border border-[var(--border-color)] text-brand-mint"
+                aria-label={t('common.menu')}
               >
                 <Users size={20} />
               </button>
@@ -747,14 +691,13 @@ export default function AdminPage() {
             </div>
           </header>
 
-          {/* Stats */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 mb-8 md:mb-12">
-            {stats.map((stat, i) => (
+            {stats.map((stat, index) => (
               <motion.div
-                key={i}
+                key={`${stat.id}-${index}`}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.1 }}
+                transition={{ delay: index * 0.1 }}
                 onClick={() => {
                   if (stat.id === 'pending') {
                     setActiveTab('talents');
@@ -762,7 +705,9 @@ export default function AdminPage() {
                   } else if (stat.id === 'all') {
                     setActiveTab('talents');
                     setStatusFilter('all');
-                  } else setActiveTab('projects');
+                  } else {
+                    setActiveTab('projects');
+                  }
                 }}
                 className="bg-[var(--bg-surface)] p-6 rounded-2xl border border-[var(--border-color)] cursor-pointer hover:border-brand-mint/50 transition-all group"
               >
@@ -776,7 +721,6 @@ export default function AdminPage() {
         </main>
       </div>
 
-      {/* Modal talent */}
       <AnimatePresence>
         {selectedTalent && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
@@ -806,6 +750,7 @@ export default function AdminPage() {
                 <button
                   onClick={() => setSelectedTalent(null)}
                   className="p-2 rounded-full hover:bg-white/5 text-brand-gray"
+                  aria-label={t('common.close')}
                 >
                   <X size={24} />
                 </button>
@@ -814,21 +759,23 @@ export default function AdminPage() {
               <div className="space-y-3 mb-8">
                 <div className="flex items-center gap-3 text-brand-gray">
                   <Mail size={18} className="text-brand-mint" />
-                  <span className="text-sm">{selectedTalent.email}</span>
+                  <span className="text-sm">{selectedTalent.email || t('admin.common.na')}</span>
                 </div>
                 <div className="flex items-center gap-3 text-brand-gray">
                   <Phone size={18} className="text-brand-mint" />
                   <span className="text-sm">
-                    {selectedTalent.phone_number || selectedTalent.phone || 'N/A'}
+                    {selectedTalent.phone_number || selectedTalent.phone || t('admin.common.na')}
                   </span>
                 </div>
                 <div className="flex items-center gap-3 text-brand-gray">
                   <DollarSign size={18} className="text-brand-mint" />
                   <span className="text-sm">
-                    {selectedTalent.tarif_jour ? `${selectedTalent.tarif_jour} FCFA/jour` : 'N/A'}
+                    {selectedTalent.tarif_jour
+                      ? `${selectedTalent.tarif_jour} FCFA/jour`
+                      : t('admin.common.na')}
                   </span>
                 </div>
-                {selectedTalent.portfolio !== 'N/A' && (
+                {selectedTalent.portfolio !== t('admin.common.na') && (
                   <div className="flex items-center gap-3 text-brand-gray">
                     <Globe size={18} className="text-brand-mint" />
                     <a
@@ -850,14 +797,18 @@ export default function AdminPage() {
                     onClick={() => handleUpdateStatus(selectedTalent.id, 'validated')}
                     className="flex-grow bg-green-500 text-white py-4 rounded-xl font-bold hover:bg-green-600 transition-all"
                   >
-                    {updatingTalentId === selectedTalent.id ? 'Traitement...' : 'Approuver'}
+                    {updatingTalentId === selectedTalent.id
+                      ? t('admin.actions.processing')
+                      : t('admin.actions.approve')}
                   </button>
                   <button
                     disabled={updatingTalentId === selectedTalent.id}
                     onClick={() => handleUpdateStatus(selectedTalent.id, 'rejected')}
                     className="flex-grow bg-red-500 text-white py-4 rounded-xl font-bold hover:bg-red-600 transition-all"
                   >
-                    {updatingTalentId === selectedTalent.id ? 'Traitement...' : 'Refuser'}
+                    {updatingTalentId === selectedTalent.id
+                      ? t('admin.actions.processing')
+                      : t('admin.actions.reject')}
                   </button>
                 </div>
               ) : (
@@ -865,94 +816,12 @@ export default function AdminPage() {
                   className={`p-4 rounded-xl text-center font-bold uppercase ${selectedTalent.status === 'validated' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : selectedTalent.status === 'suspended' ? 'bg-orange-500/10 text-orange-400 border border-orange-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}
                 >
                   {selectedTalent.status === 'validated'
-                    ? '✅ Validé'
+                    ? t('admin.modal.validated')
                     : selectedTalent.status === 'suspended'
-                      ? '⏸ Suspendu'
-                      : '❌ Refusé'}
+                      ? t('admin.modal.suspended')
+                      : t('admin.modal.rejected')}
                 </div>
               )}
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* Modal nouveau projet */}
-      <AnimatePresence>
-        {isProjectModalOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsProjectModalOpen(false)}
-              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              className="relative w-full max-w-lg bg-[var(--bg-surface)] rounded-3xl border border-[var(--border-color)] p-8 shadow-2xl"
-            >
-              <div className="flex justify-between items-center mb-8">
-                <h2 className="text-2xl font-bold">Nouveau Projet</h2>
-                <button
-                  onClick={() => setIsProjectModalOpen(false)}
-                  className="text-brand-gray hover:text-white"
-                >
-                  <X size={24} />
-                </button>
-              </div>
-              <form onSubmit={handleCreateProject} className="space-y-4">
-                {['title', 'client', 'budget', 'deadline'].map((field) => (
-                  <div key={field} className="space-y-1">
-                    <label className="text-xs text-brand-gray uppercase font-bold">
-                      {field === 'title'
-                        ? 'Titre'
-                        : field === 'client'
-                          ? 'Client'
-                          : field === 'budget'
-                            ? 'Budget'
-                            : 'Deadline'}
-                    </label>
-                    <input
-                      required
-                      type="text"
-                      value={newProject[field as keyof typeof newProject]}
-                      onChange={(e) => setNewProject({ ...newProject, [field]: e.target.value })}
-                      placeholder={
-                        field === 'budget' ? '1 500 €' : field === 'deadline' ? 'JJ/MM/AAAA' : ''
-                      }
-                      className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint"
-                    />
-                  </div>
-                ))}
-                <div className="space-y-1">
-                  <label className="text-xs text-brand-gray uppercase font-bold">
-                    Talent assigné
-                  </label>
-                  <select
-                    required
-                    value={newProject.talent}
-                    onChange={(e) => setNewProject({ ...newProject, talent: e.target.value })}
-                    className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint"
-                  >
-                    <option value="">Sélectionner un talent</option>
-                    {requests
-                      .filter((r) => r.status === 'validated')
-                      .map((r) => (
-                        <option key={r.id} value={r.name}>
-                          {r.name} ({r.specialty})
-                        </option>
-                      ))}
-                  </select>
-                </div>
-                <button
-                  type="submit"
-                  className="w-full bg-brand-mint text-[#0D1117] py-4 rounded-xl font-bold hover:scale-[1.02] mt-4"
-                >
-                  Créer le projet
-                </button>
-              </form>
             </motion.div>
           </div>
         )}

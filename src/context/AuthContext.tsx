@@ -5,7 +5,7 @@ import { runWithAsyncGuard, toErrorMessage } from '../utils/asyncTools';
 
 const PROFILE_COLUMNS = 'id, user_id, email, full_name, role, avatar_url';
 const FREELANCER_COLUMNS =
-  'id, user_id, statut, phone_number, tarif_jour, bio, specialite, onboarding_completed, archived_at';
+  'id, user_id, statut, phone_number, tarif_jour, bio, specialite, portfolio_url, onboarding_completed, archived_at';
 
 export interface Profile {
   id: string;
@@ -24,6 +24,7 @@ export interface Freelancer {
   tarif_jour: number | null;
   bio: string | null;
   specialite: string | null;
+  portfolio_url?: string | null;
   onboarding_completed: boolean;
   archived_at: string | null;
 }
@@ -400,6 +401,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       if ('specialite' in updates) {
         allowedUpdates.specialite = updates.specialite ?? null;
+      }
+      if ('portfolio_url' in updates) {
+        allowedUpdates.portfolio_url = updates.portfolio_url ?? null;
       }
       if ('onboarding_completed' in updates) {
         allowedUpdates.onboarding_completed = Boolean(updates.onboarding_completed);

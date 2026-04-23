@@ -1,6 +1,8 @@
+import type { ReactNode } from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ProtectedRoute } from '../../components/ProtectedRoute';
+import { LanguageProvider } from '../../context/LanguageContext';
 import CompleteProfilePage from '../../pages/CompleteProfilePage';
 
 const mockUseAuth = vi.fn();
@@ -32,6 +34,10 @@ Object.defineProperty(window, 'location', {
 });
 
 describe('CompleteProfilePage', () => {
+  const phoneLabel = 'Numéro de téléphone *';
+  const rateLabel = 'Tarif journalier (FCFA) *';
+  const submitLabel = 'Compléter mon profil';
+
   afterEach(() => {
     vi.useRealTimers();
   });
@@ -67,24 +73,26 @@ describe('CompleteProfilePage', () => {
   });
 
   const submitForm = () => {
-    const button = screen.getByRole('button', { name: /completer mon profil/i });
+    const button = screen.getByRole('button', { name: submitLabel });
     const form = button.closest('form');
     expect(form).not.toBeNull();
     fireEvent.submit(form!);
   };
 
-  it('renders form with phone and tarif fields', () => {
-    render(<CompleteProfilePage />);
+  const renderWithLanguage = (ui: ReactNode) => render(<LanguageProvider>{ui}</LanguageProvider>);
 
-    expect(screen.getByLabelText(/numero de telephone/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/tarif journalier/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /completer mon profil/i })).toBeInTheDocument();
+  it('renders form with phone and tarif fields', () => {
+    renderWithLanguage(<CompleteProfilePage />);
+
+    expect(screen.getByLabelText(phoneLabel)).toBeInTheDocument();
+    expect(screen.getByLabelText(rateLabel)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: submitLabel })).toBeInTheDocument();
   });
 
   it('validates phone number format', async () => {
-    render(<CompleteProfilePage />);
+    renderWithLanguage(<CompleteProfilePage />);
 
-    fireEvent.change(screen.getByLabelText(/numero de telephone/i), {
+    fireEvent.change(screen.getByLabelText(phoneLabel), {
       target: { name: 'phone_number', value: '1234' },
     });
     submitForm();
@@ -94,27 +102,27 @@ describe('CompleteProfilePage', () => {
   });
 
   it('validates tarif_jour range', async () => {
-    render(<CompleteProfilePage />);
+    renderWithLanguage(<CompleteProfilePage />);
 
-    fireEvent.change(screen.getByLabelText(/numero de telephone/i), {
+    fireEvent.change(screen.getByLabelText(phoneLabel), {
       target: { name: 'phone_number', value: '+221770000000' },
     });
-    fireEvent.change(screen.getByLabelText(/tarif journalier/i), {
+    fireEvent.change(screen.getByLabelText(rateLabel), {
       target: { name: 'tarif_jour', value: '999' },
     });
     submitForm();
 
-    expect(await screen.findByText(/entre 1000 et 1000000 fcfa/i)).toBeInTheDocument();
+    expect(await screen.findByText(/1000 et 1000000 fcfa/i)).toBeInTheDocument();
     expect(completeFreelancerProfileMock).not.toHaveBeenCalled();
   });
 
   it('submits to complete-profile endpoint', async () => {
-    render(<CompleteProfilePage />);
+    renderWithLanguage(<CompleteProfilePage />);
 
-    fireEvent.change(screen.getByLabelText(/numero de telephone/i), {
+    fireEvent.change(screen.getByLabelText(phoneLabel), {
       target: { name: 'phone_number', value: '+221770000000' },
     });
-    fireEvent.change(screen.getByLabelText(/tarif journalier/i), {
+    fireEvent.change(screen.getByLabelText(rateLabel), {
       target: { name: 'tarif_jour', value: '25000' },
     });
     submitForm();
@@ -130,17 +138,17 @@ describe('CompleteProfilePage', () => {
   });
 
   it('redirects to dashboard on success', async () => {
-    render(<CompleteProfilePage />);
+    renderWithLanguage(<CompleteProfilePage />);
 
-    fireEvent.change(screen.getByLabelText(/numero de telephone/i), {
+    fireEvent.change(screen.getByLabelText(phoneLabel), {
       target: { name: 'phone_number', value: '+221770000000' },
     });
-    fireEvent.change(screen.getByLabelText(/tarif journalier/i), {
+    fireEvent.change(screen.getByLabelText(rateLabel), {
       target: { name: 'tarif_jour', value: '25000' },
     });
     submitForm();
 
-    await screen.findByText(/profil termine/i);
+    await screen.findByText(/profil termin/i);
     await new Promise((resolve) => setTimeout(resolve, 1600));
 
     expect(mockLocation.href).toContain('/dashboard');
@@ -149,12 +157,12 @@ describe('CompleteProfilePage', () => {
   it('shows error message on failure', async () => {
     completeFreelancerProfileMock.mockRejectedValue(new Error('Failed to complete profile'));
 
-    render(<CompleteProfilePage />);
+    renderWithLanguage(<CompleteProfilePage />);
 
-    fireEvent.change(screen.getByLabelText(/numero de telephone/i), {
+    fireEvent.change(screen.getByLabelText(phoneLabel), {
       target: { name: 'phone_number', value: '+221770000000' },
     });
-    fireEvent.change(screen.getByLabelText(/tarif journalier/i), {
+    fireEvent.change(screen.getByLabelText(rateLabel), {
       target: { name: 'tarif_jour', value: '25000' },
     });
     submitForm();
@@ -169,7 +177,7 @@ describe('CompleteProfilePage', () => {
       loading: false,
     });
 
-    const { container } = render(
+    const { container } = renderWithLanguage(
       <ProtectedRoute requiredRole="freelancer">
         <CompleteProfilePage />
       </ProtectedRoute>

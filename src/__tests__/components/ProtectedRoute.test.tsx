@@ -1,6 +1,8 @@
+import type { ReactNode } from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { ProtectedRoute } from '../../components/ProtectedRoute';
+import { LanguageProvider } from '../../context/LanguageContext';
 
 // ✅ Un seul vi.mock — le mockUseAuth est redéfini dans chaque test
 const mockUseAuth = vi.fn();
@@ -22,9 +24,11 @@ vi.mock('../../context/AuthContext', () => ({
 }));
 
 describe('ProtectedRoute', () => {
+  const renderWithLanguage = (ui: ReactNode) => render(<LanguageProvider>{ui}</LanguageProvider>);
+
   it('affiche un spinner pendant le chargement', () => {
     mockUseAuth.mockReturnValue({ session: null, profile: null, loading: true });
-    render(
+    renderWithLanguage(
       <ProtectedRoute requiredRole="freelancer">
         <div>Contenu protégé</div>
       </ProtectedRoute>
@@ -34,7 +38,7 @@ describe('ProtectedRoute', () => {
 
   it('redirige si pas de session', () => {
     mockUseAuth.mockReturnValue({ session: null, profile: null, loading: false });
-    render(
+    renderWithLanguage(
       <ProtectedRoute requiredRole="freelancer">
         <div>Contenu protégé</div>
       </ProtectedRoute>
@@ -48,7 +52,7 @@ describe('ProtectedRoute', () => {
       profile: { role: 'freelancer', user_id: '123' },
       loading: false,
     });
-    render(
+    renderWithLanguage(
       <ProtectedRoute requiredRole="admin">
         <div>Contenu admin</div>
       </ProtectedRoute>
@@ -62,7 +66,7 @@ describe('ProtectedRoute', () => {
       profile: { role: 'admin', user_id: '123' },
       loading: false,
     });
-    render(
+    renderWithLanguage(
       <ProtectedRoute requiredRole="admin">
         <div>Contenu admin autorisé</div>
       </ProtectedRoute>

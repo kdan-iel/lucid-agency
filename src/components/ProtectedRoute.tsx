@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -13,6 +14,7 @@ export function ProtectedRoute({
   allowIncompleteFreelancer = false,
 }: ProtectedRouteProps) {
   const { session, profile, freelancer, loading } = useAuth();
+  const { t } = useLanguage();
 
   useEffect(() => {
     if (loading) return;
@@ -53,7 +55,7 @@ export function ProtectedRoute({
       <div className="min-h-screen flex items-center justify-center bg-[var(--bg-primary)]">
         <div className="flex flex-col items-center gap-4">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-mint" />
-          <p className="text-brand-gray text-sm">Vérification de la session...</p>
+          <p className="text-brand-gray text-sm">{t('common.sessionCheck')}</p>
         </div>
       </div>
     );
@@ -62,7 +64,7 @@ export function ProtectedRoute({
   if (!session || !profile || profile.role !== requiredRole) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[var(--bg-primary)]">
-        <p className="text-brand-gray text-sm">Redirection en cours...</p>
+        <p className="text-brand-gray text-sm">{t('common.redirecting')}</p>
       </div>
     );
   }
@@ -71,7 +73,7 @@ export function ProtectedRoute({
     if (!freelancer || freelancer.statut !== 'validated') {
       return (
         <div className="min-h-screen flex items-center justify-center bg-[var(--bg-primary)]">
-          <p className="text-brand-gray text-sm">Redirection en cours...</p>
+          <p className="text-brand-gray text-sm">{t('common.redirecting')}</p>
         </div>
       );
     }
@@ -80,14 +82,14 @@ export function ProtectedRoute({
       if (freelancer.onboarding_completed) {
         return (
           <div className="min-h-screen flex items-center justify-center bg-[var(--bg-primary)]">
-            <p className="text-brand-gray text-sm">Redirection en cours...</p>
+            <p className="text-brand-gray text-sm">{t('common.redirecting')}</p>
           </div>
         );
       }
     } else if (!freelancer.onboarding_completed) {
       return (
         <div className="min-h-screen flex items-center justify-center bg-[var(--bg-primary)]">
-          <p className="text-brand-gray text-sm">Redirection en cours...</p>
+          <p className="text-brand-gray text-sm">{t('common.redirecting')}</p>
         </div>
       );
     }
