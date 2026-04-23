@@ -2,36 +2,15 @@ import { supabase } from '../lib/supabaseClient';
 import { ensureSerializablePayload, runWithAsyncGuard } from './asyncTools';
 import { getOptionalEnv } from './env';
 
-const CONTACT_FUNCTION_NAME = getOptionalEnv('VITE_CONTACT_FUNCTION_NAME', 'contact-submit');
-const JOIN_FUNCTION_NAME = getOptionalEnv('VITE_JOIN_FUNCTION_NAME', 'join-submit');
-const PROFILE_GET_FUNCTION_NAME = getOptionalEnv(
-  'VITE_PROFILE_GET_FUNCTION_NAME',
-  'profile-get-by-user-id'
-);
-const PROFILE_UPDATE_FUNCTION_NAME = getOptionalEnv(
-  'VITE_PROFILE_UPDATE_FUNCTION_NAME',
-  'profile-update'
-);
-const FREELANCER_UPDATE_FUNCTION_NAME = getOptionalEnv(
-  'VITE_FREELANCER_UPDATE_FUNCTION_NAME',
-  'freelancer-update'
-);
-const PUBLIC_TALENTS_FUNCTION_NAME = getOptionalEnv(
-  'VITE_PUBLIC_TALENTS_FUNCTION_NAME',
-  'public-talents-list'
-);
-const ADMIN_TALENT_REQUESTS_FUNCTION_NAME = getOptionalEnv(
-  'VITE_ADMIN_TALENT_REQUESTS_FUNCTION_NAME',
-  'admin-talent-requests-list'
-);
-const ADMIN_TALENT_STATUS_FUNCTION_NAME = getOptionalEnv(
-  'VITE_ADMIN_TALENT_STATUS_FUNCTION_NAME',
-  'admin-talent-status-update'
-);
-const COMPLETE_PROFILE_FUNCTION_NAME = getOptionalEnv(
-  'VITE_COMPLETE_PROFILE_FUNCTION_NAME',
-  'complete-profile'
-);
+const CONTACT_FUNCTION_NAME = 'contact-submit';
+const JOIN_FUNCTION_NAME = 'freelancer-apply';
+const PROFILE_GET_FUNCTION_NAME = 'profile-get-by-user-id';
+const PROFILE_UPDATE_FUNCTION_NAME = 'profile-update';
+const FREELANCER_UPDATE_FUNCTION_NAME = 'freelancer-update';
+const PUBLIC_TALENTS_FUNCTION_NAME = 'public-talents-list';
+const ADMIN_TALENT_REQUESTS_FUNCTION_NAME = 'admin-talent-requests-list';
+const ADMIN_TALENT_STATUS_FUNCTION_NAME = 'admin-talent-status-update';
+const COMPLETE_PROFILE_FUNCTION_NAME = 'complete-profile';
 
 type FunctionResponse = {
   error?: string;
