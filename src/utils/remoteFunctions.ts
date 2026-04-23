@@ -1,6 +1,5 @@
 import { supabase } from '../lib/supabaseClient';
 import { ensureSerializablePayload, runWithAsyncGuard } from './asyncTools';
-import { getOptionalEnv } from './env';
 
 const CONTACT_FUNCTION_NAME = 'contact-submit';
 const JOIN_FUNCTION_NAME = 'freelancer-apply';
