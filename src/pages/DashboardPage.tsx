@@ -600,7 +600,8 @@ export default function DashboardPage() {
                     '{{name}}',
                     splitFullName(profile?.full_name).firstName ||
                       t('dashboard.profile.fallbackName')
-                  )};
+                  )}
+                  ;
                 </h1>
                 <p className="text-brand-gray text-sm">{t('dashboard.welcome.sub')}</p>
               </div>
