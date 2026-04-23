@@ -15,7 +15,7 @@ interface FreelancerData {
 }
 
 export default function CompleteProfilePage() {
-  const { profile, session } = useAuth();
+  const { freelancer, session, refreshAuthState } = useAuth();
   const [form, setForm] = useState<FreelancerData>({
     phone_number: '',
     tarif_jour: 25000,
@@ -29,18 +29,20 @@ export default function CompleteProfilePage() {
   const { clearAll, schedule } = useTimeoutRegistry();
 
   useEffect(() => {
-    if (!profile) return;
+    if (!freelancer) return;
 
     setForm((prev) => ({
       ...prev,
-      phone_number: profile.phone ?? prev.phone_number,
-      tarif_jour: profile.tarif_jour ?? prev.tarif_jour,
+      phone_number: freelancer.phone_number ?? prev.phone_number,
+      tarif_jour: freelancer.tarif_jour ?? prev.tarif_jour,
+      bio: freelancer.bio ?? prev.bio ?? '',
+      specialite: freelancer.specialite ?? prev.specialite ?? '',
     }));
 
-    if (profile.phone && profile.tarif_jour) {
+    if (freelancer.onboarding_completed && freelancer.phone_number && freelancer.tarif_jour) {
       window.location.href = '/dashboard';
     }
-  }, [profile]);
+  }, [freelancer]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -88,6 +90,7 @@ export default function CompleteProfilePage() {
         bio: form.bio?.trim() || null,
         specialite: form.specialite?.trim() || null,
       });
+      await refreshAuthState();
 
       setStatus('success');
       schedule(() => {

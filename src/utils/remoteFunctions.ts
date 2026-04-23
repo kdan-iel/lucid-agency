@@ -1,97 +1,152 @@
-import { supabase } from '../lib/supabaseClient';
 import { ensureSerializablePayload, runWithAsyncGuard } from './asyncTools';
+import { getOptionalEnv, getRequiredEnv, getRequiredHttpUrlEnv } from './env';
 
-const CONTACT_FUNCTION_NAME = 'contact-submit';
-const JOIN_FUNCTION_NAME = 'freelancer-apply';
-const PROFILE_GET_FUNCTION_NAME = 'profile-get-by-user-id';
-const PROFILE_UPDATE_FUNCTION_NAME = 'profile-update';
-const FREELANCER_UPDATE_FUNCTION_NAME = 'freelancer-update';
-const PUBLIC_TALENTS_FUNCTION_NAME = 'public-talents-list';
-const ADMIN_TALENT_REQUESTS_FUNCTION_NAME = 'admin-talent-requests-list';
-const ADMIN_TALENT_STATUS_FUNCTION_NAME = 'admin-talent-status-update';
-const COMPLETE_PROFILE_FUNCTION_NAME = 'complete-profile';
+const SUPABASE_URL = getRequiredHttpUrlEnv('VITE_SUPABASE_URL').replace(/\/+$/, '');
+const SUPABASE_ANON_KEY = getRequiredEnv('VITE_SUPABASE_ANON_KEY');
+
+const CONTACT_FUNCTION_NAME = getOptionalEnv('VITE_CONTACT_FUNCTION_NAME', 'contact-submit');
+const JOIN_FUNCTION_NAME = getOptionalEnv('VITE_JOIN_FUNCTION_NAME', 'freelancer-apply');
+const PUBLIC_TALENTS_FUNCTION_NAME = getOptionalEnv(
+  'VITE_PUBLIC_TALENTS_FUNCTION_NAME',
+  'public-talents-list'
+);
+const COMPLETE_PROFILE_FUNCTION_NAME = getOptionalEnv(
+  'VITE_COMPLETE_PROFILE_FUNCTION_NAME',
+  'complete-profile'
+);
+const ADMIN_LIST_FREELANCERS_FUNCTION_NAME = getOptionalEnv(
+  'VITE_ADMIN_LIST_FREELANCERS_FUNCTION_NAME',
+  'admin-list-freelancers'
+);
+const ADMIN_VALIDATE_FREELANCER_FUNCTION_NAME = getOptionalEnv(
+  'VITE_ADMIN_VALIDATE_FREELANCER_FUNCTION_NAME',
+  'admin-validate-freelancer'
+);
 
 type FunctionResponse = {
   error?: string;
   message?: string;
 };
 
+type HttpMethod = 'GET' | 'POST';
+
 interface RemoteInvokeOptions<TPayload extends Record<string, unknown> | undefined> {
+  method?: HttpMethod;
   payload?: TPayload;
   headers?: Record<string, string>;
   timeoutMs?: number;
+  accessToken?: string;
+  query?: Record<string, string | number | undefined>;
 }
 
-export interface RemoteProfile {
-  id: string;
-  user_id: string;
-  email: string;
-  first_name: string;
-  last_name: string;
-  role: 'admin' | 'freelancer' | 'client';
-  avatar_url?: string;
-  bio?: string;
-  phone?: string;
-  tarif_jour?: number;
-  onboarding_completed?: boolean;
-  created_at: string;
-  updated_at: string;
+export interface PublicTalentPortfolio {
+  title: string;
+  type: string;
+  url: string;
+  order: number;
 }
 
 export interface PublicTalentRecord {
   id: string;
   user_id: string;
-  specialty: string;
-  skills?: string[] | null;
-  rate_per_hour?: number | null;
+  full_name?: string | null;
+  name?: string | null;
+  avatar_url?: string | null;
+  domaine?: string | null;
+  domain?: string | null;
+  specialite?: string | null;
+  specialty?: string | null;
   bio?: string | null;
+  tarif_jour?: number | null;
+  day_rate?: number | null;
+  disponible?: boolean;
+  available?: boolean;
   portfolio_url?: string | null;
-  first_name?: string | null;
-  last_name?: string | null;
+  portfolioUrl?: string | null;
+  portfolio_count?: number;
+  rating?: number;
+  total_projects?: number;
+  portfolios?: PublicTalentPortfolio[];
 }
 
-export interface AdminTalentRequestRecord {
+export interface AdminFreelancerRecord {
   id: string;
   user_id: string;
-  specialty: string;
-  status: 'pending' | 'approved' | 'rejected';
+  domaine: string;
+  specialite: string | null;
+  portfolio_url: string | null;
+  phone_number: string | null;
+  tarif_jour: number | null;
+  bio: string | null;
+  statut: 'pending' | 'validated' | 'rejected' | 'suspended';
+  onboarding_completed: boolean;
   created_at: string;
-  portfolio_url?: string | null;
-  email?: string | null;
-  phone?: string | null;
-  phone_number?: string | null;
-  tarif_jour?: number | null;
-  onboarding_completed?: boolean | null;
-  first_name?: string | null;
-  last_name?: string | null;
+  profiles?: {
+    id: string;
+    email: string;
+    full_name: string | null;
+    role: string;
+  } | null;
 }
 
-async function extractFunctionError(error: {
-  message: string;
-  context?: Response | undefined;
-}): Promise<string> {
-  if (error.context instanceof Response) {
+export interface AdminListFreelancersResponse {
+  data: AdminFreelancerRecord[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+function buildFunctionUrl(
+  functionName: string,
+  query?: Record<string, string | number | undefined>
+) {
+  const url = new URL(`${SUPABASE_URL}/functions/v1/${functionName}`);
+
+  Object.entries(query ?? {}).forEach(([key, value]) => {
+    if (typeof value === 'undefined' || value === '') return;
+    url.searchParams.set(key, String(value));
+  });
+
+  return url.toString();
+}
+
+async function extractResponseError(response: Response): Promise<string> {
+  try {
+    const payload = (await response.clone().json()) as FunctionResponse;
+    if (payload.error) return payload.error;
+    if (payload.message) return payload.message;
+  } catch {
     try {
-      const payload = (await error.context.clone().json()) as FunctionResponse;
-      if (payload.error) return payload.error;
-      if (payload.message) return payload.message;
+      const text = await response.clone().text();
+      if (text) return text;
     } catch {
-      try {
-        const text = await error.context.clone().text();
-        if (text) return text;
-      } catch {
-        // Ignore secondary parsing failures and use the fallback below.
-      }
+      // Ignore parsing failures and fallback below.
     }
   }
 
-  return error.message || 'Erreur serveur';
+  return `Erreur serveur (${response.status})`;
+}
+
+async function parseResponse<TResult>(response: Response): Promise<TResult> {
+  if (response.status === 204) {
+    return null as TResult;
+  }
+
+  const contentType = response.headers.get('content-type') ?? '';
+
+  if (contentType.includes('application/json')) {
+    return (await response.json()) as TResult;
+  }
+
+  const text = await response.text();
+  return text ? (text as TResult) : (null as TResult);
 }
 
 async function invokeRemoteFunction<
   TResult,
   TPayload extends Record<string, unknown> = Record<string, unknown>,
 >(functionName: string, options: RemoteInvokeOptions<TPayload> = {}): Promise<TResult> {
+  const method = options.method ?? 'POST';
   const payload = ensureSerializablePayload(
     options.payload ?? ({} as TPayload),
     `remote:${functionName}`
@@ -100,20 +155,25 @@ async function invokeRemoteFunction<
   return runWithAsyncGuard(
     `edge:${functionName}`,
     async () => {
-      const { data, error } = await supabase.functions.invoke(functionName, {
-        body: payload,
-        ...(options.headers ? { headers: options.headers } : {}),
+      const response = await fetch(buildFunctionUrl(functionName, options.query), {
+        method,
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${options.accessToken ?? SUPABASE_ANON_KEY}`,
+          ...(method === 'POST' ? { 'Content-Type': 'application/json' } : {}),
+          ...(options.headers ?? {}),
+        },
+        ...(method === 'POST' ? { body: JSON.stringify(payload) } : {}),
       });
 
-      if (error) {
-        throw new Error(await extractFunctionError(error));
+      if (!response.ok) {
+        throw new Error(await extractResponseError(response));
       }
 
-      if (data && typeof data === 'object') {
-        const response = data as FunctionResponse;
-        if (response.error) {
-          throw new Error(response.error);
-        }
+      const data = await parseResponse<TResult | FunctionResponse>(response);
+
+      if (data && typeof data === 'object' && 'error' in data && data.error) {
+        throw new Error(data.error);
       }
 
       return data as TResult;
@@ -122,6 +182,7 @@ async function invokeRemoteFunction<
       fallbackMessage: `Le service distant "${functionName}" ne répond pas.`,
       metadata: {
         functionName,
+        method,
       },
       ...(typeof options.timeoutMs === 'number' ? { timeoutMs: options.timeoutMs } : {}),
     }
@@ -129,16 +190,18 @@ async function invokeRemoteFunction<
 }
 
 export async function submitContact(payload: {
-  name: string;
-  company: string;
+  nom: string;
   email: string;
-  phone: string;
-  type: string;
-  budget: string;
-  budgetDetails: string;
+  phone_number?: string;
+  entreprise?: string;
+  type_projet?: string;
+  budget_estime?: string;
   message: string;
 }) {
-  return invokeRemoteFunction(CONTACT_FUNCTION_NAME, { payload });
+  return invokeRemoteFunction(CONTACT_FUNCTION_NAME, {
+    method: 'POST',
+    payload,
+  });
 }
 
 export async function submitJoinApplication(payload: {
@@ -153,6 +216,7 @@ export async function submitJoinApplication(payload: {
   message: string;
 }) {
   return invokeRemoteFunction(JOIN_FUNCTION_NAME, {
+    method: 'POST',
     payload: {
       first_name: payload.firstName,
       last_name: payload.lastName,
@@ -182,53 +246,71 @@ export async function completeFreelancerProfile(
   }
 
   return invokeRemoteFunction(COMPLETE_PROFILE_FUNCTION_NAME, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
+    method: 'POST',
+    accessToken,
     payload: {
       phone_number: payload.phoneNumber,
       tarif_jour: payload.tarifJour,
-      bio: payload.bio,
-      specialite: payload.specialite,
+      ...(payload.bio ? { bio: payload.bio } : {}),
+      ...(payload.specialite ? { specialite: payload.specialite } : {}),
     },
-  });
-}
-
-export async function fetchProfileByUserId(userId: string) {
-  return invokeRemoteFunction<RemoteProfile | null>(PROFILE_GET_FUNCTION_NAME, {
-    payload: { userId },
-  });
-}
-
-export async function updateProfileRecord(userId: string, updates: Partial<RemoteProfile>) {
-  return invokeRemoteFunction<RemoteProfile>(PROFILE_UPDATE_FUNCTION_NAME, {
-    payload: { userId, updates },
-  });
-}
-
-export async function updateFreelancerRecordByUserId(
-  userId: string,
-  updates: Record<string, unknown>
-) {
-  return invokeRemoteFunction(FREELANCER_UPDATE_FUNCTION_NAME, {
-    payload: { userId, updates },
   });
 }
 
 export async function listPublicTalents() {
-  const data = await invokeRemoteFunction<PublicTalentRecord[]>(PUBLIC_TALENTS_FUNCTION_NAME);
-  return Array.isArray(data) ? data : [];
-}
-
-export async function listAdminTalentRequests() {
-  const data = await invokeRemoteFunction<AdminTalentRequestRecord[]>(
-    ADMIN_TALENT_REQUESTS_FUNCTION_NAME
+  const data = await invokeRemoteFunction<PublicTalentRecord[] | { data?: PublicTalentRecord[] }>(
+    PUBLIC_TALENTS_FUNCTION_NAME,
+    {
+      method: 'GET',
+    }
   );
-  return Array.isArray(data) ? data : [];
+
+  if (Array.isArray(data)) return data;
+  return Array.isArray(data?.data) ? data.data : [];
 }
 
-export async function updateAdminTalentStatus(id: string, status: 'approved' | 'rejected') {
-  return invokeRemoteFunction(ADMIN_TALENT_STATUS_FUNCTION_NAME, {
-    payload: { id, status },
+export async function listAdminFreelancers(
+  accessToken: string,
+  options: {
+    status?: 'pending' | 'validated' | 'rejected' | 'suspended';
+    limit?: number;
+    offset?: number;
+  } = {}
+) {
+  const data = await invokeRemoteFunction<AdminListFreelancersResponse>(
+    ADMIN_LIST_FREELANCERS_FUNCTION_NAME,
+    {
+      method: 'GET',
+      accessToken,
+      query: {
+        status: options.status,
+        limit: options.limit,
+        offset: options.offset,
+      },
+    }
+  );
+
+  return {
+    data: Array.isArray(data?.data) ? data.data : [],
+    total: typeof data?.total === 'number' ? data.total : 0,
+    limit: typeof data?.limit === 'number' ? data.limit : (options.limit ?? 20),
+    offset: typeof data?.offset === 'number' ? data.offset : (options.offset ?? 0),
+  };
+}
+
+export async function validateAdminFreelancer(
+  accessToken: string,
+  freelancerId: string,
+  decision: 'validated' | 'rejected',
+  motif?: string
+) {
+  return invokeRemoteFunction(ADMIN_VALIDATE_FREELANCER_FUNCTION_NAME, {
+    method: 'POST',
+    accessToken,
+    payload: {
+      freelancer_id: freelancerId,
+      decision,
+      ...(motif?.trim() ? { motif: motif.trim() } : {}),
+    },
   });
 }

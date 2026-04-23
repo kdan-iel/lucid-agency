@@ -22,9 +22,16 @@ import {
 import Navbar from '../components/Navbar';
 import { Phone as WhatsAppIcon } from 'lucide-react';
 import { validatePassword } from '../utils/security';
-import { updateFreelancerRecordByUserId } from '../utils/remoteFunctions';
 import { useTimeoutRegistry } from '../hooks/useTimeoutRegistry';
 import { toErrorMessage } from '../utils/asyncTools';
+
+function splitFullName(fullName: string | null | undefined) {
+  const parts = (fullName ?? '').trim().split(/\s+/).filter(Boolean);
+  return {
+    firstName: parts[0] ?? '',
+    lastName: parts.slice(1).join(' '),
+  };
+}
 
 interface Mission {
   id: number;
@@ -75,7 +82,8 @@ const MISSIONS: Mission[] = [
 
 export default function DashboardPage() {
   const { t } = useLanguage();
-  const { logout, profile, updateProfile, updatePassword } = useAuth();
+  const { logout, profile, freelancer, updateProfile, updateFreelancer, updatePassword } =
+    useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -99,10 +107,10 @@ export default function DashboardPage() {
 
   // Settings state
   const [profileForm, setProfileForm] = useState({
-    first_name: profile?.first_name ?? '',
-    last_name: profile?.last_name ?? '',
-    bio: profile?.bio ?? '',
-    phone: profile?.phone ?? '',
+    first_name: splitFullName(profile?.full_name).firstName,
+    last_name: splitFullName(profile?.full_name).lastName,
+    bio: freelancer?.bio ?? '',
+    phone: freelancer?.phone_number ?? '',
   });
   const [passwordForm, setPasswordForm] = useState({ current: '', new: '', confirm: '' });
   const [showNewPwd, setShowNewPwd] = useState(false);
@@ -116,19 +124,19 @@ export default function DashboardPage() {
   const { clearAll, schedule } = useTimeoutRegistry();
 
   useEffect(() => {
-    if (profile && (!profile.phone || !profile.tarif_jour)) {
+    if (profile?.role === 'freelancer' && freelancer && !freelancer.onboarding_completed) {
       window.location.href = '/complete-profile';
     }
-  }, [profile]);
+  }, [freelancer, profile?.role]);
 
   useEffect(() => {
     setProfileForm({
-      first_name: profile?.first_name ?? '',
-      last_name: profile?.last_name ?? '',
-      bio: profile?.bio ?? '',
-      phone: profile?.phone ?? '',
+      first_name: splitFullName(profile?.full_name).firstName,
+      last_name: splitFullName(profile?.full_name).lastName,
+      bio: freelancer?.bio ?? '',
+      phone: freelancer?.phone_number ?? '',
     });
-  }, [profile]);
+  }, [freelancer?.bio, freelancer?.phone_number, profile?.full_name]);
 
   const handleApply = (missionId: number) => {
     setAppliedMissions((previous) => {
@@ -153,16 +161,15 @@ export default function DashboardPage() {
     setSettingsStatus('saving');
     setSettingsError('');
     try {
+      const fullName = `${profileForm.first_name.trim()} ${profileForm.last_name.trim()}`.trim();
       await updateProfile({
-        first_name: profileForm.first_name.trim(),
-        last_name: profileForm.last_name.trim(),
-        bio: profileForm.bio.trim(),
-        phone: profileForm.phone.trim(),
+        full_name: fullName || null,
       });
       // ✅ Mettre aussi à jour la table freelancers si bio
-      if (profile?.role === 'freelancer') {
-        await updateFreelancerRecordByUserId(profile.user_id, {
-          bio: profileForm.bio.trim(),
+      if (profile?.role === 'freelancer' && freelancer) {
+        await updateFreelancer({
+          bio: profileForm.bio.trim() || null,
+          phone_number: profileForm.phone.trim() || null,
         });
       }
       setSettingsStatus('success');
@@ -249,8 +256,14 @@ export default function DashboardPage() {
     },
   ];
 
-  const displayName = profile ? `${profile.first_name} ${profile.last_name}` : 'Freelancer';
-  const initials = profile ? `${profile.first_name.charAt(0)}${profile.last_name.charAt(0)}` : 'F';
+  const displayName = profile?.full_name?.trim() || 'Freelancer';
+  const initials =
+    displayName
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part.charAt(0).toUpperCase())
+      .join('') || 'F';
 
   const renderMissionsList = () => (
     <div className="bg-[var(--bg-surface)] rounded-2xl md:rounded-3xl border border-[var(--border-color)] p-4 md:p-8">
@@ -771,7 +784,10 @@ export default function DashboardPage() {
               </button>
               <div>
                 <h1 className="text-2xl md:text-3xl font-bold mb-1">
-                  {t('dashboard.welcome').replace('{{name}}', profile?.first_name ?? '')}
+                  {t('dashboard.welcome').replace(
+                    '{{name}}',
+                    splitFullName(profile?.full_name).firstName
+                  )}
                 </h1>
                 <p className="text-brand-gray text-sm">{t('dashboard.welcome.sub')}</p>
               </div>

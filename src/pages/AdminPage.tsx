@@ -27,7 +27,7 @@ import {
 import Navbar from '../components/Navbar';
 import { Phone as WhatsAppIcon } from 'lucide-react';
 import { validatePassword } from '../utils/security';
-import { listAdminTalentRequests, updateAdminTalentStatus } from '../utils/remoteFunctions';
+import { listAdminFreelancers, validateAdminFreelancer } from '../utils/remoteFunctions';
 import { useTimeoutRegistry } from '../hooks/useTimeoutRegistry';
 import { toErrorMessage } from '../utils/asyncTools';
 
@@ -36,7 +36,7 @@ interface TalentRequest {
   name: string;
   specialty: string;
   date: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'validated' | 'rejected' | 'suspended';
   email: string;
   phone: string;
   phone_number?: string | null;
@@ -80,13 +80,13 @@ const INITIAL_PROJECTS: Project[] = [
 
 export default function AdminPage() {
   const { t } = useLanguage();
-  const { logout, profile, updatePassword } = useAuth();
+  const { logout, profile, session, updatePassword } = useAuth();
   const [activeTab, setActiveTab] = useState('talents');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>(
-    'all'
-  );
+  const [statusFilter, setStatusFilter] = useState<
+    'all' | 'pending' | 'validated' | 'rejected' | 'suspended'
+  >('all');
   const [requests, setRequests] = useState<TalentRequest[]>([]);
   const [loadingTalents, setLoadingTalents] = useState(false);
   const [talentsError, setTalentsError] = useState('');
@@ -117,23 +117,29 @@ export default function AdminPage() {
     setLoadingTalents(true);
     setTalentsError('');
     try {
-      const data = await listAdminTalentRequests();
+      if (!session?.access_token) {
+        throw new Error('Session admin invalide.');
+      }
+
+      const { data } = await listAdminFreelancers(session.access_token, {
+        limit: 50,
+        offset: 0,
+      });
 
       const mapped: TalentRequest[] = data.map((f) => ({
         id: f.id,
         user_id: f.user_id,
-        name: `${f.first_name ?? ''} ${f.last_name ?? ''}`.trim() || 'N/A',
-        specialty: f.specialty,
+        name: f.profiles?.full_name?.trim() || 'N/A',
+        specialty: f.specialite?.trim() || f.domaine,
         date: new Date(f.created_at).toLocaleDateString('fr-FR'),
-        status: f.status,
-        email: f.email ?? '',
-        phone: f.phone ?? f.phone_number ?? 'N/A',
-        phone_number: f.phone_number ?? f.phone ?? null,
+        status: f.statut,
+        email: f.profiles?.email ?? '',
+        phone: f.phone_number ?? 'N/A',
+        phone_number: f.phone_number ?? null,
         tarif_jour: f.tarif_jour ?? null,
-        onboarding_completed:
-          f.onboarding_completed ?? Boolean((f.phone_number ?? f.phone) && f.tarif_jour),
+        onboarding_completed: Boolean(f.onboarding_completed),
         portfolio: f.portfolio_url ?? 'N/A',
-        experience: '',
+        experience: f.bio ?? '',
       }));
       setRequests(mapped);
     } catch (err) {
@@ -147,15 +153,20 @@ export default function AdminPage() {
 
   // Charger au montage
   useEffect(() => {
-    loadTalents();
-  }, []);
+    if (!session?.access_token) return;
+    void loadTalents();
+  }, [session?.access_token]);
 
   // ✅ Mettre à jour le statut dans Supabase
-  const handleUpdateStatus = async (id: string, newStatus: 'approved' | 'rejected') => {
+  const handleUpdateStatus = async (id: string, newStatus: 'validated' | 'rejected') => {
     try {
+      if (!session?.access_token) {
+        throw new Error('Session admin invalide.');
+      }
+
       setUpdatingTalentId(id);
       setTalentsError('');
-      await updateAdminTalentStatus(id, newStatus);
+      await validateAdminFreelancer(session.access_token, id, newStatus);
       setRequests((prev) => prev.map((r) => (r.id === id ? { ...r, status: newStatus } : r)));
       if (selectedTalent?.id === id)
         setSelectedTalent((prev) => (prev ? { ...prev, status: newStatus } : null));
@@ -235,7 +246,7 @@ export default function AdminPage() {
     {
       id: 'all',
       label: t('admin.stats.activeTalents'),
-      value: requests.filter((r) => r.status === 'approved').length.toString(),
+      value: requests.filter((r) => r.status === 'validated').length.toString(),
       color: 'text-brand-mint',
     },
     {
@@ -252,7 +263,12 @@ export default function AdminPage() {
     },
   ];
 
-  const initials = profile ? `${profile.first_name.charAt(0)}${profile.last_name.charAt(0)}` : 'A';
+  const initials = (profile?.full_name ?? 'Admin')
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join('');
 
   const renderTalents = () => (
     <div className="bg-[var(--bg-surface)] rounded-2xl md:rounded-3xl border border-[var(--border-color)] p-4 md:p-8">
@@ -275,14 +291,17 @@ export default function AdminPage() {
           <select
             value={statusFilter}
             onChange={(e) =>
-              setStatusFilter(e.target.value as 'all' | 'pending' | 'approved' | 'rejected')
+              setStatusFilter(
+                e.target.value as 'all' | 'pending' | 'validated' | 'rejected' | 'suspended'
+              )
             }
             className="bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-2 text-sm text-brand-gray focus:outline-none"
           >
             <option value="all">Tous</option>
             <option value="pending">En attente</option>
-            <option value="approved">Approuvés</option>
+            <option value="validated">Validés</option>
             <option value="rejected">Refusés</option>
+            <option value="suspended">Suspendus</option>
           </select>
         </div>
       </div>
@@ -335,7 +354,7 @@ export default function AdminPage() {
                   <td className="py-4 text-brand-gray">{row.onboarding_completed ? '✓' : '✗'}</td>
                   <td className="py-4 text-brand-gray">{row.date}</td>
                   <td className="py-4">
-                    {row.status === 'approved' && (
+                    {row.status === 'validated' && (
                       <span className="flex items-center gap-1 text-green-400 text-xs font-bold uppercase">
                         <CheckCircle size={14} />
                         {t('admin.status.approved')}
@@ -351,6 +370,12 @@ export default function AdminPage() {
                       <span className="flex items-center gap-1 text-red-400 text-xs font-bold uppercase">
                         <XCircle size={14} />
                         {t('admin.status.rejected')}
+                      </span>
+                    )}
+                    {row.status === 'suspended' && (
+                      <span className="flex items-center gap-1 text-orange-400 text-xs font-bold uppercase">
+                        <XCircle size={14} />
+                        Suspendu
                       </span>
                     )}
                   </td>
@@ -432,7 +457,7 @@ export default function AdminPage() {
   );
 
   const renderMessages = () => {
-    const approved = requests.filter((r) => r.status === 'approved');
+    const approved = requests.filter((r) => r.status === 'validated');
     return (
       <div className="bg-[var(--bg-surface)] rounded-3xl border border-[var(--border-color)] p-8">
         <h2 className="text-2xl font-bold mb-2">Messagerie WhatsApp</h2>
@@ -599,8 +624,8 @@ export default function AdminPage() {
                 color: 'text-brand-mint',
               },
               {
-                label: 'Talents approuvés',
-                value: requests.filter((r) => r.status === 'approved').length.toString(),
+                label: 'Talents validés',
+                value: requests.filter((r) => r.status === 'validated').length.toString(),
                 color: 'text-green-400',
               },
               {
@@ -822,7 +847,7 @@ export default function AdminPage() {
                 <div className="flex gap-4">
                   <button
                     disabled={updatingTalentId === selectedTalent.id}
-                    onClick={() => handleUpdateStatus(selectedTalent.id, 'approved')}
+                    onClick={() => handleUpdateStatus(selectedTalent.id, 'validated')}
                     className="flex-grow bg-green-500 text-white py-4 rounded-xl font-bold hover:bg-green-600 transition-all"
                   >
                     {updatingTalentId === selectedTalent.id ? 'Traitement...' : 'Approuver'}
@@ -837,9 +862,13 @@ export default function AdminPage() {
                 </div>
               ) : (
                 <div
-                  className={`p-4 rounded-xl text-center font-bold uppercase ${selectedTalent.status === 'approved' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}
+                  className={`p-4 rounded-xl text-center font-bold uppercase ${selectedTalent.status === 'validated' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : selectedTalent.status === 'suspended' ? 'bg-orange-500/10 text-orange-400 border border-orange-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}
                 >
-                  {selectedTalent.status === 'approved' ? '✅ Approuvé' : '❌ Refusé'}
+                  {selectedTalent.status === 'validated'
+                    ? '✅ Validé'
+                    : selectedTalent.status === 'suspended'
+                      ? '⏸ Suspendu'
+                      : '❌ Refusé'}
                 </div>
               )}
             </motion.div>
@@ -909,7 +938,7 @@ export default function AdminPage() {
                   >
                     <option value="">Sélectionner un talent</option>
                     {requests
-                      .filter((r) => r.status === 'approved')
+                      .filter((r) => r.status === 'validated')
                       .map((r) => (
                         <option key={r.id} value={r.name}>
                           {r.name} ({r.specialty})

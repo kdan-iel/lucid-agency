@@ -134,12 +134,8 @@ export default function JoinPage() {
           >
             <div className="text-6xl mb-6">✅</div>
             <h2 className="text-3xl font-bold mb-4">Candidature envoyée !</h2>
-            <p className="text-brand-gray text-lg mb-2">
-              Vérifie ta boîte mail pour confirmer ton adresse email.
-            </p>
-            <p className="text-brand-gray">
-              Notre équipe examinera ta candidature et te contactera sous 48h.
-            </p>
+            <p className="text-brand-gray text-lg mb-2">Votre candidature a bien été reçue.</p>
+            <p className="text-brand-gray">Notre équipe l’examinera et vous recontactera.</p>
           </motion.div>
         </main>
         <Footer />

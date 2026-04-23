@@ -5,12 +5,12 @@ interface ImportMetaEnv {
   readonly VITE_SUPABASE_ANON_KEY?: string;
   readonly VITE_CONTACT_FUNCTION_NAME?: string;
   readonly VITE_JOIN_FUNCTION_NAME?: string;
-  readonly VITE_PROFILE_GET_FUNCTION_NAME?: string;
-  readonly VITE_PROFILE_UPDATE_FUNCTION_NAME?: string;
-  readonly VITE_FREELANCER_UPDATE_FUNCTION_NAME?: string;
+  readonly VITE_COMPLETE_PROFILE_FUNCTION_NAME?: string;
   readonly VITE_PUBLIC_TALENTS_FUNCTION_NAME?: string;
-  readonly VITE_ADMIN_TALENT_REQUESTS_FUNCTION_NAME?: string;
-  readonly VITE_ADMIN_TALENT_STATUS_FUNCTION_NAME?: string;
+  readonly VITE_ADMIN_LIST_FREELANCERS_FUNCTION_NAME?: string;
+  readonly VITE_ADMIN_VALIDATE_FREELANCER_FUNCTION_NAME?: string;
+  readonly VITE_GAS_URL?: string;
+  readonly VITE_GAS_TOKEN?: string;
 }
 
 interface ImportMeta {

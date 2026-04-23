@@ -46,7 +46,10 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
     clearError();
 
     try {
-      const nextProfile = await login(email.trim().toLowerCase(), password);
+      const { profile: nextProfile, freelancer: nextFreelancer } = await login(
+        email.trim().toLowerCase(),
+        password
+      );
 
       if (isAdminLogin && nextProfile.role !== 'admin') {
         await runWithAsyncGuard('auth.signOutUnauthorizedAdmin', async () => {
@@ -57,9 +60,51 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
         return;
       }
 
-      if (nextProfile.role === 'freelancer' && (!nextProfile.phone || !nextProfile.tarif_jour)) {
-        window.location.href = '/complete-profile';
-        return;
+      if (nextProfile.role === 'freelancer') {
+        if (!nextFreelancer) {
+          await runWithAsyncGuard('auth.signOutMissingFreelancer', async () => {
+            const { error: signOutError } = await supabase.auth.signOut();
+            if (signOutError) throw signOutError;
+          });
+          setError('Aucune candidature freelancer associée à ce compte.');
+          return;
+        }
+
+        if (nextFreelancer.statut === 'pending') {
+          await runWithAsyncGuard('auth.signOutPendingFreelancer', async () => {
+            const { error: signOutError } = await supabase.auth.signOut();
+            if (signOutError) throw signOutError;
+          });
+          setError('Votre candidature est en attente de validation.');
+          return;
+        }
+
+        if (nextFreelancer.statut === 'rejected') {
+          await runWithAsyncGuard('auth.signOutRejectedFreelancer', async () => {
+            const { error: signOutError } = await supabase.auth.signOut();
+            if (signOutError) throw signOutError;
+          });
+          setError('Votre candidature a été rejetée.');
+          return;
+        }
+
+        if (nextFreelancer.statut === 'suspended') {
+          await runWithAsyncGuard('auth.signOutSuspendedFreelancer', async () => {
+            const { error: signOutError } = await supabase.auth.signOut();
+            if (signOutError) throw signOutError;
+          });
+          setError('Votre compte est suspendu.');
+          return;
+        }
+
+        if (
+          !nextFreelancer.onboarding_completed ||
+          !nextFreelancer.phone_number ||
+          !nextFreelancer.tarif_jour
+        ) {
+          window.location.href = '/complete-profile';
+          return;
+        }
       }
 
       window.location.href = nextProfile.role === 'admin' ? '/admin' : '/dashboard';
@@ -71,6 +116,8 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
         setError('Veuillez confirmer votre email avant de vous connecter.');
       } else if (msg.includes('Profil introuvable')) {
         setError('Compte incomplet. Contactez un administrateur.');
+      } else if (msg.includes('Aucune candidature freelancer')) {
+        setError('Aucune candidature freelancer associée à ce compte.');
       } else {
         setError('Une erreur est survenue. Veuillez reessayer.');
       }

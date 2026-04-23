@@ -149,14 +149,13 @@ export default function ContactForm() {
           : result.data.budget;
 
       await submitContact({
-        name: result.data.name.trim(),
-        company: result.data.company?.trim() || '',
+        nom: result.data.name.trim(),
         email: result.data.email.toLowerCase().trim(),
-        phone: result.data.phone?.trim() || '',
-        type: result.data.type ?? DEFAULT_PROJECT_TYPE,
-        budget: normalizedBudget ?? BUDGET_OPTIONS[0],
-        budgetDetails: result.data.budgetDetails?.trim() || '',
+        type_projet: result.data.type ?? DEFAULT_PROJECT_TYPE,
+        budget_estime: normalizedBudget ?? BUDGET_OPTIONS[0],
         message: result.data.message.trim(),
+        ...(result.data.phone?.trim() ? { phone_number: result.data.phone.trim() } : {}),
+        ...(result.data.company?.trim() ? { entreprise: result.data.company.trim() } : {}),
       });
 
       setStatus('success');

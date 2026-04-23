@@ -140,7 +140,7 @@ function AppContent() {
         );
       case '/complete-profile':
         return (
-          <ProtectedRoute requiredRole="freelancer">
+          <ProtectedRoute requiredRole="freelancer" allowIncompleteFreelancer>
             <CompleteProfilePage />
           </ProtectedRoute>
         );

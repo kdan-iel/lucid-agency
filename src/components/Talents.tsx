@@ -98,7 +98,7 @@ function formatRate(ratePerHour: number | null) {
     maximumFractionDigits: 0,
   }).format(ratePerHour);
 
-  return `${rounded} FCFA/h`;
+  return `${rounded} FCFA/jour`;
 }
 
 function buildInitials(firstName: string, lastName: string) {
@@ -149,28 +149,32 @@ export default function Talents() {
       try {
         const data = await listPublicTalents();
         const mapped = data.map((item) => {
-          const specialty = toSpecialtyKey(item.specialty ?? 'autre');
+          const specialty = toSpecialtyKey(
+            item.specialite ?? item.specialty ?? item.domaine ?? item.domain ?? 'autre'
+          );
           const meta = specialtyMeta[specialty];
-          const firstName = item.first_name?.trim() || 'Talent';
-          const lastName = item.last_name?.trim() || 'LUCID';
+          const fullName = item.full_name?.trim() || item.name?.trim() || 'Talent LUCID';
+          const [firstName = 'Talent', ...restName] = fullName.split(' ').filter(Boolean);
+          const lastName = restName.join(' ') || 'LUCID';
           const fallbackSkill = lang === 'FR' ? meta.fallbackSkillFr : meta.fallbackSkillEn;
-          const rawSkills = Array.isArray(item.skills) ? item.skills.filter(Boolean) : [];
+          const derivedSkill = item.specialite?.trim() || item.specialty?.trim() || fallbackSkill;
+          const rawSkills = [derivedSkill].filter(Boolean);
 
           return {
             id: item.id,
-            name: `${firstName} ${lastName}`.trim(),
+            name: fullName,
             category: specialty,
             expertise: lang === 'FR' ? meta.labelFr : meta.labelEn,
             skills: rawSkills.length > 0 ? rawSkills.slice(0, 3) : [fallbackSkill],
             initials: buildInitials(firstName, lastName),
             color: meta.color,
-            rate: formatRate(item.rate_per_hour ?? null),
+            rate: formatRate(item.day_rate ?? item.tarif_jour ?? null),
             bio:
               item.bio?.trim() ||
               (lang === 'FR'
                 ? 'Profil en cours de completion. Les details seront disponibles tres bientot.'
                 : 'Profile is being completed. More details will be available very soon.'),
-            portfolioUrl: item.portfolio_url ?? null,
+            portfolioUrl: item.portfolio_url ?? item.portfolioUrl ?? null,
           } satisfies PublicTalent;
         });
 

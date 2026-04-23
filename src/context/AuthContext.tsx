@@ -1,36 +1,52 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabaseClient';
-import { fetchProfileByUserId, updateProfileRecord } from '../utils/remoteFunctions';
 import { runWithAsyncGuard, toErrorMessage } from '../utils/asyncTools';
+
+const PROFILE_COLUMNS = 'id, user_id, email, full_name, role, avatar_url';
+const FREELANCER_COLUMNS =
+  'id, user_id, statut, phone_number, tarif_jour, bio, specialite, onboarding_completed, archived_at';
 
 export interface Profile {
   id: string;
   user_id: string;
   email: string;
-  first_name: string;
-  last_name: string;
+  full_name: string | null;
   role: 'admin' | 'freelancer' | 'client';
-  avatar_url?: string;
-  bio?: string;
-  phone?: string;
-  tarif_jour?: number;
-  onboarding_completed?: boolean;
-  created_at: string;
-  updated_at: string;
+  avatar_url?: string | null;
+}
+
+export interface Freelancer {
+  id: string;
+  user_id: string;
+  statut: 'pending' | 'validated' | 'rejected' | 'suspended';
+  phone_number: string | null;
+  tarif_jour: number | null;
+  bio: string | null;
+  specialite: string | null;
+  onboarding_completed: boolean;
+  archived_at: string | null;
+}
+
+export interface LoginResult {
+  profile: Profile;
+  freelancer: Freelancer | null;
 }
 
 export interface AuthContextType {
   session: Session | null;
   user: User | null;
   profile: Profile | null;
+  freelancer: Freelancer | null;
   loading: boolean;
   error: string | null;
-  login: (email: string, password: string) => Promise<Profile>;
+  login: (email: string, password: string) => Promise<LoginResult>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   updatePassword: (newPassword: string) => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<void>;
+  updateFreelancer: (updates: Partial<Freelancer>) => Promise<void>;
+  refreshAuthState: () => Promise<void>;
   clearError: () => void;
 }
 
@@ -40,48 +56,92 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [freelancer, setFreelancer] = useState<Freelancer | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const mountedRef = useRef(true);
-  const profileRequestRef = useRef(0);
+  const authRequestRef = useRef(0);
 
   const getProfileByUserId = async (userId: string): Promise<Profile | null> => {
+    const { data, error: profileError } = await supabase
+      .from('profiles')
+      .select(PROFILE_COLUMNS)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (profileError) {
+      throw profileError;
+    }
+
+    return (data as Profile | null) ?? null;
+  };
+
+  const getFreelancerByUserId = async (userId: string): Promise<Freelancer | null> => {
+    const { data, error: freelancerError } = await supabase
+      .from('freelancers')
+      .select(FREELANCER_COLUMNS)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (freelancerError) {
+      throw freelancerError;
+    }
+
+    return (data as Freelancer | null) ?? null;
+  };
+
+  const syncAuthState = async (userId: string | null) => {
+    const requestId = ++authRequestRef.current;
+
+    if (!userId) {
+      if (mountedRef.current) {
+        setProfile(null);
+        setFreelancer(null);
+      }
+      return { profile: null, freelancer: null };
+    }
+
     try {
-      const data = await runWithAsyncGuard(
+      const nextProfile = await runWithAsyncGuard(
         'auth.fetchProfile',
-        () => fetchProfileByUserId(userId),
+        () => getProfileByUserId(userId),
         {
           fallbackMessage: 'Impossible de récupérer le profil utilisateur.',
           metadata: { userId },
         }
       );
-      return (data as Profile) ?? null;
+
+      let nextFreelancer: Freelancer | null = null;
+      if (nextProfile?.role === 'freelancer') {
+        nextFreelancer = await runWithAsyncGuard(
+          'auth.fetchFreelancer',
+          () => getFreelancerByUserId(userId),
+          {
+            fallbackMessage: 'Impossible de récupérer les informations freelancer.',
+            metadata: { userId },
+          }
+        );
+      }
+
+      if (!mountedRef.current || requestId !== authRequestRef.current) {
+        return { profile: null, freelancer: null };
+      }
+
+      setProfile(nextProfile);
+      setFreelancer(nextFreelancer);
+
+      return { profile: nextProfile, freelancer: nextFreelancer };
     } catch (err) {
-      console.error('[Auth] fetchProfile error', {
-        userId,
-        message: toErrorMessage(err),
-      });
-      return null;
+      if (mountedRef.current && requestId === authRequestRef.current) {
+        setProfile(null);
+        setFreelancer(null);
+      }
+      throw err;
     }
   };
 
-  const syncProfile = async (userId: string | null) => {
-    const requestId = ++profileRequestRef.current;
-
-    if (!userId) {
-      if (mountedRef.current) {
-        setProfile(null);
-      }
-      return null;
-    }
-
-    const nextProfile = await getProfileByUserId(userId);
-    if (!mountedRef.current || requestId !== profileRequestRef.current) {
-      return null;
-    }
-
-    setProfile(nextProfile);
-    return nextProfile;
+  const refreshAuthState = async () => {
+    await syncAuthState(user?.id ?? session?.user?.id ?? null);
   };
 
   useEffect(() => {
@@ -106,8 +166,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         setSession(nextSession);
         setUser(nextSession?.user ?? null);
-
-        await syncProfile(nextSession?.user?.id ?? null);
+        await syncAuthState(nextSession?.user?.id ?? null);
       } catch (err) {
         const message = toErrorMessage(err, 'Impossible d’initialiser la session.');
         console.error('[Auth] init error', { message });
@@ -116,6 +175,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setSession(null);
           setUser(null);
           setProfile(null);
+          setFreelancer(null);
         }
       } finally {
         if (mountedRef.current) setLoading(false);
@@ -131,10 +191,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       authEventCounter += 1;
       const eventId = authEventCounter;
-      // console.info('[Auth] state change', {
-      //   event: _event,
-      //   hasSession: Boolean(nextSession),
-      // });
 
       if (!mountedRef.current) return;
 
@@ -142,20 +198,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(nextSession?.user ?? null);
 
       void (async () => {
-        if (!nextSession?.user) {
-          profileRequestRef.current += 1;
-          if (mountedRef.current) {
+        try {
+          const hydrated = await syncAuthState(nextSession?.user?.id ?? null);
+          if (!mountedRef.current || eventId !== authEventCounter) return;
+
+          if (!nextSession?.user) {
             setProfile(null);
+            setFreelancer(null);
+            return;
           }
-          return;
-        }
 
-        const nextProfile = await getProfileByUserId(nextSession.user.id);
-        if (!mountedRef.current || eventId !== authEventCounter) {
-          return;
+          setProfile(hydrated.profile);
+          setFreelancer(hydrated.freelancer);
+        } catch (err) {
+          const message = toErrorMessage(err, 'Impossible de synchroniser la session.');
+          console.error('[Auth] state sync failure', { message });
+          if (mountedRef.current && eventId === authEventCounter) {
+            setError(message);
+            setProfile(null);
+            setFreelancer(null);
+          }
         }
-
-        setProfile(nextProfile);
       })();
     });
 
@@ -165,10 +228,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const login = async (email: string, password: string): Promise<Profile> => {
+  const login = async (email: string, password: string): Promise<LoginResult> => {
     try {
       setError(null);
-      const nextProfile = await runWithAsyncGuard(
+
+      const result = await runWithAsyncGuard(
         'auth.login',
         async () => {
           const {
@@ -177,18 +241,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           } = await supabase.auth.signInWithPassword({ email, password });
 
           if (signInError) throw signInError;
-          if (!loggedUser) throw new Error('Utilisateur introuvable.');
+          if (!loggedUser || !nextSession) throw new Error('Utilisateur introuvable.');
 
-          const fetchedProfile = await getProfileByUserId(loggedUser.id);
-          if (!fetchedProfile) throw new Error('Profil introuvable pour ce compte.');
+          const nextProfile = await getProfileByUserId(loggedUser.id);
+          if (!nextProfile) {
+            await supabase.auth.signOut();
+            throw new Error('Profil introuvable pour ce compte.');
+          }
+
+          let nextFreelancer: Freelancer | null = null;
+          if (nextProfile.role === 'freelancer') {
+            nextFreelancer = await getFreelancerByUserId(loggedUser.id);
+            if (!nextFreelancer) {
+              await supabase.auth.signOut();
+              throw new Error('Aucune candidature freelancer associée à ce compte.');
+            }
+          }
 
           if (mountedRef.current) {
             setSession(nextSession);
             setUser(loggedUser);
-            setProfile(fetchedProfile);
+            setProfile(nextProfile);
+            setFreelancer(nextFreelancer);
           }
 
-          return fetchedProfile;
+          return {
+            profile: nextProfile,
+            freelancer: nextFreelancer,
+          };
         },
         {
           fallbackMessage: 'La connexion a expiré. Veuillez réessayer.',
@@ -196,8 +276,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       );
 
-      if (!nextProfile) throw new Error('Profil introuvable pour ce compte.');
-      return nextProfile;
+      return result;
     } catch (err) {
       setError(toErrorMessage(err));
       throw err;
@@ -214,6 +293,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(null);
       setUser(null);
       setProfile(null);
+      setFreelancer(null);
       window.location.href = '/';
     } catch (err) {
       setError(toErrorMessage(err));
@@ -266,15 +346,88 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setError(null);
       if (!profile) throw new Error('Aucun profil chargé');
-      const nextProfile = await runWithAsyncGuard(
+
+      const allowedUpdates: Partial<Profile> = {};
+
+      if ('full_name' in updates) {
+        allowedUpdates.full_name = updates.full_name ?? null;
+      }
+
+      if ('avatar_url' in updates) {
+        allowedUpdates.avatar_url = updates.avatar_url ?? null;
+      }
+
+      const { data, error: updateError } = await runWithAsyncGuard(
         'auth.updateProfile',
-        () => updateProfileRecord(profile.user_id, updates),
+        async () =>
+          supabase
+            .from('profiles')
+            .update(allowedUpdates)
+            .eq('user_id', profile.user_id)
+            .select(PROFILE_COLUMNS)
+            .single(),
         {
           fallbackMessage: 'La mise à jour du profil a expiré.',
           metadata: { userId: profile.user_id },
         }
       );
-      setProfile(nextProfile as Profile);
+
+      if (updateError) throw updateError;
+      setProfile(data as Profile);
+    } catch (err) {
+      setError(toErrorMessage(err));
+      throw err;
+    }
+  };
+
+  const updateFreelancer = async (updates: Partial<Freelancer>) => {
+    try {
+      setError(null);
+      if (!profile || profile.role !== 'freelancer' || !freelancer) {
+        throw new Error('Aucun profil freelancer chargé');
+      }
+
+      const allowedUpdates: Partial<Freelancer> = {};
+
+      if ('phone_number' in updates) {
+        allowedUpdates.phone_number = updates.phone_number ?? null;
+      }
+      if ('tarif_jour' in updates) {
+        allowedUpdates.tarif_jour = updates.tarif_jour ?? null;
+      }
+      if ('bio' in updates) {
+        allowedUpdates.bio = updates.bio ?? null;
+      }
+      if ('specialite' in updates) {
+        allowedUpdates.specialite = updates.specialite ?? null;
+      }
+      if ('onboarding_completed' in updates) {
+        allowedUpdates.onboarding_completed = Boolean(updates.onboarding_completed);
+      }
+      if ('statut' in updates && updates.statut) {
+        allowedUpdates.statut = updates.statut;
+      }
+      if ('archived_at' in updates) {
+        allowedUpdates.archived_at = updates.archived_at ?? null;
+      }
+
+      const { data, error: updateError } = await runWithAsyncGuard(
+        'auth.updateFreelancer',
+        async () =>
+          supabase
+            .from('freelancers')
+            .update(allowedUpdates)
+            .eq('user_id', profile.user_id)
+            .select(FREELANCER_COLUMNS)
+            .single(),
+        {
+          fallbackMessage: 'La mise à jour du profil freelancer a expiré.',
+          metadata: { userId: profile.user_id },
+        }
+      );
+
+      if (updateError) throw updateError;
+      setFreelancer(data as Freelancer);
     } catch (err) {
       setError(toErrorMessage(err));
       throw err;
@@ -289,6 +442,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         session,
         user,
         profile,
+        freelancer,
         loading,
         error,
         login,
@@ -296,6 +450,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         resetPassword,
         updatePassword,
         updateProfile,
+        updateFreelancer,
+        refreshAuthState,
         clearError,
       }}
     >
@@ -303,6 +459,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     </AuthContext.Provider>
   );
 }
+
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) throw new Error('useAuth must be used within an AuthProvider');
