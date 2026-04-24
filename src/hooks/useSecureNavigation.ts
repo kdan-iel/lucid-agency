@@ -3,7 +3,7 @@
  * Valide les URLs avant toute redirection pour éviter les open redirects.
  */
 
-const ALLOWED_INTERNAL_PATHS = ['/', '/join', '/dashboard', '/admin', '/login', '/reset-password'];
+const ALLOWED_INTERNAL_PATHS = ['/', '/join', '/dashboard', '/admin', '/login', '/update-password'];
 
 /**
  * Navigue vers un chemin interne validé.

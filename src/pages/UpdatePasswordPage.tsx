@@ -12,25 +12,12 @@ import { useTimeoutRegistry } from '../hooks/useTimeoutRegistry';
 type FormErrors = Partial<Record<keyof ResetPasswordFormInput, string>>;
 type PageState = 'loading' | 'ready' | 'success' | 'invalid';
 
-function scrubRecoveryUrl() {
+function scrubAuthRedirectUrl() {
   if (!window.location.search && !window.location.hash) return;
   window.history.replaceState({}, '', window.location.pathname);
 }
 
-function hasRecoveryLinkParams() {
-  const searchParams = new URLSearchParams(window.location.search);
-  const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
-  const authType = searchParams.get('type') ?? hashParams.get('type');
-
-  return (
-    authType === 'recovery' ||
-    hashParams.has('access_token') ||
-    hashParams.has('refresh_token') ||
-    searchParams.has('code')
-  );
-}
-
-export default function ResetPasswordPage() {
+export default function UpdatePasswordPage() {
   const { t } = useLanguage();
   const [form, setForm] = useState<ResetPasswordFormInput>({ password: '', confirmPassword: '' });
   const [errors, setErrors] = useState<FormErrors>({});
@@ -53,9 +40,9 @@ export default function ResetPasswordPage() {
     return lookup[message] ?? message;
   };
 
-  const navigateToLogin = () => {
-    if (window.location.pathname === '/login') return;
-    window.history.pushState({}, '', '/login');
+  const navigateTo = (path: string) => {
+    if (window.location.pathname === path) return;
+    window.history.pushState({}, '', path);
     window.dispatchEvent(new PopStateEvent('popstate'));
   };
 
@@ -80,29 +67,44 @@ export default function ResetPasswordPage() {
 
   useEffect(() => {
     let active = true;
-    const hasRecoveryParams = hasRecoveryLinkParams();
+    let sessionResolved = false;
+
+    const allowPasswordUpdate = () => {
+      if (!active || sessionResolved) return;
+      sessionResolved = true;
+      clearAll();
+      scrubAuthRedirectUrl();
+      setPageState('ready');
+      setServerError('');
+    };
+
+    const denyPasswordUpdate = (message: string) => {
+      if (!active || sessionResolved) return;
+      sessionResolved = true;
+      clearAll();
+      setPageState('invalid');
+      setServerError(message);
+    };
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (!active) return;
 
-      if (event === 'PASSWORD_RECOVERY' && session) {
-        scrubRecoveryUrl();
-        setPageState('ready');
-        setServerError('');
+      if (
+        session &&
+        (event === 'INITIAL_SESSION' ||
+          event === 'SIGNED_IN' ||
+          event === 'PASSWORD_RECOVERY' ||
+          event === 'TOKEN_REFRESHED')
+      ) {
+        allowPasswordUpdate();
       }
     });
 
     const initializeRecovery = async () => {
       setPageState('loading');
       setServerError('');
-
-      if (!hasRecoveryParams) {
-        setPageState('invalid');
-        setServerError(t('resetPassword.error.invalidLink'));
-        return;
-      }
 
       try {
         const {
@@ -114,20 +116,17 @@ export default function ResetPasswordPage() {
         if (!active) return;
 
         if (session) {
-          scrubRecoveryUrl();
-          setPageState('ready');
+          allowPasswordUpdate();
           return;
         }
 
         schedule(() => {
           if (!active) return;
-          setPageState('invalid');
-          setServerError(t('resetPassword.error.missingRecoverySession'));
+          denyPasswordUpdate(t('resetPassword.error.invalidLink'));
         }, 1500);
       } catch (err) {
         if (!active) return;
-        setPageState('invalid');
-        setServerError(mapRecoveryError(toErrorMessage(err, t('resetPassword.error.generic'))));
+        denyPasswordUpdate(mapRecoveryError(toErrorMessage(err, t('resetPassword.error.generic'))));
       }
     };
 
@@ -176,6 +175,22 @@ export default function ResetPasswordPage() {
     setIsSubmitting(true);
 
     try {
+      const {
+        data: { session },
+      } = await runWithAsyncGuard(
+        'auth.getSessionBeforePasswordUpdate',
+        () => supabase.auth.getSession(),
+        {
+          fallbackMessage: t('resetPassword.error.missingRecoverySession'),
+        }
+      );
+
+      if (!session) {
+        setPageState('invalid');
+        setServerError(t('resetPassword.error.invalidLink'));
+        return;
+      }
+
       const { error } = await runWithAsyncGuard(
         'auth.updateRecoveredPassword',
         () => supabase.auth.updateUser({ password: result.data.password }),
@@ -188,15 +203,15 @@ export default function ResetPasswordPage() {
         throw error;
       }
 
+      clearAll();
       setPageState('success');
 
       schedule(() => {
-        void supabase.auth.signOut();
-        navigateToLogin();
+        navigateTo('/dashboard');
       }, 2000);
     } catch (err) {
       const message = toErrorMessage(err, t('resetPassword.error.generic'));
-      console.error('[ResetPasswordPage] password update failure', { message });
+      console.error('[UpdatePasswordPage] password update failure', { message });
       setServerError(mapRecoveryError(message));
     } finally {
       setIsSubmitting(false);
@@ -226,7 +241,7 @@ export default function ResetPasswordPage() {
           </p>
           <button
             type="button"
-            onClick={navigateToLogin}
+            onClick={() => navigateTo('/login')}
             className="rounded-xl bg-brand-mint px-6 py-3 font-bold text-[#0D1117] transition-all hover:scale-[1.02]"
           >
             {t('resetPassword.invalid.cta')}

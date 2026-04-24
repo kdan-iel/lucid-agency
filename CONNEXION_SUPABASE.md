@@ -15,6 +15,7 @@
 ```
 VITE_SUPABASE_URL=https://votre-projet.supabase.co
 VITE_SUPABASE_ANON_KEY=votre_anon_key
+VITE_APP_URL=https://votre-domaine.com
 ```
 2. Ces valeurs se trouvent dans Supabase → **Settings → API**
 
@@ -32,6 +33,15 @@ VALUES ('VOTRE_UUID', 'admin@lucid-agency.com', 'Admin', 'LUCID', 'admin');
 Dans votre dashboard Vercel → **Settings → Environment Variables** :
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
+- `VITE_APP_URL`
+
+## Réinitialisation du mot de passe
+
+Dans **Supabase > Authentication > URL Configuration**, ajoutez cette URL de redirection :
+
+- `https://votre-domaine.com/update-password`
+
+Le front utilise ensuite `supabase.auth.resetPasswordForEmail(..., { redirectTo })` avec cette URL.
 
 ## Étape 6 — Lancer en local
 ```bash

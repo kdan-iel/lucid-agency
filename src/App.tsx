@@ -23,7 +23,7 @@ import DashboardPage from './pages/DashboardPage';
 import AdminPage from './pages/AdminPage';
 import LoginPage from './pages/LoginPage';
 import CompleteProfilePage from './pages/CompleteProfilePage';
-import ResetPasswordPage from './pages/ResetPasswordPage';
+import UpdatePasswordPage from './pages/UpdatePasswordPage';
 import NotFoundPage from './pages/NotFoundPage';
 import PrivacyPage from './pages/PrivacyPage';
 import LegalPage from './pages/LegalPage';
@@ -55,7 +55,7 @@ const VALID_PATHS = [
   '/admin/login',
   '/login',
   '/complete-profile',
-  '/reset-password',
+  '/update-password',
   '/privacy',
   '/legal',
 ];
@@ -126,8 +126,8 @@ function AppContent() {
         return <LoginPage role="freelancer" />;
       case '/admin/login':
         return <LoginPage role="admin" />;
-      case '/reset-password':
-        return <ResetPasswordPage />;
+      case '/update-password':
+        return <UpdatePasswordPage />;
       case '/privacy':
         return <PrivacyPage />;
       case '/legal':

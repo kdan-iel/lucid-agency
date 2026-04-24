@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabaseClient';
+import { getPasswordUpdateRedirectUrl } from '../utils/authRedirect';
 import { runWithAsyncGuard, toErrorMessage } from '../utils/asyncTools';
 
 const PROFILE_COLUMNS = 'id, user_id, email, full_name, role, avatar_url';
@@ -309,7 +310,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         'auth.resetPassword',
         async () => {
           const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-            redirectTo: `${window.location.origin}/reset-password`,
+            redirectTo: getPasswordUpdateRedirectUrl(),
           });
           if (resetError) throw resetError;
         },

@@ -240,7 +240,7 @@ jobs:
           URL="https://lucidagence.com"
 
           # Les routes SPA doivent retourner 200 (pas 404)
-          for route in "/join" "/login" "/privacy" "/legal"; do
+          for route in "/join" "/login" "/update-password" "/privacy" "/legal"; do
             STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$URL$route")
             if [ "$STATUS" != "200" ]; then
               echo "❌ Route $route returned HTTP $STATUS (expected 200)"
