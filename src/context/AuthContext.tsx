@@ -7,6 +7,25 @@ import { runWithAsyncGuard, toErrorMessage } from '../utils/asyncTools';
 const PROFILE_COLUMNS = 'id, user_id, email, full_name, role, avatar_url';
 const FREELANCER_COLUMNS =
   'id, user_id, statut, phone_number, tarif_jour, bio, specialite, portfolio_url, onboarding_completed, archived_at';
+const PASSWORD_UPDATE_PATH = '/update-password';
+const AUTH_HYDRATION_GRACE_MS = 1500;
+
+function shouldDelayInitialHydration() {
+  if (typeof window === 'undefined') return false;
+
+  return (
+    window.location.pathname === PASSWORD_UPDATE_PATH &&
+    Boolean(window.location.search || window.location.hash)
+  );
+}
+
+function scrubPasswordUpdateUrl() {
+  if (typeof window === 'undefined') return;
+  if (window.location.pathname !== PASSWORD_UPDATE_PATH) return;
+  if (!window.location.search && !window.location.hash) return;
+
+  window.history.replaceState({}, document.title, PASSWORD_UPDATE_PATH);
+}
 
 export interface Profile {
   id: string;
@@ -148,6 +167,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     mountedRef.current = true;
+    let initialHydrationSettled = false;
+    let hydrationTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const clearHydrationTimer = () => {
+      if (!hydrationTimer) return;
+      clearTimeout(hydrationTimer);
+      hydrationTimer = null;
+    };
+
+    const settleInitialHydration = () => {
+      if (!mountedRef.current || initialHydrationSettled) return;
+
+      initialHydrationSettled = true;
+      clearHydrationTimer();
+      scrubPasswordUpdateUrl();
+      setLoading(false);
+    };
 
     const initAuth = async () => {
       setLoading(true);
@@ -169,6 +205,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(nextSession);
         setUser(nextSession?.user ?? null);
         await syncAuthState(nextSession?.user?.id ?? null);
+
+        if (nextSession || !shouldDelayInitialHydration()) {
+          settleInitialHydration();
+          return;
+        }
+
+        hydrationTimer = setTimeout(() => {
+          if (!mountedRef.current) return;
+
+          setSession(null);
+          setUser(null);
+          setProfile(null);
+          setFreelancer(null);
+          settleInitialHydration();
+        }, AUTH_HYDRATION_GRACE_MS);
       } catch (err) {
         const message = toErrorMessage(err, 'Impossible d’initialiser la session.');
         console.error('[Auth] init error', { message });
@@ -179,8 +230,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setProfile(null);
           setFreelancer(null);
         }
+        settleInitialHydration();
       } finally {
-        if (mountedRef.current) setLoading(false);
+        if (!shouldDelayInitialHydration()) {
+          settleInitialHydration();
+        }
       }
     };
 
@@ -190,7 +244,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    } = supabase.auth.onAuthStateChange((event, nextSession) => {
       authEventCounter += 1;
       const eventId = authEventCounter;
 
@@ -207,11 +261,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (!nextSession?.user) {
             setProfile(null);
             setFreelancer(null);
+            if (event === 'SIGNED_OUT' || !shouldDelayInitialHydration()) {
+              settleInitialHydration();
+            }
             return;
           }
 
           setProfile(hydrated.profile);
           setFreelancer(hydrated.freelancer);
+          settleInitialHydration();
         } catch (err) {
           const message = toErrorMessage(err, 'Impossible de synchroniser la session.');
           console.error('[Auth] state sync failure', { message });
@@ -220,12 +278,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setProfile(null);
             setFreelancer(null);
           }
+          settleInitialHydration();
         }
       })();
     });
 
     return () => {
       mountedRef.current = false;
+      clearHydrationTimer();
       subscription.unsubscribe();
     };
   }, []);

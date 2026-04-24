@@ -1,30 +1,25 @@
-import { useEffect, useState } from 'react';
-import type { Session } from '@supabase/supabase-js';
+import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { motion } from 'motion/react';
 import { Eye, EyeOff, Lock, CheckCircle, AlertTriangle } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
-import { supabase } from '../lib/supabaseClient';
 import { resetPasswordFormSchema, type ResetPasswordFormInput } from '../schemas';
-import { runWithAsyncGuard, toErrorMessage } from '../utils/asyncTools';
-import { useTimeoutRegistry } from '../hooks/useTimeoutRegistry';
+import { toErrorMessage } from '../utils/asyncTools';
 
 type FormErrors = Partial<Record<keyof ResetPasswordFormInput, string>>;
-const SESSION_HYDRATION_TIMEOUT_MS = 1500;
 
 export default function UpdatePasswordPage() {
+  const { session, loading: authLoading, updatePassword, clearError } = useAuth();
   const { t } = useLanguage();
   const [form, setForm] = useState<ResetPasswordFormInput>({ password: '', confirmPassword: '' });
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
   const [errors, setErrors] = useState<FormErrors>({});
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [serverError, setServerError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { clearAll, schedule } = useTimeoutRegistry();
 
   const translateValidationMessage = (message: string) => {
     const lookup: Record<string, string> = {
@@ -36,12 +31,6 @@ export default function UpdatePasswordPage() {
     };
 
     return lookup[message] ?? message;
-  };
-
-  const navigateTo = (path: string) => {
-    if (window.location.pathname === path) return;
-    window.history.pushState({}, '', path);
-    window.dispatchEvent(new PopStateEvent('popstate'));
   };
 
   const mapRecoveryError = (message: string) => {
@@ -63,86 +52,7 @@ export default function UpdatePasswordPage() {
     return t('resetPassword.error.generic');
   };
 
-  useEffect(() => {
-    let active = true;
-    let hydrationTimeout: number | null = null;
-
-    const clearHydrationTimeout = () => {
-      if (hydrationTimeout === null) return;
-      window.clearTimeout(hydrationTimeout);
-      hydrationTimeout = null;
-    };
-
-    const resolveSession = (nextSession: Session | null) => {
-      if (!active) return;
-      clearHydrationTimeout();
-      setSession(nextSession);
-      setLoading(false);
-    };
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!active) return;
-
-      if (session) {
-        resolveSession(session);
-        return;
-      }
-
-      if (event === 'SIGNED_OUT') {
-        resolveSession(null);
-      }
-    });
-
-    const initializeRecovery = async () => {
-      setLoading(true);
-      setServerError('');
-
-      try {
-        const {
-          data: { session: nextSession },
-        } = await runWithAsyncGuard('auth.getSession', () => supabase.auth.getSession(), {
-          fallbackMessage: t('resetPassword.error.missingRecoverySession'),
-        });
-
-        if (!active) return;
-
-        if (nextSession) {
-          resolveSession(nextSession);
-          return;
-        }
-
-        hydrationTimeout = window.setTimeout(() => {
-          if (!active) return;
-          resolveSession(null);
-        }, SESSION_HYDRATION_TIMEOUT_MS);
-      } catch (err) {
-        if (!active) return;
-        clearHydrationTimeout();
-        setSession(null);
-        setLoading(false);
-        setServerError(mapRecoveryError(toErrorMessage(err, t('resetPassword.error.generic'))));
-      }
-    };
-
-    void initializeRecovery();
-
-    return () => {
-      active = false;
-      clearHydrationTimeout();
-      clearAll();
-      subscription.unsubscribe();
-    };
-  }, [clearAll, t]);
-
-  useEffect(() => {
-    if (loading) return;
-    if (!window.location.search && !window.location.hash) return;
-    window.history.replaceState({}, document.title, '/update-password');
-  }, [loading, session]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setForm((previous) => ({ ...previous, [name]: value }));
 
@@ -155,11 +65,11 @@ export default function UpdatePasswordPage() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    clearAll();
     setErrors({});
     setServerError('');
+    clearError();
 
     const result = resetPasswordFormSchema.safeParse(form);
 
@@ -178,42 +88,8 @@ export default function UpdatePasswordPage() {
     setIsSubmitting(true);
 
     try {
-      const {
-        data: { session: nextSession },
-      } = await runWithAsyncGuard(
-        'auth.getSessionBeforePasswordUpdate',
-        () => supabase.auth.getSession(),
-        {
-          fallbackMessage: t('resetPassword.error.missingRecoverySession'),
-        }
-      );
-
-      if (!nextSession) {
-        setSession(null);
-        setServerError(t('resetPassword.error.invalidLink'));
-        return;
-      }
-
-      setSession(nextSession);
-
-      const { error } = await runWithAsyncGuard(
-        'auth.updateRecoveredPassword',
-        () => supabase.auth.updateUser({ password: result.data.password }),
-        {
-          fallbackMessage: t('resetPassword.error.generic'),
-        }
-      );
-
-      if (error) {
-        throw error;
-      }
-
-      clearAll();
+      await updatePassword(result.data.password);
       setIsSuccess(true);
-
-      schedule(() => {
-        navigateTo('/dashboard');
-      }, 2000);
     } catch (err) {
       const message = toErrorMessage(err, t('resetPassword.error.generic'));
       console.error('[UpdatePasswordPage] password update failure', { message });
@@ -224,7 +100,7 @@ export default function UpdatePasswordPage() {
   };
 
   const renderContent = () => {
-    if (loading) {
+    if (authLoading) {
       return (
         <div className="text-center">
           <div className="mx-auto mb-6 h-12 w-12 animate-spin rounded-full border-b-2 border-brand-mint" />
@@ -244,13 +120,12 @@ export default function UpdatePasswordPage() {
           <p className="mb-8 text-brand-gray">
             {serverError || t('resetPassword.error.invalidLink')}
           </p>
-          <button
-            type="button"
-            onClick={() => navigateTo('/login')}
-            className="rounded-xl bg-brand-mint px-6 py-3 font-bold text-[#0D1117] transition-all hover:scale-[1.02]"
+          <a
+            href="/login"
+            className="inline-flex rounded-xl bg-brand-mint px-6 py-3 font-bold text-[#0D1117] transition-all hover:scale-[1.02]"
           >
             {t('resetPassword.invalid.cta')}
-          </button>
+          </a>
         </div>
       );
     }
@@ -260,7 +135,6 @@ export default function UpdatePasswordPage() {
         <div className="text-center">
           <CheckCircle size={64} className="mx-auto mb-4 text-brand-mint" />
           <h1 className="mb-3 text-2xl font-bold">{t('resetPassword.success.title')}</h1>
-          <p className="text-brand-gray">{t('resetPassword.success.body')}</p>
         </div>
       );
     }

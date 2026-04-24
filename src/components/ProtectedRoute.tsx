@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -8,6 +8,14 @@ interface ProtectedRouteProps {
   allowIncompleteFreelancer?: boolean;
 }
 
+function BlockedState({ message }: { message: string }) {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-[var(--bg-primary)]">
+      <p className="text-brand-gray text-sm">{message}</p>
+    </div>
+  );
+}
+
 export function ProtectedRoute({
   children,
   requiredRole,
@@ -15,40 +23,6 @@ export function ProtectedRoute({
 }: ProtectedRouteProps) {
   const { session, profile, freelancer, loading } = useAuth();
   const { t } = useLanguage();
-
-  useEffect(() => {
-    if (loading) return;
-
-    if (!session || !profile || profile.role !== requiredRole) {
-      window.location.href = '/';
-      return;
-    }
-
-    if (requiredRole !== 'freelancer') {
-      return;
-    }
-
-    if (!freelancer) {
-      window.location.href = '/login';
-      return;
-    }
-
-    if (freelancer.statut !== 'validated') {
-      window.location.href = '/login';
-      return;
-    }
-
-    if (allowIncompleteFreelancer) {
-      if (freelancer.onboarding_completed) {
-        window.location.href = '/dashboard';
-      }
-      return;
-    }
-
-    if (!freelancer.onboarding_completed) {
-      window.location.href = '/complete-profile';
-    }
-  }, [allowIncompleteFreelancer, freelancer, loading, profile, requiredRole, session]);
 
   if (loading) {
     return (
@@ -61,38 +35,32 @@ export function ProtectedRoute({
     );
   }
 
-  if (!session || !profile || profile.role !== requiredRole) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--bg-primary)]">
-        <p className="text-brand-gray text-sm">{t('common.redirecting')}</p>
-      </div>
-    );
+  if (!session) {
+    return <BlockedState message={t('common.redirecting')} />;
   }
 
-  if (requiredRole === 'freelancer') {
-    if (!freelancer || freelancer.statut !== 'validated') {
-      return (
-        <div className="min-h-screen flex items-center justify-center bg-[var(--bg-primary)]">
-          <p className="text-brand-gray text-sm">{t('common.redirecting')}</p>
-        </div>
-      );
+  if (!profile || profile.role !== requiredRole) {
+    return <BlockedState message={t('common.redirecting')} />;
+  }
+
+  if (requiredRole !== 'freelancer') {
+    return <>{children}</>;
+  }
+
+  if (!freelancer || freelancer.statut !== 'validated') {
+    return <BlockedState message={t('common.redirecting')} />;
+  }
+
+  if (allowIncompleteFreelancer) {
+    if (freelancer.onboarding_completed) {
+      return <BlockedState message={t('common.redirecting')} />;
     }
 
-    if (allowIncompleteFreelancer) {
-      if (freelancer.onboarding_completed) {
-        return (
-          <div className="min-h-screen flex items-center justify-center bg-[var(--bg-primary)]">
-            <p className="text-brand-gray text-sm">{t('common.redirecting')}</p>
-          </div>
-        );
-      }
-    } else if (!freelancer.onboarding_completed) {
-      return (
-        <div className="min-h-screen flex items-center justify-center bg-[var(--bg-primary)]">
-          <p className="text-brand-gray text-sm">{t('common.redirecting')}</p>
-        </div>
-      );
-    }
+    return <>{children}</>;
+  }
+
+  if (!freelancer.onboarding_completed) {
+    return <BlockedState message={t('common.redirecting')} />;
   }
 
   return <>{children}</>;

@@ -184,6 +184,6 @@ describe('CompleteProfilePage', () => {
     );
 
     expect(container).toHaveTextContent(/redirection en cours/i);
-    expect(mockLocation.href).toContain('/');
+    expect(mockLocation.href).toContain('/complete-profile');
   });
 });
