@@ -27,6 +27,8 @@ import {
 import Navbar from '../components/Navbar';
 import { validatePassword } from '../utils/security';
 import {
+  type AdminContactRecord,
+  type AdminFreelancerRecord,
   listAdminContacts,
   listAdminFreelancers,
   validateAdminFreelancer,
@@ -53,6 +55,7 @@ interface TalentRequest {
 interface ClientContact {
   id: string;
   name: string;
+  firstName?: string | null;
   company: string;
   email: string;
   phone: string;
@@ -60,12 +63,90 @@ interface ClientContact {
   budget: string;
   message: string;
   date: string;
+  submittedAt?: string | null;
+  status?: string | null;
 }
 
 type SettingsTab = 'main' | 'security' | 'system';
 
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100] as const;
+const ADMIN_BATCH_SIZE = 100;
+
+interface PaginationControlsProps {
+  page: number;
+  pageSize: number;
+  total: number;
+  t: (key: string) => string;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (pageSize: number) => void;
+}
+
+function PaginationControls({
+  page,
+  pageSize,
+  total,
+  t,
+  onPageChange,
+  onPageSizeChange,
+}: PaginationControlsProps) {
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const start = total === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const end = total === 0 ? 0 : Math.min(currentPage * pageSize, total);
+
+  return (
+    <div className="mt-6 flex flex-col gap-4 border-t border-[var(--border-color)] pt-4 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex flex-col gap-3 text-sm text-brand-gray sm:flex-row sm:items-center">
+        <label className="flex items-center gap-2">
+          <span>{t('admin.pagination.rowsPerPage')}</span>
+          <select
+            value={pageSize}
+            onChange={(e) => onPageSizeChange(Number(e.target.value))}
+            className="bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:border-brand-mint"
+          >
+            {PAGE_SIZE_OPTIONS.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </label>
+        <span>
+          {total === 0
+            ? t('admin.pagination.noResults')
+            : `${start}-${end} ${t('admin.pagination.of')} ${total} ${t('admin.pagination.results')}`}
+        </span>
+      </div>
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <span className="text-sm text-brand-gray">
+          {`${t('admin.pagination.page')} ${currentPage} ${t('admin.pagination.on')} ${totalPages}`}
+        </span>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => onPageChange(currentPage - 1)}
+            disabled={currentPage <= 1}
+            className="rounded-xl border border-[var(--border-color)] px-4 py-2 text-sm font-medium text-brand-gray transition-all hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {t('admin.pagination.previous')}
+          </button>
+          <button
+            type="button"
+            onClick={() => onPageChange(currentPage + 1)}
+            disabled={currentPage >= totalPages}
+            className="rounded-xl border border-[var(--border-color)] px-4 py-2 text-sm font-medium text-brand-gray transition-all hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {t('admin.pagination.next')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminPage() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const { logout, profile, session, updatePassword } = useAuth();
   const [activeTab, setActiveTab] = useState('talents');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -81,23 +162,48 @@ export default function AdminPage() {
   const [contactsError, setContactsError] = useState('');
   const [updatingTalentId, setUpdatingTalentId] = useState<string | null>(null);
   const [selectedTalent, setSelectedTalent] = useState<TalentRequest | null>(null);
+  const [selectedContact, setSelectedContact] = useState<ClientContact | null>(null);
   const [isRejectMode, setIsRejectMode] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
   const [rejectionError, setRejectionError] = useState('');
   const [activeSettingsTab, setActiveSettingsTab] = useState<SettingsTab>('main');
   const [passwordForm, setPasswordForm] = useState({ new: '', confirm: '' });
   const [showPwd, setShowPwd] = useState(false);
+  const [talentsPage, setTalentsPage] = useState(1);
+  const [talentsPageSize, setTalentsPageSize] = useState<number>(PAGE_SIZE_OPTIONS[0]);
+  const [contactsPage, setContactsPage] = useState(1);
+  const [contactsPageSize, setContactsPageSize] = useState<number>(PAGE_SIZE_OPTIONS[0]);
   const [settingsStatus, setSettingsStatus] = useState<'idle' | 'saving' | 'success' | 'error'>(
     'idle'
   );
   const [settingsError, setSettingsError] = useState('');
   const { clearAll, schedule } = useTimeoutRegistry();
+  const dateLocale = lang === 'FR' ? 'fr-FR' : 'en-US';
+
+  const formatDate = (value?: string | null) =>
+    value ? new Date(value).toLocaleDateString(dateLocale) : t('admin.common.na');
+
+  const formatDateTime = (value?: string | null) =>
+    value ? new Date(value).toLocaleString(dateLocale) : t('admin.common.na');
+
+  const normalizeContactStatus = (value?: string | null) => {
+    if (!value?.trim()) return t('admin.common.na');
+
+    return value
+      .trim()
+      .replace(/[_-]+/g, ' ')
+      .replace(/\b\w/g, (char) => char.toUpperCase());
+  };
 
   const closeSelectedTalent = () => {
     setSelectedTalent(null);
     setIsRejectMode(false);
     setRejectionReason('');
     setRejectionError('');
+  };
+
+  const closeSelectedContact = () => {
+    setSelectedContact(null);
   };
 
   const loadTalents = async () => {
@@ -109,19 +215,30 @@ export default function AdminPage() {
         throw new Error(t('admin.error.invalidSession'));
       }
 
-      const { data } = await listAdminFreelancers(session.access_token, {
-        limit: 50,
-        offset: 0,
-      });
+      const allTalents: AdminFreelancerRecord[] = [];
+      let offset = 0;
 
-      const mapped: TalentRequest[] = data.map((freelancer) => ({
+      while (true) {
+        const response = await listAdminFreelancers(session.access_token, {
+          limit: ADMIN_BATCH_SIZE,
+          offset,
+        });
+
+        allTalents.push(...response.data);
+
+        if (response.data.length === 0 || response.data.length < ADMIN_BATCH_SIZE) {
+          break;
+        }
+
+        offset += response.data.length;
+      }
+
+      const mapped: TalentRequest[] = allTalents.map((freelancer) => ({
         id: freelancer.id,
         user_id: freelancer.user_id,
         name: freelancer.profiles?.full_name?.trim() || t('admin.common.na'),
         specialty: freelancer.specialite?.trim() || freelancer.domaine,
-        date: freelancer.created_at
-          ? new Date(freelancer.created_at).toLocaleDateString('fr-FR')
-          : t('admin.common.na'),
+        date: formatDate(freelancer.created_at),
         status: freelancer.statut,
         email: freelancer.profiles?.email ?? '',
         phone: freelancer.phone_number ?? t('admin.common.na'),
@@ -151,14 +268,28 @@ export default function AdminPage() {
         throw new Error(t('admin.error.invalidSession'));
       }
 
-      const { data } = await listAdminContacts(session.access_token, {
-        limit: 50,
-        offset: 0,
-      });
+      const allContacts: AdminContactRecord[] = [];
+      let offset = 0;
 
-      const mapped: ClientContact[] = data.map((contact) => ({
+      while (true) {
+        const response = await listAdminContacts(session.access_token, {
+          limit: ADMIN_BATCH_SIZE,
+          offset,
+        });
+
+        allContacts.push(...response.data);
+
+        if (response.data.length === 0 || response.data.length < ADMIN_BATCH_SIZE) {
+          break;
+        }
+
+        offset += response.data.length;
+      }
+
+      const mapped: ClientContact[] = allContacts.map((contact) => ({
         id: contact.id,
         name: contact.nom?.trim() || contact.name?.trim() || t('admin.common.na'),
+        firstName: contact.prenom?.trim() || contact.first_name?.trim() || null,
         company: contact.entreprise?.trim() || contact.company?.trim() || t('admin.common.na'),
         email: contact.email?.trim() || t('admin.common.na'),
         phone: contact.phone_number?.trim() || contact.phone?.trim() || t('admin.common.na'),
@@ -166,9 +297,9 @@ export default function AdminPage() {
           contact.type_projet?.trim() || contact.project_type?.trim() || t('admin.common.na'),
         budget: contact.budget_estime?.trim() || contact.budget?.trim() || t('admin.common.na'),
         message: contact.message?.trim() || t('admin.common.na'),
-        date: contact.created_at
-          ? new Date(contact.created_at).toLocaleDateString('fr-FR')
-          : t('admin.common.na'),
+        date: formatDate(contact.created_at),
+        submittedAt: contact.created_at ?? null,
+        status: contact.status?.trim() || null,
       }));
 
       setContacts(mapped);
@@ -185,7 +316,7 @@ export default function AdminPage() {
     if (!session?.access_token) return;
     void loadTalents();
     void loadContacts();
-  }, [session?.access_token]);
+  }, [session?.access_token, lang]);
 
   useEffect(() => {
     setIsRejectMode(false);
@@ -319,6 +450,35 @@ export default function AdminPage() {
     [contacts, searchQuery]
   );
 
+  const paginatedRequests = useMemo(
+    () =>
+      filteredRequests.slice((talentsPage - 1) * talentsPageSize, talentsPage * talentsPageSize),
+    [filteredRequests, talentsPage, talentsPageSize]
+  );
+
+  const paginatedContacts = useMemo(
+    () =>
+      filteredContacts.slice(
+        (contactsPage - 1) * contactsPageSize,
+        contactsPage * contactsPageSize
+      ),
+    [filteredContacts, contactsPage, contactsPageSize]
+  );
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(filteredRequests.length / talentsPageSize));
+    if (talentsPage > totalPages) {
+      setTalentsPage(totalPages);
+    }
+  }, [filteredRequests.length, talentsPage, talentsPageSize]);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(filteredContacts.length / contactsPageSize));
+    if (contactsPage > totalPages) {
+      setContactsPage(totalPages);
+    }
+  }, [filteredContacts.length, contactsPage, contactsPageSize]);
+
   const sidebarItems = [
     { id: 'talents', icon: <Users size={20} />, label: t('admin.nav.talents') },
     { id: 'clients', icon: <Building2 size={20} />, label: t('admin.nav.clients') },
@@ -367,18 +527,22 @@ export default function AdminPage() {
             <input
               type="text"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setTalentsPage(1);
+              }}
               placeholder={t('admin.search.placeholder')}
               className="bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-full py-2 pl-10 pr-4 text-sm focus:outline-none focus:border-brand-mint w-full"
             />
           </div>
           <select
             value={statusFilter}
-            onChange={(e) =>
+            onChange={(e) => {
               setStatusFilter(
                 e.target.value as 'all' | 'pending' | 'validated' | 'rejected' | 'suspended'
-              )
-            }
+              );
+              setTalentsPage(1);
+            }}
             className="bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-2 text-sm text-brand-gray focus:outline-none"
           >
             <option value="all">{t('admin.filter.all')}</option>
@@ -418,7 +582,7 @@ export default function AdminPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--border-color)]">
-              {filteredRequests.map((row) => (
+              {paginatedRequests.map((row) => (
                 <tr
                   key={row.id}
                   className="hover:bg-white/5 transition-all cursor-pointer"
@@ -488,6 +652,17 @@ export default function AdminPage() {
               ))}
             </tbody>
           </table>
+          <PaginationControls
+            page={talentsPage}
+            pageSize={talentsPageSize}
+            total={filteredRequests.length}
+            t={t}
+            onPageChange={setTalentsPage}
+            onPageSizeChange={(pageSize) => {
+              setTalentsPageSize(pageSize);
+              setTalentsPage(1);
+            }}
+          />
         </div>
       )}
     </div>
@@ -502,7 +677,10 @@ export default function AdminPage() {
           <input
             type="text"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setContactsPage(1);
+            }}
             placeholder={t('admin.search.placeholder')}
             className="bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-full py-2 pl-10 pr-4 text-sm focus:outline-none focus:border-brand-mint w-full"
           />
@@ -533,11 +711,16 @@ export default function AdminPage() {
                 <th className="pb-4 font-medium">{t('admin.clients.table.projectType')}</th>
                 <th className="pb-4 font-medium">{t('admin.clients.table.budget')}</th>
                 <th className="pb-4 font-medium">{t('admin.clients.table.date')}</th>
+                <th className="pb-4 font-medium text-right">{t('admin.clients.table.actions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--border-color)]">
-              {filteredContacts.map((contact) => (
-                <tr key={contact.id} className="hover:bg-white/5 transition-all align-top">
+              {paginatedContacts.map((contact) => (
+                <tr
+                  key={contact.id}
+                  className="hover:bg-white/5 transition-all align-top cursor-pointer"
+                  onClick={() => setSelectedContact(contact)}
+                >
                   <td className="py-4 font-bold">{contact.name}</td>
                   <td className="py-4 text-brand-gray">{contact.company}</td>
                   <td className="py-4 text-brand-gray">{contact.email}</td>
@@ -545,10 +728,34 @@ export default function AdminPage() {
                   <td className="py-4 text-brand-gray">{contact.projectType}</td>
                   <td className="py-4 text-brand-gray">{contact.budget}</td>
                   <td className="py-4 text-brand-gray">{contact.date}</td>
+                  <td className="py-4 text-right">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedContact(contact);
+                      }}
+                      className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-color)] px-3 py-2 text-sm font-medium text-brand-gray transition-all hover:bg-white/5"
+                    >
+                      <Eye size={16} />
+                      {t('admin.clients.actions.viewDetails')}
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
+          <PaginationControls
+            page={contactsPage}
+            pageSize={contactsPageSize}
+            total={filteredContacts.length}
+            t={t}
+            onPageChange={setContactsPage}
+            onPageSizeChange={(pageSize) => {
+              setContactsPageSize(pageSize);
+              setContactsPage(1);
+            }}
+          />
         </div>
       )}
     </div>
@@ -894,6 +1101,118 @@ export default function AdminPage() {
       </div>
 
       <AnimatePresence>
+        {selectedContact && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={closeSelectedContact}
+              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              className="relative w-full max-w-3xl max-h-[85vh] overflow-y-auto rounded-3xl border border-[var(--border-color)] bg-[var(--bg-surface)] p-6 shadow-2xl md:p-8"
+            >
+              <div className="mb-8 flex items-start justify-between gap-4">
+                <div>
+                  <p className="mb-2 text-sm uppercase tracking-[0.2em] text-brand-mint">
+                    {t('admin.clients.modal.title')}
+                  </p>
+                  <h2 className="text-2xl font-bold">{selectedContact.name}</h2>
+                  <p className="mt-1 text-sm text-brand-gray">
+                    {formatDateTime(selectedContact.submittedAt)}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={closeSelectedContact}
+                  className="rounded-full p-2 text-brand-gray transition-all hover:bg-white/5"
+                  aria-label={t('common.close')}
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="rounded-2xl border border-[var(--border-color)] bg-white/5 p-4">
+                  <p className="mb-1 text-xs uppercase tracking-wide text-brand-gray">
+                    {t('admin.clients.table.name')}
+                  </p>
+                  <p className="font-semibold">{selectedContact.name}</p>
+                </div>
+                <div className="rounded-2xl border border-[var(--border-color)] bg-white/5 p-4">
+                  <p className="mb-1 text-xs uppercase tracking-wide text-brand-gray">
+                    {t('admin.clients.modal.firstName')}
+                  </p>
+                  <p className="font-semibold">
+                    {selectedContact.firstName || t('admin.common.na')}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-[var(--border-color)] bg-white/5 p-4">
+                  <p className="mb-1 text-xs uppercase tracking-wide text-brand-gray">
+                    {t('admin.clients.table.email')}
+                  </p>
+                  <p className="font-semibold break-all">{selectedContact.email}</p>
+                </div>
+                <div className="rounded-2xl border border-[var(--border-color)] bg-white/5 p-4">
+                  <p className="mb-1 text-xs uppercase tracking-wide text-brand-gray">
+                    {t('admin.clients.table.phone')}
+                  </p>
+                  <p className="font-semibold">{selectedContact.phone}</p>
+                </div>
+                <div className="rounded-2xl border border-[var(--border-color)] bg-white/5 p-4">
+                  <p className="mb-1 text-xs uppercase tracking-wide text-brand-gray">
+                    {t('admin.clients.table.company')}
+                  </p>
+                  <p className="font-semibold">{selectedContact.company}</p>
+                </div>
+                <div className="rounded-2xl border border-[var(--border-color)] bg-white/5 p-4">
+                  <p className="mb-1 text-xs uppercase tracking-wide text-brand-gray">
+                    {t('admin.clients.table.projectType')}
+                  </p>
+                  <p className="font-semibold">{selectedContact.projectType}</p>
+                </div>
+                <div className="rounded-2xl border border-[var(--border-color)] bg-white/5 p-4">
+                  <p className="mb-1 text-xs uppercase tracking-wide text-brand-gray">
+                    {t('admin.clients.table.budget')}
+                  </p>
+                  <p className="font-semibold">{selectedContact.budget}</p>
+                </div>
+                <div className="rounded-2xl border border-[var(--border-color)] bg-white/5 p-4">
+                  <p className="mb-1 text-xs uppercase tracking-wide text-brand-gray">
+                    {t('admin.clients.modal.status')}
+                  </p>
+                  <p className="font-semibold">{normalizeContactStatus(selectedContact.status)}</p>
+                </div>
+              </div>
+
+              <div className="mb-6 rounded-2xl border border-[var(--border-color)] bg-white/5 p-5">
+                <p className="mb-2 text-xs uppercase tracking-wide text-brand-gray">
+                  {t('admin.clients.modal.message')}
+                </p>
+                <p className="whitespace-pre-wrap leading-relaxed text-brand-gray">
+                  {selectedContact.message}
+                </p>
+              </div>
+
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={closeSelectedContact}
+                  className="rounded-xl border border-[var(--border-color)] px-5 py-3 font-medium text-brand-gray transition-all hover:bg-white/5"
+                >
+                  {t('common.close')}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
         {selectedTalent && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
             <motion.div
@@ -907,7 +1226,7 @@ export default function AdminPage() {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              className="relative w-full max-w-2xl bg-[var(--bg-surface)] rounded-3xl border border-[var(--border-color)] p-8 shadow-2xl"
+              className="relative w-full max-w-2xl max-h-[85vh] overflow-y-auto bg-[var(--bg-surface)] rounded-3xl border border-[var(--border-color)] p-8 shadow-2xl"
             >
               <div className="flex justify-between items-start mb-8">
                 <div className="flex items-center gap-4">

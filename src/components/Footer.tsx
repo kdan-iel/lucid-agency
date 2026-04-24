@@ -54,7 +54,7 @@ export default function Footer() {
             <h4 className="text-white font-bold mb-6 uppercase tracking-widest text-xs">Espaces</h4>
             <ul className="space-y-4 text-sm">
               <li>
-                <a href="/join" className="hover:text-brand-mint transition-colors">
+                <a href="/login" className="hover:text-brand-mint transition-colors">
                   {t('footer.join')}
                 </a>
               </li>
@@ -65,13 +65,13 @@ export default function Footer() {
                   </a>
                 </li>
               )}
-              {profile?.role === 'admin' && (
+              {/* {profile?.role === 'admin' && (
                 <li>
                   <a href="/admin" className="hover:text-brand-mint transition-colors">
                     Administration
                   </a>
                 </li>
-              )}
+              )} */}
               <li>
                 <a href="/#contact" className="hover:text-brand-mint transition-colors">
                   {t('nav.contact')}

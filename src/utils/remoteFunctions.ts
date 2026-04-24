@@ -104,6 +104,8 @@ export interface AdminContactRecord {
   id: string;
   nom?: string | null;
   name?: string | null;
+  prenom?: string | null;
+  first_name?: string | null;
   email?: string | null;
   phone_number?: string | null;
   phone?: string | null;
