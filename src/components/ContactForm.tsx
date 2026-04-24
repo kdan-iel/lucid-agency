@@ -52,6 +52,7 @@ const initialForm: ContactFormInput = {
   company: '',
   phone: '',
   email: '',
+  phone: '',
   type: DEFAULT_PROJECT_TYPE,
   budget: BUDGET_OPTIONS[0],
   budgetDetails: '',
