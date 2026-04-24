@@ -237,7 +237,7 @@ jobs:
 
       - name: Verify SPA routing works
         run: |
-          URL="${{ needs.deploy.outputs.deployed_url }}"
+          URL="https://lucidagence.com"
 
           # Les routes SPA doivent retourner 200 (pas 404)
           for route in "/join" "/login" "/privacy" "/legal"; do
