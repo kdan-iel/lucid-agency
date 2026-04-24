@@ -4,7 +4,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import {
   Users,
-  Briefcase,
+  Building2,
   MessageSquare,
   Settings,
   LogOut,
@@ -26,7 +26,11 @@ import {
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import { validatePassword } from '../utils/security';
-import { listAdminFreelancers, validateAdminFreelancer } from '../utils/remoteFunctions';
+import {
+  listAdminContacts,
+  listAdminFreelancers,
+  validateAdminFreelancer,
+} from '../utils/remoteFunctions';
 import { useTimeoutRegistry } from '../hooks/useTimeoutRegistry';
 import { toErrorMessage } from '../utils/asyncTools';
 
@@ -46,6 +50,18 @@ interface TalentRequest {
   user_id: string;
 }
 
+interface ClientContact {
+  id: string;
+  name: string;
+  company: string;
+  email: string;
+  phone: string;
+  projectType: string;
+  budget: string;
+  message: string;
+  date: string;
+}
+
 type SettingsTab = 'main' | 'security' | 'system';
 
 export default function AdminPage() {
@@ -58,10 +74,16 @@ export default function AdminPage() {
     'all' | 'pending' | 'validated' | 'rejected' | 'suspended'
   >('all');
   const [requests, setRequests] = useState<TalentRequest[]>([]);
+  const [contacts, setContacts] = useState<ClientContact[]>([]);
   const [loadingTalents, setLoadingTalents] = useState(false);
+  const [loadingContacts, setLoadingContacts] = useState(false);
   const [talentsError, setTalentsError] = useState('');
+  const [contactsError, setContactsError] = useState('');
   const [updatingTalentId, setUpdatingTalentId] = useState<string | null>(null);
   const [selectedTalent, setSelectedTalent] = useState<TalentRequest | null>(null);
+  const [isRejectMode, setIsRejectMode] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [rejectionError, setRejectionError] = useState('');
   const [activeSettingsTab, setActiveSettingsTab] = useState<SettingsTab>('main');
   const [passwordForm, setPasswordForm] = useState({ new: '', confirm: '' });
   const [showPwd, setShowPwd] = useState(false);
@@ -70,6 +92,13 @@ export default function AdminPage() {
   );
   const [settingsError, setSettingsError] = useState('');
   const { clearAll, schedule } = useTimeoutRegistry();
+
+  const closeSelectedTalent = () => {
+    setSelectedTalent(null);
+    setIsRejectMode(false);
+    setRejectionReason('');
+    setRejectionError('');
+  };
 
   const loadTalents = async () => {
     setLoadingTalents(true);
@@ -90,7 +119,9 @@ export default function AdminPage() {
         user_id: freelancer.user_id,
         name: freelancer.profiles?.full_name?.trim() || t('admin.common.na'),
         specialty: freelancer.specialite?.trim() || freelancer.domaine,
-        date: new Date(freelancer.created_at).toLocaleDateString('fr-FR'),
+        date: freelancer.created_at
+          ? new Date(freelancer.created_at).toLocaleDateString('fr-FR')
+          : t('admin.common.na'),
         status: freelancer.statut,
         email: freelancer.profiles?.email ?? '',
         phone: freelancer.phone_number ?? t('admin.common.na'),
@@ -111,12 +142,62 @@ export default function AdminPage() {
     }
   };
 
+  const loadContacts = async () => {
+    setLoadingContacts(true);
+    setContactsError('');
+
+    try {
+      if (!session?.access_token) {
+        throw new Error(t('admin.error.invalidSession'));
+      }
+
+      const { data } = await listAdminContacts(session.access_token, {
+        limit: 50,
+        offset: 0,
+      });
+
+      const mapped: ClientContact[] = data.map((contact) => ({
+        id: contact.id,
+        name: contact.nom?.trim() || contact.name?.trim() || t('admin.common.na'),
+        company: contact.entreprise?.trim() || contact.company?.trim() || t('admin.common.na'),
+        email: contact.email?.trim() || t('admin.common.na'),
+        phone: contact.phone_number?.trim() || contact.phone?.trim() || t('admin.common.na'),
+        projectType:
+          contact.type_projet?.trim() || contact.project_type?.trim() || t('admin.common.na'),
+        budget: contact.budget_estime?.trim() || contact.budget?.trim() || t('admin.common.na'),
+        message: contact.message?.trim() || t('admin.common.na'),
+        date: contact.created_at
+          ? new Date(contact.created_at).toLocaleDateString('fr-FR')
+          : t('admin.common.na'),
+      }));
+
+      setContacts(mapped);
+    } catch (err) {
+      const message = toErrorMessage(err, t('admin.error.loadContacts'));
+      console.error('[AdminPage] contacts load failure', { message });
+      setContactsError(message);
+    } finally {
+      setLoadingContacts(false);
+    }
+  };
+
   useEffect(() => {
     if (!session?.access_token) return;
     void loadTalents();
+    void loadContacts();
   }, [session?.access_token]);
 
-  const handleUpdateStatus = async (id: string, newStatus: 'validated' | 'rejected') => {
+  useEffect(() => {
+    setIsRejectMode(false);
+    setRejectionReason('');
+    setRejectionError('');
+  }, [selectedTalent?.id]);
+
+  const handleUpdateStatus = async (
+    id: string,
+    newStatus: 'validated' | 'rejected',
+    reason?: string
+  ) => {
     try {
       if (!session?.access_token) {
         throw new Error(t('admin.error.invalidSession'));
@@ -124,8 +205,9 @@ export default function AdminPage() {
 
       setUpdatingTalentId(id);
       setTalentsError('');
+      setRejectionError('');
 
-      await validateAdminFreelancer(session.access_token, id, newStatus);
+      await validateAdminFreelancer(session.access_token, id, newStatus, reason);
 
       setRequests((previous) =>
         previous.map((request) => (request.id === id ? { ...request, status: newStatus } : request))
@@ -134,13 +216,33 @@ export default function AdminPage() {
       if (selectedTalent?.id === id) {
         setSelectedTalent((previous) => (previous ? { ...previous, status: newStatus } : null));
       }
+
+      if (newStatus === 'rejected') {
+        setIsRejectMode(false);
+        setRejectionReason('');
+      }
     } catch (err) {
       const message = toErrorMessage(err, t('admin.error.updateStatus'));
       console.error('[AdminPage] talent status failure', { message, id, newStatus });
       setTalentsError(message);
+      if (newStatus === 'rejected') {
+        setRejectionError(message);
+      }
     } finally {
       setUpdatingTalentId(null);
     }
+  };
+
+  const handleConfirmReject = async () => {
+    if (!selectedTalent) return;
+
+    const trimmedReason = rejectionReason.trim();
+    if (!trimmedReason) {
+      setRejectionError(t('admin.reject.reasonRequired'));
+      return;
+    }
+
+    await handleUpdateStatus(selectedTalent.id, 'rejected', trimmedReason);
   };
 
   const handlePasswordChange = async (e: React.FormEvent) => {
@@ -199,24 +301,42 @@ export default function AdminPage() {
     [requests, searchQuery, statusFilter]
   );
 
+  const filteredContacts = useMemo(
+    () =>
+      contacts.filter((contact) => {
+        const haystack = [
+          contact.name,
+          contact.company,
+          contact.email,
+          contact.phone,
+          contact.projectType,
+        ]
+          .join(' ')
+          .toLowerCase();
+
+        return haystack.includes(searchQuery.toLowerCase());
+      }),
+    [contacts, searchQuery]
+  );
+
   const sidebarItems = [
     { id: 'talents', icon: <Users size={20} />, label: t('admin.nav.talents') },
-    { id: 'projects', icon: <Briefcase size={20} />, label: t('admin.nav.projects') },
+    { id: 'clients', icon: <Building2 size={20} />, label: t('admin.nav.clients') },
     { id: 'messages', icon: <MessageSquare size={20} />, label: t('admin.nav.messages') },
     { id: 'settings', icon: <Settings size={20} />, label: t('admin.nav.settings') },
   ];
 
   const stats = [
     {
-      id: 'all',
+      id: 'talents',
       label: t('admin.stats.activeTalents'),
       value: requests.filter((request) => request.status === 'validated').length.toString(),
       color: 'text-brand-mint',
     },
     {
-      id: 'projects',
-      label: t('admin.stats.activeProjects'),
-      value: '0',
+      id: 'clients',
+      label: t('admin.stats.clients'),
+      value: contacts.length.toString(),
       color: 'text-blue-400',
     },
     {
@@ -373,12 +493,64 @@ export default function AdminPage() {
     </div>
   );
 
-  const renderProjects = () => (
-    <div className="bg-[var(--bg-surface)] rounded-3xl border border-[var(--border-color)] p-8">
-      <div className="text-center py-20 border border-dashed border-[var(--border-color)] rounded-3xl">
-        <h2 className="text-2xl font-bold mb-3">{t('admin.projects.emptyTitle')}</h2>
-        <p className="text-brand-gray max-w-xl mx-auto">{t('admin.projects.emptyBody')}</p>
+  const renderClients = () => (
+    <div className="bg-[var(--bg-surface)] rounded-2xl md:rounded-3xl border border-[var(--border-color)] p-4 md:p-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+        <h2 className="text-xl font-bold">{t('admin.clients.title')}</h2>
+        <div className="relative w-full sm:w-64">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-gray" size={18} />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={t('admin.search.placeholder')}
+            className="bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-full py-2 pl-10 pr-4 text-sm focus:outline-none focus:border-brand-mint w-full"
+          />
+        </div>
       </div>
+
+      {loadingContacts ? (
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-mint mx-auto" />
+        </div>
+      ) : contactsError ? (
+        <div className="text-center py-12 text-red-400">{contactsError}</div>
+      ) : filteredContacts.length === 0 ? (
+        <div className="text-center py-12 text-brand-gray">
+          {contacts.length === 0
+            ? t('admin.clients.empty.none')
+            : t('admin.clients.empty.filtered')}
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="border-b border-[var(--border-color)] text-brand-gray text-sm">
+                <th className="pb-4 font-medium">{t('admin.clients.table.name')}</th>
+                <th className="pb-4 font-medium">{t('admin.clients.table.company')}</th>
+                <th className="pb-4 font-medium">{t('admin.clients.table.email')}</th>
+                <th className="pb-4 font-medium">{t('admin.clients.table.phone')}</th>
+                <th className="pb-4 font-medium">{t('admin.clients.table.projectType')}</th>
+                <th className="pb-4 font-medium">{t('admin.clients.table.budget')}</th>
+                <th className="pb-4 font-medium">{t('admin.clients.table.date')}</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[var(--border-color)]">
+              {filteredContacts.map((contact) => (
+                <tr key={contact.id} className="hover:bg-white/5 transition-all align-top">
+                  <td className="py-4 font-bold">{contact.name}</td>
+                  <td className="py-4 text-brand-gray">{contact.company}</td>
+                  <td className="py-4 text-brand-gray">{contact.email}</td>
+                  <td className="py-4 text-brand-gray">{contact.phone}</td>
+                  <td className="py-4 text-brand-gray">{contact.projectType}</td>
+                  <td className="py-4 text-brand-gray">{contact.budget}</td>
+                  <td className="py-4 text-brand-gray">{contact.date}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 
@@ -601,8 +773,8 @@ export default function AdminPage() {
     switch (activeTab) {
       case 'talents':
         return renderTalents();
-      case 'projects':
-        return renderProjects();
+      case 'clients':
+        return renderClients();
       case 'messages':
         return renderMessages();
       case 'settings':
@@ -702,11 +874,11 @@ export default function AdminPage() {
                   if (stat.id === 'pending') {
                     setActiveTab('talents');
                     setStatusFilter('pending');
-                  } else if (stat.id === 'all') {
+                  } else if (stat.id === 'talents') {
                     setActiveTab('talents');
                     setStatusFilter('all');
                   } else {
-                    setActiveTab('projects');
+                    setActiveTab('clients');
                   }
                 }}
                 className="bg-[var(--bg-surface)] p-6 rounded-2xl border border-[var(--border-color)] cursor-pointer hover:border-brand-mint/50 transition-all group"
@@ -728,7 +900,7 @@ export default function AdminPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setSelectedTalent(null)}
+              onClick={closeSelectedTalent}
               className="absolute inset-0 bg-black/80 backdrop-blur-sm"
             />
             <motion.div
@@ -748,7 +920,7 @@ export default function AdminPage() {
                   </div>
                 </div>
                 <button
-                  onClick={() => setSelectedTalent(null)}
+                  onClick={closeSelectedTalent}
                   className="p-2 rounded-full hover:bg-white/5 text-brand-gray"
                   aria-label={t('common.close')}
                 >
@@ -791,26 +963,72 @@ export default function AdminPage() {
               </div>
 
               {selectedTalent.status === 'pending' ? (
-                <div className="flex gap-4">
-                  <button
-                    disabled={updatingTalentId === selectedTalent.id}
-                    onClick={() => handleUpdateStatus(selectedTalent.id, 'validated')}
-                    className="flex-grow bg-green-500 text-white py-4 rounded-xl font-bold hover:bg-green-600 transition-all"
-                  >
-                    {updatingTalentId === selectedTalent.id
-                      ? t('admin.actions.processing')
-                      : t('admin.actions.approve')}
-                  </button>
-                  <button
-                    disabled={updatingTalentId === selectedTalent.id}
-                    onClick={() => handleUpdateStatus(selectedTalent.id, 'rejected')}
-                    className="flex-grow bg-red-500 text-white py-4 rounded-xl font-bold hover:bg-red-600 transition-all"
-                  >
-                    {updatingTalentId === selectedTalent.id
-                      ? t('admin.actions.processing')
-                      : t('admin.actions.reject')}
-                  </button>
-                </div>
+                isRejectMode ? (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-brand-gray">
+                        {t('admin.reject.reasonLabel')}
+                      </label>
+                      <textarea
+                        value={rejectionReason}
+                        onChange={(e) => {
+                          setRejectionReason(e.target.value);
+                          if (rejectionError) setRejectionError('');
+                        }}
+                        rows={4}
+                        placeholder={t('admin.reject.reasonPlaceholder')}
+                        className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl px-4 py-3 focus:outline-none focus:border-brand-mint transition-all resize-none"
+                      />
+                    </div>
+                    {rejectionError && <p className="text-red-400 text-sm">{rejectionError}</p>}
+                    <div className="flex gap-4">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsRejectMode(false);
+                          setRejectionReason('');
+                          setRejectionError('');
+                        }}
+                        className="flex-1 px-6 py-4 rounded-xl border border-[var(--border-color)] text-brand-gray font-bold hover:bg-white/5 transition-all"
+                      >
+                        {t('common.cancel')}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={!rejectionReason.trim() || updatingTalentId === selectedTalent.id}
+                        onClick={() => {
+                          void handleConfirmReject();
+                        }}
+                        className="flex-1 bg-red-500 text-white py-4 rounded-xl font-bold hover:bg-red-600 transition-all disabled:opacity-60 disabled:hover:bg-red-500"
+                      >
+                        {updatingTalentId === selectedTalent.id
+                          ? t('admin.actions.processing')
+                          : t('admin.reject.confirm')}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex gap-4">
+                    <button
+                      disabled={updatingTalentId === selectedTalent.id}
+                      onClick={() => {
+                        void handleUpdateStatus(selectedTalent.id, 'validated');
+                      }}
+                      className="flex-grow bg-green-500 text-white py-4 rounded-xl font-bold hover:bg-green-600 transition-all"
+                    >
+                      {updatingTalentId === selectedTalent.id
+                        ? t('admin.actions.processing')
+                        : t('admin.actions.approve')}
+                    </button>
+                    <button
+                      disabled={updatingTalentId === selectedTalent.id}
+                      onClick={() => setIsRejectMode(true)}
+                      className="flex-grow bg-red-500 text-white py-4 rounded-xl font-bold hover:bg-red-600 transition-all"
+                    >
+                      {t('admin.actions.reject')}
+                    </button>
+                  </div>
+                )
               ) : (
                 <div
                   className={`p-4 rounded-xl text-center font-bold uppercase ${selectedTalent.status === 'validated' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : selectedTalent.status === 'suspended' ? 'bg-orange-500/10 text-orange-400 border border-orange-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}

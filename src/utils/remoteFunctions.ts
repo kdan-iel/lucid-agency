@@ -22,6 +22,10 @@ const ADMIN_VALIDATE_FREELANCER_FUNCTION_NAME = getOptionalEnv(
   'VITE_ADMIN_VALIDATE_FREELANCER_FUNCTION_NAME',
   'admin-validate-freelancer'
 );
+const ADMIN_LIST_CONTACTS_FUNCTION_NAME = getOptionalEnv(
+  'VITE_ADMIN_LIST_CONTACTS_FUNCTION_NAME',
+  'admin-list-contacts'
+);
 
 type FunctionResponse = {
   error?: string;
@@ -94,6 +98,31 @@ export interface AdminListFreelancersResponse {
   total: number;
   limit: number;
   offset: number;
+}
+
+export interface AdminContactRecord {
+  id: string;
+  nom?: string | null;
+  name?: string | null;
+  email?: string | null;
+  phone_number?: string | null;
+  phone?: string | null;
+  entreprise?: string | null;
+  company?: string | null;
+  type_projet?: string | null;
+  project_type?: string | null;
+  budget_estime?: string | null;
+  budget?: string | null;
+  message?: string | null;
+  created_at?: string | null;
+  status?: string | null;
+}
+
+export interface AdminListContactsResponse {
+  data: AdminContactRecord[];
+  total?: number;
+  limit?: number;
+  offset?: number;
 }
 
 function buildFunctionUrl(
@@ -304,13 +333,61 @@ export async function validateAdminFreelancer(
   decision: 'validated' | 'rejected',
   motif?: string
 ) {
+  const trimmedMotif = motif?.trim();
+
   return invokeRemoteFunction(ADMIN_VALIDATE_FREELANCER_FUNCTION_NAME, {
     method: 'POST',
     accessToken,
     payload: {
       freelancer_id: freelancerId,
       decision,
-      ...(motif?.trim() ? { motif: motif.trim() } : {}),
+      ...(decision === 'rejected'
+        ? {
+            status: 'rejected',
+            ...(trimmedMotif ? { motif: trimmedMotif, rejection_reason: trimmedMotif } : {}),
+          }
+        : {}),
     },
   });
+}
+
+export async function listAdminContacts(
+  accessToken: string,
+  options: {
+    limit?: number;
+    offset?: number;
+  } = {}
+) {
+  const data = await invokeRemoteFunction<AdminListContactsResponse | AdminContactRecord[]>(
+    ADMIN_LIST_CONTACTS_FUNCTION_NAME,
+    {
+      method: 'GET',
+      accessToken,
+      query: {
+        limit: options.limit,
+        offset: options.offset,
+      },
+    }
+  );
+
+  if (Array.isArray(data)) {
+    return {
+      data,
+      total: data.length,
+      limit: options.limit ?? data.length,
+      offset: options.offset ?? 0,
+    };
+  }
+
+  return {
+    data: Array.isArray(data?.data) ? data.data : [],
+    total:
+      typeof data?.total === 'number'
+        ? data.total
+        : Array.isArray(data?.data)
+          ? data.data.length
+          : 0,
+    limit: typeof data?.limit === 'number' ? data.limit : (options.limit ?? 20),
+    offset: typeof data?.offset === 'number' ? data.offset : (options.offset ?? 0),
+  };
 }

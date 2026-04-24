@@ -9,6 +9,7 @@ interface ImportMetaEnv {
   readonly VITE_PUBLIC_TALENTS_FUNCTION_NAME?: string;
   readonly VITE_ADMIN_LIST_FREELANCERS_FUNCTION_NAME?: string;
   readonly VITE_ADMIN_VALIDATE_FREELANCER_FUNCTION_NAME?: string;
+  readonly VITE_ADMIN_LIST_CONTACTS_FUNCTION_NAME?: string;
   readonly VITE_GAS_URL?: string;
   readonly VITE_GAS_TOKEN?: string;
 }

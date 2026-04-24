@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -9,7 +9,7 @@ import { supabase } from '../lib/supabaseClient';
 import { runWithAsyncGuard, toErrorMessage } from '../utils/asyncTools';
 
 export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
-  const { login, resetPassword, clearError } = useAuth();
+  const { login, resetPassword, clearError, profile, freelancer, loading } = useAuth();
   const { t } = useLanguage();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -21,6 +21,38 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
   const [resetSent, setResetSent] = useState(false);
 
   const isAdminLogin = role === 'admin';
+
+  const navigateTo = (path: string) => {
+    if (window.location.pathname === path) return;
+    window.history.pushState({}, '', path);
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  };
+
+  useEffect(() => {
+    if (loading || !profile) return;
+
+    if (profile.role === 'admin') {
+      navigateTo('/admin');
+      return;
+    }
+
+    if (profile.role !== 'freelancer') {
+      navigateTo('/dashboard');
+      return;
+    }
+
+    if (
+      freelancer &&
+      (!freelancer.onboarding_completed || !freelancer.phone_number || !freelancer.tarif_jour)
+    ) {
+      navigateTo('/complete-profile');
+      return;
+    }
+
+    if (freelancer?.statut === 'validated' && freelancer.onboarding_completed) {
+      navigateTo('/dashboard');
+    }
+  }, [freelancer, loading, profile]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -102,12 +134,12 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
           !nextFreelancer.phone_number ||
           !nextFreelancer.tarif_jour
         ) {
-          window.location.href = '/complete-profile';
+          navigateTo('/complete-profile');
           return;
         }
       }
 
-      window.location.href = nextProfile.role === 'admin' ? '/admin' : '/dashboard';
+      navigateTo(nextProfile.role === 'admin' ? '/admin' : '/dashboard');
     } catch (err) {
       const message = (err as Error).message;
 
