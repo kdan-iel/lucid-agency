@@ -8,7 +8,7 @@ function trimTrailingSlash(value: string) {
 
 export function getPasswordUpdateRedirectUrl() {
   const origin =
-    appUrl ?? (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173');
+    appUrl ?? (typeof window !== 'undefined' ? window.location.origin : 'https://lucidagence.com');
 
   return `${trimTrailingSlash(origin)}/update-password`;
 }

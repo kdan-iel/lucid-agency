@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import type { Session } from '@supabase/supabase-js';
 import { motion } from 'motion/react';
 import { Eye, EyeOff, Lock, CheckCircle, AlertTriangle } from 'lucide-react';
 import Navbar from '../components/Navbar';
@@ -10,20 +11,17 @@ import { runWithAsyncGuard, toErrorMessage } from '../utils/asyncTools';
 import { useTimeoutRegistry } from '../hooks/useTimeoutRegistry';
 
 type FormErrors = Partial<Record<keyof ResetPasswordFormInput, string>>;
-type PageState = 'loading' | 'ready' | 'success' | 'invalid';
-
-function scrubAuthRedirectUrl() {
-  if (!window.location.search && !window.location.hash) return;
-  window.history.replaceState({}, '', window.location.pathname);
-}
+const SESSION_HYDRATION_TIMEOUT_MS = 1500;
 
 export default function UpdatePasswordPage() {
   const { t } = useLanguage();
   const [form, setForm] = useState<ResetPasswordFormInput>({ password: '', confirmPassword: '' });
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
   const [errors, setErrors] = useState<FormErrors>({});
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [pageState, setPageState] = useState<PageState>('loading');
+  const [isSuccess, setIsSuccess] = useState(false);
   const [serverError, setServerError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { clearAll, schedule } = useTimeoutRegistry();
@@ -67,23 +65,19 @@ export default function UpdatePasswordPage() {
 
   useEffect(() => {
     let active = true;
-    let sessionResolved = false;
+    let hydrationTimeout: number | null = null;
 
-    const allowPasswordUpdate = () => {
-      if (!active || sessionResolved) return;
-      sessionResolved = true;
-      clearAll();
-      scrubAuthRedirectUrl();
-      setPageState('ready');
-      setServerError('');
+    const clearHydrationTimeout = () => {
+      if (hydrationTimeout === null) return;
+      window.clearTimeout(hydrationTimeout);
+      hydrationTimeout = null;
     };
 
-    const denyPasswordUpdate = (message: string) => {
-      if (!active || sessionResolved) return;
-      sessionResolved = true;
-      clearAll();
-      setPageState('invalid');
-      setServerError(message);
+    const resolveSession = (nextSession: Session | null) => {
+      if (!active) return;
+      clearHydrationTimeout();
+      setSession(nextSession);
+      setLoading(false);
     };
 
     const {
@@ -91,42 +85,44 @@ export default function UpdatePasswordPage() {
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (!active) return;
 
-      if (
-        session &&
-        (event === 'INITIAL_SESSION' ||
-          event === 'SIGNED_IN' ||
-          event === 'PASSWORD_RECOVERY' ||
-          event === 'TOKEN_REFRESHED')
-      ) {
-        allowPasswordUpdate();
+      if (session) {
+        resolveSession(session);
+        return;
+      }
+
+      if (event === 'SIGNED_OUT') {
+        resolveSession(null);
       }
     });
 
     const initializeRecovery = async () => {
-      setPageState('loading');
+      setLoading(true);
       setServerError('');
 
       try {
         const {
-          data: { session },
+          data: { session: nextSession },
         } = await runWithAsyncGuard('auth.getSession', () => supabase.auth.getSession(), {
           fallbackMessage: t('resetPassword.error.missingRecoverySession'),
         });
 
         if (!active) return;
 
-        if (session) {
-          allowPasswordUpdate();
+        if (nextSession) {
+          resolveSession(nextSession);
           return;
         }
 
-        schedule(() => {
+        hydrationTimeout = window.setTimeout(() => {
           if (!active) return;
-          denyPasswordUpdate(t('resetPassword.error.invalidLink'));
-        }, 1500);
+          resolveSession(null);
+        }, SESSION_HYDRATION_TIMEOUT_MS);
       } catch (err) {
         if (!active) return;
-        denyPasswordUpdate(mapRecoveryError(toErrorMessage(err, t('resetPassword.error.generic'))));
+        clearHydrationTimeout();
+        setSession(null);
+        setLoading(false);
+        setServerError(mapRecoveryError(toErrorMessage(err, t('resetPassword.error.generic'))));
       }
     };
 
@@ -134,10 +130,17 @@ export default function UpdatePasswordPage() {
 
     return () => {
       active = false;
+      clearHydrationTimeout();
       clearAll();
       subscription.unsubscribe();
     };
-  }, [clearAll, schedule, t]);
+  }, [clearAll, t]);
+
+  useEffect(() => {
+    if (loading) return;
+    if (!window.location.search && !window.location.hash) return;
+    window.history.replaceState({}, document.title, '/update-password');
+  }, [loading, session]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -176,7 +179,7 @@ export default function UpdatePasswordPage() {
 
     try {
       const {
-        data: { session },
+        data: { session: nextSession },
       } = await runWithAsyncGuard(
         'auth.getSessionBeforePasswordUpdate',
         () => supabase.auth.getSession(),
@@ -185,11 +188,13 @@ export default function UpdatePasswordPage() {
         }
       );
 
-      if (!session) {
-        setPageState('invalid');
+      if (!nextSession) {
+        setSession(null);
         setServerError(t('resetPassword.error.invalidLink'));
         return;
       }
+
+      setSession(nextSession);
 
       const { error } = await runWithAsyncGuard(
         'auth.updateRecoveredPassword',
@@ -204,7 +209,7 @@ export default function UpdatePasswordPage() {
       }
 
       clearAll();
-      setPageState('success');
+      setIsSuccess(true);
 
       schedule(() => {
         navigateTo('/dashboard');
@@ -219,7 +224,7 @@ export default function UpdatePasswordPage() {
   };
 
   const renderContent = () => {
-    if (pageState === 'loading') {
+    if (loading) {
       return (
         <div className="text-center">
           <div className="mx-auto mb-6 h-12 w-12 animate-spin rounded-full border-b-2 border-brand-mint" />
@@ -229,7 +234,7 @@ export default function UpdatePasswordPage() {
       );
     }
 
-    if (pageState === 'invalid') {
+    if (!session) {
       return (
         <div className="text-center">
           <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-red-400/10 text-red-400">
@@ -250,7 +255,7 @@ export default function UpdatePasswordPage() {
       );
     }
 
-    if (pageState === 'success') {
+    if (isSuccess) {
       return (
         <div className="text-center">
           <CheckCircle size={64} className="mx-auto mb-4 text-brand-mint" />

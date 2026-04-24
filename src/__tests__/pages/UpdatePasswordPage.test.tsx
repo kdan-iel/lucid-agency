@@ -7,6 +7,9 @@ const updateUserMock = vi.fn();
 const signOutMock = vi.fn();
 const getSessionMock = vi.fn();
 const onAuthStateChangeMock = vi.fn();
+let authStateChangeHandler:
+  | ((event: string, session: { user: { id: string } } | null) => void)
+  | null = null;
 
 vi.mock('../../lib/supabaseClient', () => ({
   supabase: {
@@ -41,16 +44,20 @@ describe('UpdatePasswordPage', () => {
       data: { session: { user: { id: 'user-1' } } },
       error: null,
     });
-    onAuthStateChangeMock.mockReturnValue({
-      data: {
-        subscription: {
-          unsubscribe: vi.fn(),
+    onAuthStateChangeMock.mockImplementation((callback) => {
+      authStateChangeHandler = callback as typeof authStateChangeHandler;
+      return {
+        data: {
+          subscription: {
+            unsubscribe: vi.fn(),
+          },
         },
-      },
+      };
     });
   });
 
   afterEach(() => {
+    authStateChangeHandler = null;
     vi.useRealTimers();
   });
 
@@ -66,6 +73,33 @@ describe('UpdatePasswordPage', () => {
 
     expect(await screen.findByRole('button', { name: submitButtonName })).toBeInTheDocument();
     expect(getSessionMock).toHaveBeenCalled();
+  });
+
+  it('attend la session Supabase sans afficher un lien invalide trop tot', async () => {
+    vi.useFakeTimers();
+    getSessionMock.mockResolvedValue({ data: { session: null }, error: null });
+
+    renderPage();
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(screen.queryByRole('button', { name: submitButtonName })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Lien invalide/i)).not.toBeInTheDocument();
+
+    await act(async () => {
+      authStateChangeHandler?.('PASSWORD_RECOVERY', { user: { id: 'user-1' } });
+      await Promise.resolve();
+    });
+
+    expect(screen.getByRole('button', { name: submitButtonName })).toBeInTheDocument();
+
+    await act(async () => {
+      vi.advanceTimersByTime(1600);
+    });
+
+    expect(screen.queryByText(/Lien invalide/i)).not.toBeInTheDocument();
   });
 
   it('applique les memes regles de validation que JoinPage', async () => {
