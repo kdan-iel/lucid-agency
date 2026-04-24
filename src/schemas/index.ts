@@ -56,6 +56,25 @@ export const contactFormSchema = z
 
 export type ContactFormInput = z.infer<typeof contactFormSchema>;
 
+export const passwordSchema = z
+  .string()
+  .min(8, 'Minimum 8 caracteres')
+  .regex(/[A-Z]/, 'Au moins une majuscule')
+  .regex(/[0-9]/, 'Au moins un chiffre')
+  .regex(/[^a-zA-Z0-9]/, 'Au moins un caractere special');
+
+export const resetPasswordFormSchema = z
+  .object({
+    password: passwordSchema,
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: 'Les mots de passe ne correspondent pas',
+    path: ['confirmPassword'],
+  });
+
+export type ResetPasswordFormInput = z.infer<typeof resetPasswordFormSchema>;
+
 // ============================================================
 // SCHEMA INSCRIPTION FREELANCER
 // ============================================================
@@ -75,14 +94,16 @@ export const joinFormSchema = z
 
     email: z.string().email('Email invalide').max(255),
 
-    password: z
-      .string()
-      .min(8, 'Minimum 8 caracteres')
-      .regex(/[A-Z]/, 'Au moins une majuscule')
-      .regex(/[0-9]/, 'Au moins un chiffre')
-      .regex(/[^a-zA-Z0-9]/, 'Au moins un caractere special'),
+    password: passwordSchema,
 
     confirmPassword: z.string(),
+
+    phoneNumber: z
+      .string()
+      .min(1, 'Numero de telephone requis')
+      .regex(/^\+?[1-9]\d{7,14}$/, 'Format: +COUNTRYCODE 8-15 digits'),
+
+    tarifJour: z.number().min(1000, 'Minimum 1000 FCFA').max(1000000, 'Maximum 1000000 FCFA'),
 
     specialty: z
       .string()

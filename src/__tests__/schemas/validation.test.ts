@@ -5,6 +5,7 @@ describe('contactFormSchema', () => {
   const valid = {
     name: 'Jean Dupont',
     email: 'jean@example.com',
+    phone: '+228 90 00 00 00',
     message: 'Bonjour, je veux lancer un projet.',
     company: 'TechFlow',
     type: 'Site Web',
@@ -75,6 +76,8 @@ describe('joinFormSchema', () => {
     email: 'jean@example.com',
     password: 'Secure1!Pass',
     confirmPassword: 'Secure1!Pass',
+    phoneNumber: '+221770000000',
+    tarifJour: 25000,
     specialty: 'graphisme',
     portfolio: 'https://jean.design',
     message: '',
@@ -110,6 +113,16 @@ describe('joinFormSchema', () => {
 
   it('rejette une specialite hors liste', () => {
     const r = joinFormSchema.safeParse({ ...valid, specialty: 'designer' });
+    expect(r.success).toBe(false);
+  });
+
+  it('rejette un numero de telephone invalide', () => {
+    const r = joinFormSchema.safeParse({ ...valid, phoneNumber: '1234' });
+    expect(r.success).toBe(false);
+  });
+
+  it('rejette un tarif journalier hors limite', () => {
+    const r = joinFormSchema.safeParse({ ...valid, tarifJour: 500 });
     expect(r.success).toBe(false);
   });
 

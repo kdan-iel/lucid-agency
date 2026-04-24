@@ -1,39 +1,53 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { createClient, Session, User } from '@supabase/supabase-js';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { Session, User } from '@supabase/supabase-js';
+import { supabase } from '../lib/supabaseClient';
+import { runWithAsyncGuard, toErrorMessage } from '../utils/asyncTools';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
-
-export const supabase = createClient(
-  supabaseUrl || 'https://placeholder.supabase.co',
-  supabaseKey || 'placeholder'
-);
+const PROFILE_COLUMNS = 'id, user_id, email, full_name, role, avatar_url';
+const FREELANCER_COLUMNS =
+  'id, user_id, statut, phone_number, tarif_jour, bio, specialite, portfolio_url, onboarding_completed, archived_at';
 
 export interface Profile {
   id: string;
   user_id: string;
   email: string;
-  first_name: string;
-  last_name: string;
+  full_name: string | null;
   role: 'admin' | 'freelancer' | 'client';
-  avatar_url?: string;
-  bio?: string;
-  phone?: string;
-  created_at: string;
-  updated_at: string;
+  avatar_url?: string | null;
+}
+
+export interface Freelancer {
+  id: string;
+  user_id: string;
+  statut: 'pending' | 'validated' | 'rejected' | 'suspended';
+  phone_number: string | null;
+  tarif_jour: number | null;
+  bio: string | null;
+  specialite: string | null;
+  portfolio_url?: string | null;
+  onboarding_completed: boolean;
+  archived_at: string | null;
+}
+
+export interface LoginResult {
+  profile: Profile;
+  freelancer: Freelancer | null;
 }
 
 export interface AuthContextType {
   session: Session | null;
   user: User | null;
   profile: Profile | null;
+  freelancer: Freelancer | null;
   loading: boolean;
   error: string | null;
-  login: (email: string, password: string) => Promise<Profile>;
+  login: (email: string, password: string) => Promise<LoginResult>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   updatePassword: (newPassword: string) => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<void>;
+  updateFreelancer: (updates: Partial<Freelancer>) => Promise<void>;
+  refreshAuthState: () => Promise<void>;
   clearError: () => void;
 }
 
@@ -43,83 +57,229 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [freelancer, setFreelancer] = useState<Freelancer | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const mountedRef = useRef(true);
+  const authRequestRef = useRef(0);
 
   const getProfileByUserId = async (userId: string): Promise<Profile | null> => {
-    try {
-      const { data, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', userId)
-        .single();
-      if (profileError && profileError.code !== 'PGRST116') {
-        console.error('Erreur profil:', profileError.message);
-        return null;
+    const { data, error: profileError } = await supabase
+      .from('profiles')
+      .select(PROFILE_COLUMNS)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (profileError) {
+      throw profileError;
+    }
+
+    return (data as Profile | null) ?? null;
+  };
+
+  const getFreelancerByUserId = async (userId: string): Promise<Freelancer | null> => {
+    const { data, error: freelancerError } = await supabase
+      .from('freelancers')
+      .select(FREELANCER_COLUMNS)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (freelancerError) {
+      throw freelancerError;
+    }
+
+    return (data as Freelancer | null) ?? null;
+  };
+
+  const syncAuthState = async (userId: string | null) => {
+    const requestId = ++authRequestRef.current;
+
+    if (!userId) {
+      if (mountedRef.current) {
+        setProfile(null);
+        setFreelancer(null);
       }
-      return (data as Profile) ?? null;
+      return { profile: null, freelancer: null };
+    }
+
+    try {
+      const nextProfile = await runWithAsyncGuard(
+        'auth.fetchProfile',
+        () => getProfileByUserId(userId),
+        {
+          fallbackMessage: 'Impossible de récupérer le profil utilisateur.',
+          metadata: { userId },
+        }
+      );
+
+      let nextFreelancer: Freelancer | null = null;
+      if (nextProfile?.role === 'freelancer') {
+        nextFreelancer = await runWithAsyncGuard(
+          'auth.fetchFreelancer',
+          () => getFreelancerByUserId(userId),
+          {
+            fallbackMessage: 'Impossible de récupérer les informations freelancer.',
+            metadata: { userId },
+          }
+        );
+      }
+
+      if (!mountedRef.current || requestId !== authRequestRef.current) {
+        return { profile: null, freelancer: null };
+      }
+
+      setProfile(nextProfile);
+      setFreelancer(nextFreelancer);
+
+      return { profile: nextProfile, freelancer: nextFreelancer };
     } catch (err) {
-      console.error('fetchProfile error:', err);
-      return null;
+      if (mountedRef.current && requestId === authRequestRef.current) {
+        setProfile(null);
+        setFreelancer(null);
+      }
+      throw err;
     }
   };
 
-  const fetchProfile = async (userId: string) => {
-    const nextProfile = await getProfileByUserId(userId);
-    setProfile(nextProfile);
-    return nextProfile;
+  const refreshAuthState = async () => {
+    await syncAuthState(user?.id ?? session?.user?.id ?? null);
   };
 
   useEffect(() => {
+    mountedRef.current = true;
+
     const initAuth = async () => {
+      setLoading(true);
+
       try {
-        setLoading(true);
         const {
-          data: { session: s },
-          error: e,
-        } = await supabase.auth.getSession();
-        if (e) throw e;
-        setSession(s);
-        setUser(s?.user ?? null);
-        if (s?.user) await fetchProfile(s.user.id);
+          data: { session: nextSession },
+          error: sessionError,
+        } = await runWithAsyncGuard('auth.getSession', () => supabase.auth.getSession(), {
+          fallbackMessage: 'Impossible de vérifier votre session.',
+        });
+
+        if (sessionError) {
+          throw sessionError;
+        }
+
+        if (!mountedRef.current) return;
+
+        setSession(nextSession);
+        setUser(nextSession?.user ?? null);
+        await syncAuthState(nextSession?.user?.id ?? null);
       } catch (err) {
-        setError((err as Error).message);
+        const message = toErrorMessage(err, 'Impossible d’initialiser la session.');
+        console.error('[Auth] init error', { message });
+        if (mountedRef.current) {
+          setError(message);
+          setSession(null);
+          setUser(null);
+          setProfile(null);
+          setFreelancer(null);
+        }
       } finally {
-        setLoading(false);
+        if (mountedRef.current) setLoading(false);
       }
     };
-    initAuth();
+
+    void initAuth();
+
+    let authEventCounter = 0;
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, s) => {
-      setSession(s);
-      setUser(s?.user ?? null);
-      setError(null);
-      if (s?.user) await fetchProfile(s.user.id);
-      else setProfile(null);
+    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      authEventCounter += 1;
+      const eventId = authEventCounter;
+
+      if (!mountedRef.current) return;
+
+      setSession(nextSession);
+      setUser(nextSession?.user ?? null);
+
+      void (async () => {
+        try {
+          const hydrated = await syncAuthState(nextSession?.user?.id ?? null);
+          if (!mountedRef.current || eventId !== authEventCounter) return;
+
+          if (!nextSession?.user) {
+            setProfile(null);
+            setFreelancer(null);
+            return;
+          }
+
+          setProfile(hydrated.profile);
+          setFreelancer(hydrated.freelancer);
+        } catch (err) {
+          const message = toErrorMessage(err, 'Impossible de synchroniser la session.');
+          console.error('[Auth] state sync failure', { message });
+          if (mountedRef.current && eventId === authEventCounter) {
+            setError(message);
+            setProfile(null);
+            setFreelancer(null);
+          }
+        }
+      })();
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mountedRef.current = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
-  const login = async (email: string, password: string): Promise<Profile> => {
+  const login = async (email: string, password: string): Promise<LoginResult> => {
     try {
       setError(null);
-      const {
-        data: { user: loggedUser },
-        error: e,
-      } = await supabase.auth.signInWithPassword({ email, password });
-      if (e) throw e;
-      if (!loggedUser) throw new Error('Utilisateur introuvable.');
 
-      const nextProfile = await getProfileByUserId(loggedUser.id);
-      if (!nextProfile) throw new Error('Profil introuvable pour ce compte.');
+      const result = await runWithAsyncGuard(
+        'auth.login',
+        async () => {
+          const {
+            data: { user: loggedUser, session: nextSession },
+            error: signInError,
+          } = await supabase.auth.signInWithPassword({ email, password });
 
-      setProfile(nextProfile);
-      return nextProfile;
+          if (signInError) throw signInError;
+          if (!loggedUser || !nextSession) throw new Error('Utilisateur introuvable.');
+
+          const nextProfile = await getProfileByUserId(loggedUser.id);
+          if (!nextProfile) {
+            await supabase.auth.signOut();
+            throw new Error('Profil introuvable pour ce compte.');
+          }
+
+          let nextFreelancer: Freelancer | null = null;
+          if (nextProfile.role === 'freelancer') {
+            nextFreelancer = await getFreelancerByUserId(loggedUser.id);
+            if (!nextFreelancer) {
+              await supabase.auth.signOut();
+              throw new Error('Aucune candidature freelancer associée à ce compte.');
+            }
+          }
+
+          if (mountedRef.current) {
+            setSession(nextSession);
+            setUser(loggedUser);
+            setProfile(nextProfile);
+            setFreelancer(nextFreelancer);
+          }
+
+          return {
+            profile: nextProfile,
+            freelancer: nextFreelancer,
+          };
+        },
+        {
+          fallbackMessage: 'La connexion a expiré. Veuillez réessayer.',
+          metadata: { email },
+        }
+      );
+
+      return result;
     } catch (err) {
-      setError((err as Error).message);
+      setError(toErrorMessage(err));
       throw err;
     }
   };
@@ -127,13 +287,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = async () => {
     try {
       setError(null);
-      await supabase.auth.signOut();
+      await runWithAsyncGuard('auth.logout', async () => {
+        const { error: signOutError } = await supabase.auth.signOut();
+        if (signOutError) throw signOutError;
+      });
       setSession(null);
       setUser(null);
       setProfile(null);
+      setFreelancer(null);
       window.location.href = '/';
     } catch (err) {
-      setError((err as Error).message);
+      setError(toErrorMessage(err));
       throw err;
     }
   };
@@ -141,12 +305,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const resetPassword = async (email: string) => {
     try {
       setError(null);
-      const { error: e } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-      if (e) throw e;
+      await runWithAsyncGuard(
+        'auth.resetPassword',
+        async () => {
+          const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: `${window.location.origin}/reset-password`,
+          });
+          if (resetError) throw resetError;
+        },
+        {
+          fallbackMessage: 'Le lien de réinitialisation n’a pas pu être envoyé.',
+          metadata: { email },
+        }
+      );
     } catch (err) {
-      setError((err as Error).message);
+      setError(toErrorMessage(err));
       throw err;
     }
   };
@@ -154,10 +327,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const updatePassword = async (newPassword: string) => {
     try {
       setError(null);
-      const { error: e } = await supabase.auth.updateUser({ password: newPassword });
-      if (e) throw e;
+      await runWithAsyncGuard(
+        'auth.updatePassword',
+        async () => {
+          const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
+          if (updateError) throw updateError;
+        },
+        {
+          fallbackMessage: 'La mise à jour du mot de passe a expiré.',
+        }
+      );
     } catch (err) {
-      setError((err as Error).message);
+      setError(toErrorMessage(err));
       throw err;
     }
   };
@@ -166,14 +347,93 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setError(null);
       if (!profile) throw new Error('Aucun profil chargé');
-      const { error: e } = await supabase
-        .from('profiles')
-        .update(updates)
-        .eq('user_id', profile.user_id);
-      if (e) throw e;
-      setProfile({ ...profile, ...updates });
+
+      const allowedUpdates: Partial<Profile> = {};
+
+      if ('full_name' in updates) {
+        allowedUpdates.full_name = updates.full_name ?? null;
+      }
+
+      if ('avatar_url' in updates) {
+        allowedUpdates.avatar_url = updates.avatar_url ?? null;
+      }
+
+      const { data, error: updateError } = await runWithAsyncGuard(
+        'auth.updateProfile',
+        async () =>
+          supabase
+            .from('profiles')
+            .update(allowedUpdates)
+            .eq('user_id', profile.user_id)
+            .select(PROFILE_COLUMNS)
+            .single(),
+        {
+          fallbackMessage: 'La mise à jour du profil a expiré.',
+          metadata: { userId: profile.user_id },
+        }
+      );
+
+      if (updateError) throw updateError;
+      setProfile(data as Profile);
     } catch (err) {
-      setError((err as Error).message);
+      setError(toErrorMessage(err));
+      throw err;
+    }
+  };
+
+  const updateFreelancer = async (updates: Partial<Freelancer>) => {
+    try {
+      setError(null);
+      if (!profile || profile.role !== 'freelancer' || !freelancer) {
+        throw new Error('Aucun profil freelancer chargé');
+      }
+
+      const allowedUpdates: Partial<Freelancer> = {};
+
+      if ('phone_number' in updates) {
+        allowedUpdates.phone_number = updates.phone_number ?? null;
+      }
+      if ('tarif_jour' in updates) {
+        allowedUpdates.tarif_jour = updates.tarif_jour ?? null;
+      }
+      if ('bio' in updates) {
+        allowedUpdates.bio = updates.bio ?? null;
+      }
+      if ('specialite' in updates) {
+        allowedUpdates.specialite = updates.specialite ?? null;
+      }
+      if ('portfolio_url' in updates) {
+        allowedUpdates.portfolio_url = updates.portfolio_url ?? null;
+      }
+      if ('onboarding_completed' in updates) {
+        allowedUpdates.onboarding_completed = Boolean(updates.onboarding_completed);
+      }
+      if ('statut' in updates && updates.statut) {
+        allowedUpdates.statut = updates.statut;
+      }
+      if ('archived_at' in updates) {
+        allowedUpdates.archived_at = updates.archived_at ?? null;
+      }
+
+      const { data, error: updateError } = await runWithAsyncGuard(
+        'auth.updateFreelancer',
+        async () =>
+          supabase
+            .from('freelancers')
+            .update(allowedUpdates)
+            .eq('user_id', profile.user_id)
+            .select(FREELANCER_COLUMNS)
+            .single(),
+        {
+          fallbackMessage: 'La mise à jour du profil freelancer a expiré.',
+          metadata: { userId: profile.user_id },
+        }
+      );
+
+      if (updateError) throw updateError;
+      setFreelancer(data as Freelancer);
+    } catch (err) {
+      setError(toErrorMessage(err));
       throw err;
     }
   };
@@ -186,6 +446,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         session,
         user,
         profile,
+        freelancer,
         loading,
         error,
         login,
@@ -193,6 +454,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         resetPassword,
         updatePassword,
         updateProfile,
+        updateFreelancer,
+        refreshAuthState,
         clearError,
       }}
     >

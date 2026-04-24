@@ -6,6 +6,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import BackToTop from './components/BackToTop';
 import { useEffect, useState } from 'react';
 import { useSessionTimeout } from './hooks/useSessionTimeout';
+import { useTimeoutRegistry } from './hooks/useTimeoutRegistry';
 
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
@@ -21,6 +22,7 @@ import JoinPage from './pages/JoinPage';
 import DashboardPage from './pages/DashboardPage';
 import AdminPage from './pages/AdminPage';
 import LoginPage from './pages/LoginPage';
+import CompleteProfilePage from './pages/CompleteProfilePage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import NotFoundPage from './pages/NotFoundPage';
 import PrivacyPage from './pages/PrivacyPage';
@@ -52,6 +54,7 @@ const VALID_PATHS = [
   '/admin',
   '/admin/login',
   '/login',
+  '/complete-profile',
   '/reset-password',
   '/privacy',
   '/legal',
@@ -60,6 +63,7 @@ const VALID_PATHS = [
 function AppContent() {
   const [path, setPath] = useState(window.location.pathname);
   const { loading, session } = useAuth();
+  const { schedule, clearAll } = useTimeoutRegistry();
 
   // ✅ Déconnexion automatique après 30 min d'inactivité
   useSessionTimeout(!!session);
@@ -69,7 +73,7 @@ function AppContent() {
     window.addEventListener('popstate', handleLocationChange);
 
     if (window.location.hash) {
-      setTimeout(() => {
+      schedule(() => {
         const el = document.querySelector(window.location.hash);
         if (el) el.scrollIntoView({ behavior: 'smooth' });
       }, 500);
@@ -96,12 +100,13 @@ function AppContent() {
 
     document.addEventListener('click', handleClick);
     return () => {
+      clearAll();
       window.removeEventListener('popstate', handleLocationChange);
       document.removeEventListener('click', handleClick);
     };
-  }, [path]);
+  }, [clearAll, schedule]);
 
-  if (loading) {
+  if (loading && !session) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[var(--bg-primary)]">
         <div className="flex flex-col items-center gap-4">
@@ -111,7 +116,6 @@ function AppContent() {
       </div>
     );
   }
-
   const renderContent = () => {
     switch (path) {
       case '/':
@@ -132,6 +136,12 @@ function AppContent() {
         return (
           <ProtectedRoute requiredRole="freelancer">
             <DashboardPage />
+          </ProtectedRoute>
+        );
+      case '/complete-profile':
+        return (
+          <ProtectedRoute requiredRole="freelancer" allowIncompleteFreelancer>
+            <CompleteProfilePage />
           </ProtectedRoute>
         );
       case '/admin':

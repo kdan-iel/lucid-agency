@@ -3,8 +3,11 @@
  * (via Google Apps Script comme intermédiaire)
  */
 
-const GOOGLE_APPS_SCRIPT_URL = import.meta.env.VITE_GAS_URL;
-const SECRET_TOKEN = import.meta.env.VITE_GAS_TOKEN;
+import { ensureSerializablePayload, runWithAsyncGuard, toErrorMessage } from './asyncTools';
+import { getOptionalEnv, getOptionalHttpUrlEnv } from './env';
+
+const GOOGLE_APPS_SCRIPT_URL = getOptionalHttpUrlEnv('VITE_GAS_URL');
+const SECRET_TOKEN = getOptionalEnv('VITE_GAS_TOKEN', '');
 
 export interface FormSubmissionPayload {
   formType: 'contact' | 'freelancer';
@@ -52,30 +55,50 @@ export async function submitFreelancerToGoogleDrive(data: {
  */
 async function submitToGoogleDrive(payload: FormSubmissionPayload) {
   if (!GOOGLE_APPS_SCRIPT_URL || !SECRET_TOKEN) {
-    throw new Error('Configuration serveur manquante');
+    throw new Error('Configuration Google Drive manquante.');
   }
 
   try {
-    const fullPayload = {
-      ...payload,
-      token: SECRET_TOKEN,
-      ipAddress: await getClientIP(),
-      userAgent: navigator.userAgent,
-      timestamp: new Date().toISOString(),
-    };
+    const fullPayload = ensureSerializablePayload(
+      {
+        ...payload,
+        token: SECRET_TOKEN,
+        ipAddress: await getClientIP(),
+        userAgent: navigator.userAgent,
+        timestamp: new Date().toISOString(),
+      },
+      'google-drive-submit'
+    );
 
-    await fetch(GOOGLE_APPS_SCRIPT_URL, {
-      method: 'POST',
-      body: JSON.stringify(fullPayload),
-      mode: 'no-cors',
-    });
+    await runWithAsyncGuard(
+      'googleDrive.submit',
+      async () => {
+        await fetch(GOOGLE_APPS_SCRIPT_URL, {
+          method: 'POST',
+          body: JSON.stringify(fullPayload),
+          mode: 'no-cors',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+      },
+      {
+        fallbackMessage: "L'envoi Google Drive a expiré.",
+        metadata: { formType: payload.formType },
+      }
+    );
 
     return {
       success: true,
       message: 'Données envoyées vers Google Drive',
     };
-  } catch {
-    throw new Error('Impossible de sauvegarder les données');
+  } catch (error) {
+    const message = toErrorMessage(error, 'Impossible de sauvegarder les données');
+    console.error('[GoogleDrive] submit failure', {
+      formType: payload.formType,
+      message,
+    });
+    throw new Error(message);
   }
 }
 
@@ -84,10 +107,19 @@ async function submitToGoogleDrive(payload: FormSubmissionPayload) {
  */
 async function getClientIP(): Promise<string> {
   try {
-    const response = await fetch('https://api.ipify.org?format=json');
+    const response = await runWithAsyncGuard(
+      'googleDrive.getClientIp',
+      () => fetch('https://api.ipify.org?format=json'),
+      {
+        fallbackMessage: "Impossible de récupérer l'adresse IP client.",
+      }
+    );
     const data = await response.json();
     return data.ip || 'unknown';
-  } catch {
+  } catch (error) {
+    console.warn('[GoogleDrive] client IP unavailable', {
+      message: toErrorMessage(error),
+    });
     return 'unknown';
   }
 }
@@ -108,7 +140,10 @@ export async function testGoogleDrive() {
     });
 
     return true;
-  } catch {
+  } catch (error) {
+    console.error('[GoogleDrive] test failure', {
+      message: toErrorMessage(error),
+    });
     return false;
   }
 }

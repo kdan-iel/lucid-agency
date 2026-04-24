@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLanguage } from '../context/LanguageContext';
 import { Search, X } from 'lucide-react';
+import { listPublicTalents } from '../utils/remoteFunctions';
 
 type SpecialtyKey =
   | 'graphisme'
@@ -86,21 +87,21 @@ const specialtyMeta: Record<
   },
 };
 
-function _toSpecialtyKey(value: string): SpecialtyKey {
+function toSpecialtyKey(value: string): SpecialtyKey {
   return value in specialtyMeta ? (value as SpecialtyKey) : 'autre';
 }
 
-function _formatRate(ratePerHour: number | null) {
+function formatRate(ratePerHour: number | null) {
   if (!ratePerHour) return 'Tarif sur demande';
 
   const rounded = new Intl.NumberFormat('fr-FR', {
     maximumFractionDigits: 0,
   }).format(ratePerHour);
 
-  return `${rounded} FCFA/h`;
+  return `${rounded} FCFA/jour`;
 }
 
-function _buildInitials(firstName: string, lastName: string) {
+function buildInitials(firstName: string, lastName: string) {
   return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase() || 'LU';
 }
 
@@ -136,11 +137,70 @@ export default function Talents() {
   const [visibleCount, setVisibleCount] = useState(6);
   const [selectedTalent, setSelectedTalent] = useState<PublicTalent | null>(null);
   const [talents, setTalents] = useState<PublicTalent[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
-    setTalents([]);
-    setLoading(false);
+    let cancelled = false;
+
+    const loadTalents = async () => {
+      setLoading(true);
+      setLoadError(null);
+      try {
+        const data = await listPublicTalents();
+        const mapped = data.map((item) => {
+          const specialty = toSpecialtyKey(
+            item.specialite ?? item.specialty ?? item.domaine ?? item.domain ?? 'autre'
+          );
+          const meta = specialtyMeta[specialty];
+          const fullName = item.full_name?.trim() || item.name?.trim() || 'Talent LUCID';
+          const [firstName = 'Talent', ...restName] = fullName.split(' ').filter(Boolean);
+          const lastName = restName.join(' ') || 'LUCID';
+          const fallbackSkill = lang === 'FR' ? meta.fallbackSkillFr : meta.fallbackSkillEn;
+          const derivedSkill = item.specialite?.trim() || item.specialty?.trim() || fallbackSkill;
+          const rawSkills = [derivedSkill].filter(Boolean);
+
+          return {
+            id: item.id,
+            name: fullName,
+            category: specialty,
+            expertise: lang === 'FR' ? meta.labelFr : meta.labelEn,
+            skills: rawSkills.length > 0 ? rawSkills.slice(0, 3) : [fallbackSkill],
+            initials: buildInitials(firstName, lastName),
+            color: meta.color,
+            rate: formatRate(item.day_rate ?? item.tarif_jour ?? null),
+            bio:
+              item.bio?.trim() ||
+              (lang === 'FR'
+                ? 'Profil en cours de completion. Les details seront disponibles tres bientot.'
+                : 'Profile is being completed. More details will be available very soon.'),
+            portfolioUrl: item.portfolio_url ?? item.portfolioUrl ?? null,
+          } satisfies PublicTalent;
+        });
+
+        if (!cancelled) {
+          setTalents(mapped);
+        }
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'Impossible de charger les talents.';
+        console.error('[Talents] load failure', { message });
+        if (!cancelled) {
+          setLoadError(message);
+          setTalents([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void loadTalents();
+
+    return () => {
+      cancelled = true;
+    };
   }, [lang]);
 
   const categories = useMemo(
@@ -234,7 +294,7 @@ export default function Talents() {
               {emptyCopy.title}
             </h3>
             <p className="text-brand-gray leading-relaxed max-w-2xl mx-auto mb-8">
-              {emptyCopy.body}
+              {loadError ?? emptyCopy.body}
             </p>
             <a
               href="/join"

@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { supabase, useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { Lock, Mail, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import { checkRateLimit, getRateLimitWait, isValidEmail } from '../utils/security';
+import { supabase } from '../lib/supabaseClient';
+import { runWithAsyncGuard, toErrorMessage } from '../utils/asyncTools';
 
 export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
-  const { login, resetPassword, clearError } = useAuth();
+  const { login, resetPassword, clearError, profile, freelancer, loading } = useAuth();
   const { t } = useLanguage();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -20,23 +22,55 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
 
   const isAdminLogin = role === 'admin';
 
+  const navigateTo = (path: string) => {
+    if (window.location.pathname === path) return;
+    window.history.pushState({}, '', path);
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  };
+
+  useEffect(() => {
+    if (loading || !profile) return;
+
+    if (profile.role === 'admin') {
+      navigateTo('/admin');
+      return;
+    }
+
+    if (profile.role !== 'freelancer') {
+      navigateTo('/dashboard');
+      return;
+    }
+
+    if (
+      freelancer &&
+      (!freelancer.onboarding_completed || !freelancer.phone_number || !freelancer.tarif_jour)
+    ) {
+      navigateTo('/complete-profile');
+      return;
+    }
+
+    if (freelancer?.statut === 'validated' && freelancer.onboarding_completed) {
+      navigateTo('/dashboard');
+    }
+  }, [freelancer, loading, profile]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
     if (!email.trim() || !password) {
-      setError('Veuillez renseigner votre email et votre mot de passe.');
+      setError(t('login.error.missingFields'));
       return;
     }
 
     if (!isValidEmail(email.trim())) {
-      setError('Veuillez entrer une adresse email valide.');
+      setError(t('login.error.invalidEmail'));
       return;
     }
 
     if (!checkRateLimit('login_attempt', 5, 60_000)) {
       const wait = getRateLimitWait('login_attempt', 60_000);
-      setError(`Trop de tentatives. Reessayez dans ${wait} secondes.`);
+      setError(t('login.error.rateLimit').replace('{{seconds}}', String(wait)));
       return;
     }
 
@@ -44,26 +78,87 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
     clearError();
 
     try {
-      const nextProfile = await login(email.trim().toLowerCase(), password);
+      const { profile: nextProfile, freelancer: nextFreelancer } = await login(
+        email.trim().toLowerCase(),
+        password
+      );
 
       if (isAdminLogin && nextProfile.role !== 'admin') {
-        await supabase.auth.signOut();
-        setError("Ce compte n'a pas accès à l'administration.");
+        await runWithAsyncGuard('auth.signOutUnauthorizedAdmin', async () => {
+          const { error: signOutError } = await supabase.auth.signOut();
+          if (signOutError) throw signOutError;
+        });
+        setError(t('login.error.adminAccess'));
         return;
       }
 
-      window.location.href = nextProfile.role === 'admin' ? '/admin' : '/dashboard';
-    } catch (err) {
-      const msg = (err as Error).message;
-      if (msg.includes('Invalid login credentials')) {
-        setError('Email ou mot de passe incorrect.');
-      } else if (msg.includes('Email not confirmed')) {
-        setError('Veuillez confirmer votre email avant de vous connecter.');
-      } else if (msg.includes('Profil introuvable')) {
-        setError('Compte incomplet. Contactez un administrateur.');
-      } else {
-        setError('Une erreur est survenue. Veuillez reessayer.');
+      if (nextProfile.role === 'freelancer') {
+        if (!nextFreelancer) {
+          await runWithAsyncGuard('auth.signOutMissingFreelancer', async () => {
+            const { error: signOutError } = await supabase.auth.signOut();
+            if (signOutError) throw signOutError;
+          });
+          setError(t('login.error.noFreelancer'));
+          return;
+        }
+
+        if (nextFreelancer.statut === 'pending') {
+          await runWithAsyncGuard('auth.signOutPendingFreelancer', async () => {
+            const { error: signOutError } = await supabase.auth.signOut();
+            if (signOutError) throw signOutError;
+          });
+          setError(t('login.error.pending'));
+          return;
+        }
+
+        if (nextFreelancer.statut === 'rejected') {
+          await runWithAsyncGuard('auth.signOutRejectedFreelancer', async () => {
+            const { error: signOutError } = await supabase.auth.signOut();
+            if (signOutError) throw signOutError;
+          });
+          setError(t('login.error.rejected'));
+          return;
+        }
+
+        if (nextFreelancer.statut === 'suspended') {
+          await runWithAsyncGuard('auth.signOutSuspendedFreelancer', async () => {
+            const { error: signOutError } = await supabase.auth.signOut();
+            if (signOutError) throw signOutError;
+          });
+          setError(t('login.error.suspended'));
+          return;
+        }
+
+        if (
+          !nextFreelancer.onboarding_completed ||
+          !nextFreelancer.phone_number ||
+          !nextFreelancer.tarif_jour
+        ) {
+          navigateTo('/complete-profile');
+          return;
+        }
       }
+
+      navigateTo(nextProfile.role === 'admin' ? '/admin' : '/dashboard');
+    } catch (err) {
+      const message = (err as Error).message;
+
+      if (message.includes('Invalid login credentials')) {
+        setError(t('login.error.invalidCredentials'));
+      } else if (message.includes('Email not confirmed')) {
+        setError(t('login.error.emailNotConfirmed'));
+      } else if (message.includes('Profil introuvable')) {
+        setError(t('login.error.profileMissing'));
+      } else if (message.includes('Aucune candidature freelancer')) {
+        setError(t('login.error.noFreelancer'));
+      } else {
+        setError(t('login.error.generic'));
+      }
+
+      console.error('[LoginPage] login failure', {
+        message: toErrorMessage(err),
+        role,
+      });
     } finally {
       setIsLoading(false);
     }
@@ -74,12 +169,12 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
     setError('');
 
     if (!resetEmail.trim()) {
-      setError('Veuillez renseigner votre email.');
+      setError(t('login.reset.error.missingEmail'));
       return;
     }
 
     if (!isValidEmail(resetEmail.trim())) {
-      setError('Veuillez entrer une adresse email valide.');
+      setError(t('login.reset.error.invalidEmail'));
       return;
     }
 
@@ -87,8 +182,10 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
     try {
       await resetPassword(resetEmail.trim().toLowerCase());
       setResetSent(true);
-    } catch {
-      setError("Impossible d'envoyer le lien. Verifiez l'email.");
+    } catch (err) {
+      const message = toErrorMessage(err, t('login.reset.error.sendFailed'));
+      console.error('[LoginPage] reset password failure', { message });
+      setError(message);
     } finally {
       setIsLoading(false);
     }
@@ -107,11 +204,8 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
             {resetSent ? (
               <div className="text-center">
                 <div className="text-5xl mb-4">📧</div>
-                <h2 className="text-2xl font-bold mb-3">Email envoyé !</h2>
-                <p className="text-brand-gray mb-8">
-                  Vérifiez votre boîte mail et cliquez sur le lien pour réinitialiser votre mot de
-                  passe.
-                </p>
+                <h2 className="text-2xl font-bold mb-3">{t('login.reset.success.title')}</h2>
+                <p className="text-brand-gray mb-8">{t('login.reset.success.body')}</p>
                 <button
                   onClick={() => {
                     setShowReset(false);
@@ -119,15 +213,13 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
                   }}
                   className="text-brand-mint font-bold hover:underline"
                 >
-                  Retour à la connexion
+                  {t('login.reset.back')}
                 </button>
               </div>
             ) : (
               <>
-                <h2 className="text-2xl font-bold mb-2">Mot de passe oublié ?</h2>
-                <p className="text-brand-gray mb-8">
-                  Entrez votre email et nous vous enverrons un lien de réinitialisation.
-                </p>
+                <h2 className="text-2xl font-bold mb-2">{t('login.reset.title')}</h2>
+                <p className="text-brand-gray mb-8">{t('login.reset.subtitle')}</p>
                 <form onSubmit={handleResetPassword} className="space-y-6">
                   <div className="relative">
                     <Mail
@@ -138,7 +230,7 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
                       type="email"
                       value={resetEmail}
                       onChange={(e) => setResetEmail(e.target.value)}
-                      placeholder="Votre email"
+                      placeholder={t('login.emailPlaceholder')}
                       required
                       className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl py-4 pl-12 pr-4 focus:outline-none focus:border-brand-mint transition-all"
                     />
@@ -149,14 +241,14 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
                     disabled={isLoading}
                     className="w-full bg-brand-mint text-[#0D1117] py-4 rounded-xl font-bold text-lg hover:scale-[1.02] transition-all disabled:opacity-60 disabled:scale-100"
                   >
-                    {isLoading ? 'Envoi...' : 'Envoyer le lien'}
+                    {isLoading ? t('login.reset.submitLoading') : t('login.reset.submit')}
                   </button>
                   <button
                     type="button"
                     onClick={() => setShowReset(false)}
                     className="w-full text-brand-gray hover:text-brand-mint transition-colors text-sm"
                   >
-                    Retour à la connexion
+                    {t('login.reset.back')}
                   </button>
                 </form>
               </>
@@ -189,7 +281,7 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
           <form onSubmit={handleSubmit} className="space-y-6" noValidate>
             <div>
               <label className="block text-sm font-bold mb-2 text-brand-gray uppercase tracking-wider">
-                Email
+                {t('login.label.email')}
               </label>
               <div className="relative">
                 <Mail
@@ -201,7 +293,7 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl py-4 pl-12 pr-4 focus:outline-none focus:border-brand-mint transition-all"
-                  placeholder="votre@email.com"
+                  placeholder={t('login.emailPlaceholder')}
                   required
                   autoComplete="email"
                 />
@@ -222,7 +314,7 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full bg-[var(--bg-primary)] border border-[var(--border-color)] rounded-xl py-4 pl-12 pr-12 focus:outline-none focus:border-brand-mint transition-all"
-                  placeholder="••••••••"
+                  placeholder={t('login.passwordPlaceholder')}
                   required
                   autoComplete="current-password"
                 />
@@ -230,6 +322,7 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-brand-gray hover:text-brand-mint transition-colors"
+                  aria-label={t('login.togglePassword')}
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
@@ -242,7 +335,7 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
                 onClick={() => setShowReset(true)}
                 className="text-sm text-brand-gray hover:text-brand-mint transition-colors"
               >
-                Mot de passe oublié ?
+                {t('login.reset.link')}
               </button>
             </div>
 
@@ -261,9 +354,22 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
               disabled={isLoading}
               className="w-full bg-brand-mint text-[#0D1117] py-4 rounded-xl font-bold text-lg hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg shadow-brand-mint/20 disabled:opacity-60 disabled:scale-100"
             >
-              {isLoading ? 'Connexion...' : isAdminLogin ? 'Accéder à l’admin' : t('login.button')}
+              {isLoading
+                ? t('login.submitLoading')
+                : isAdminLogin
+                  ? t('login.button.admin')
+                  : t('login.button')}
             </button>
           </form>
+
+          {!isAdminLogin && (
+            <div className="mt-6 text-center text-sm text-brand-gray">
+              <span>{t('login.registerPrompt')}</span>{' '}
+              <a href="/join" className="text-brand-mint font-bold hover:underline">
+                {t('login.registerLink')}
+              </a>
+            </div>
+          )}
 
           <div className="mt-8 pt-8 border-t border-[var(--border-color)] text-center">
             <a

@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useSessionTimeout } from '../../hooks/useSessionTimeout';
-import { supabase } from '../../context/AuthContext';
+import { supabase } from '../../lib/supabaseClient';
 
-vi.mock('../../context/AuthContext', () => ({
+vi.mock('../../lib/supabaseClient', () => ({
   supabase: {
     auth: {
       signOut: vi.fn().mockResolvedValue({ error: null }),

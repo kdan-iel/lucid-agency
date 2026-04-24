@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { supabase } from '../context/AuthContext';
+import { supabase } from '../lib/supabaseClient';
+import { runWithAsyncGuard, toErrorMessage } from '../utils/asyncTools';
 
 const TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes d'inactivité
 const WARNING_MS = 25 * 60 * 1000; // Avertissement à 25 minutes
@@ -28,10 +29,20 @@ export function useSessionTimeout(isAuthenticated: boolean) {
 
     // Déconnexion à 30 min
     timeoutRef.current = setTimeout(async () => {
-      await supabase.auth.signOut();
-      window.location.href = '/';
+      try {
+        await runWithAsyncGuard('auth.idleSignOut', async () => {
+          const { error } = await supabase.auth.signOut();
+          if (error) throw error;
+        });
+      } catch (error) {
+        console.error('[Session] idle sign-out failure', {
+          message: toErrorMessage(error),
+        });
+      } finally {
+        window.location.href = '/';
+      }
     }, TIMEOUT_MS);
-  }, [isAuthenticated]);
+  }, []);
 
   useEffect(() => {
     if (!isAuthenticated) {
