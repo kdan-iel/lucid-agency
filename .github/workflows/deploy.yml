@@ -27,8 +27,8 @@ concurrency:
 env:
   NODE_VERSION: '20'
   # Placeholders de build uniquement. Le runtime Vercel gère ses propres variables.
-  VITE_SUPABASE_URL: https://placeholder.supabase.co
-  VITE_SUPABASE_ANON_KEY: placeholder_anon_key_for_ci_only
+  VITE_SUPABASE_URL: https://thnidhhicnglnkgnozxu.supabase.co
+  VITE_SUPABASE_ANON_KEY: sb_publishable_119KRKBxiYl-VbYwLGQmbQ_xmt9CCAz
 
 jobs:
   # ────────────────────────────────────────────────────────
@@ -205,7 +205,7 @@ jobs:
 
       - name: Test homepage loads
         run: |
-          URL="${{ needs.deploy.outputs.deployed_url }}"
+          URL="https://lucidagence.com"
           echo "Testing: $URL"
 
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
