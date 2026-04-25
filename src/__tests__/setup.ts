@@ -9,6 +9,7 @@ vi.mock('../context/AuthContext', async () => {
     supabase: {
       auth: {
         getSession: vi.fn().mockResolvedValue({ data: { session: null }, error: null }),
+        getUser: vi.fn().mockResolvedValue({ data: { user: null }, error: null }),
         onAuthStateChange: vi
           .fn()
           .mockReturnValue({ data: { subscription: { unsubscribe: vi.fn() } } }),
@@ -35,6 +36,7 @@ Object.defineProperty(window, 'location', {
     href: 'http://localhost:5173',
     origin: 'http://localhost:5173',
     pathname: '/',
+    replace: vi.fn(),
     assign: vi.fn(),
     reload: vi.fn(),
   },

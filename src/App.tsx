@@ -7,6 +7,7 @@ import BackToTop from './components/BackToTop';
 import { useEffect, useState } from 'react';
 import { useSessionTimeout } from './hooks/useSessionTimeout';
 import { useTimeoutRegistry } from './hooks/useTimeoutRegistry';
+import { navigate } from './utils/navigation';
 
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
@@ -87,7 +88,7 @@ function AppContent() {
         if (VALID_PATHS.includes(url.pathname)) {
           if (url.pathname === window.location.pathname && url.hash) return;
           e.preventDefault();
-          window.history.pushState({}, '', url.pathname + url.hash);
+          navigate(url.pathname + url.hash);
           setPath(url.pathname);
           if (!url.hash) window.scrollTo(0, 0);
           else {
@@ -134,19 +135,19 @@ function AppContent() {
         return <LegalPage />;
       case '/dashboard':
         return (
-          <ProtectedRoute requiredRole="freelancer">
+          <ProtectedRoute route="dashboard">
             <DashboardPage />
           </ProtectedRoute>
         );
       case '/complete-profile':
         return (
-          <ProtectedRoute requiredRole="freelancer" allowIncompleteFreelancer>
+          <ProtectedRoute route="complete-profile">
             <CompleteProfilePage />
           </ProtectedRoute>
         );
       case '/admin':
         return (
-          <ProtectedRoute requiredRole="admin">
+          <ProtectedRoute route="admin">
             <AdminPage />
           </ProtectedRoute>
         );

@@ -1,14 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useSessionTimeout } from '../../hooks/useSessionTimeout';
-import { supabase } from '../../lib/supabaseClient';
 
-vi.mock('../../lib/supabaseClient', () => ({
-  supabase: {
-    auth: {
-      signOut: vi.fn().mockResolvedValue({ error: null }),
-    },
-  },
+const forceLogoutMock = vi.fn().mockResolvedValue(undefined);
+
+vi.mock('../../context/AuthContext', () => ({
+  useAuth: () => ({
+    forceLogout: forceLogoutMock,
+  }),
 }));
 
 describe('useSessionTimeout()', () => {
@@ -17,14 +16,7 @@ describe('useSessionTimeout()', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     warnMock.mockClear();
-    vi.mocked(supabase.auth.signOut).mockClear();
-    Object.defineProperty(window, 'location', {
-      configurable: true,
-      value: {
-        ...window.location,
-        href: 'http://localhost:5173/dashboard',
-      },
-    });
+    forceLogoutMock.mockClear();
   });
 
   afterEach(() => {
@@ -32,7 +24,7 @@ describe('useSessionTimeout()', () => {
     vi.clearAllMocks();
   });
 
-  it('ne fait rien si non authentifie', () => {
+  it('does nothing when unauthenticated', () => {
     const { unmount } = renderHook(() => useSessionTimeout(false));
 
     act(() => {
@@ -41,11 +33,11 @@ describe('useSessionTimeout()', () => {
 
     unmount();
 
-    expect(supabase.auth.signOut).not.toHaveBeenCalled();
+    expect(forceLogoutMock).not.toHaveBeenCalled();
     expect(warnMock).not.toHaveBeenCalled();
   });
 
-  it('declenche un avertissement apres 25 minutes', () => {
+  it('warns after 25 minutes', () => {
     renderHook(() => useSessionTimeout(true));
 
     act(() => {
@@ -53,10 +45,10 @@ describe('useSessionTimeout()', () => {
     });
 
     expect(warnMock).toHaveBeenCalledWith('[Session] Expiration dans 5 minutes.');
-    expect(supabase.auth.signOut).not.toHaveBeenCalled();
+    expect(forceLogoutMock).not.toHaveBeenCalled();
   });
 
-  it('deconnecte et redirige apres 30 minutes', async () => {
+  it('forces logout after 30 minutes', async () => {
     renderHook(() => useSessionTimeout(true));
 
     await act(async () => {
@@ -64,11 +56,10 @@ describe('useSessionTimeout()', () => {
       await Promise.resolve();
     });
 
-    expect(supabase.auth.signOut).toHaveBeenCalledTimes(1);
-    expect(window.location.href).toBe('/');
+    expect(forceLogoutMock).toHaveBeenCalledWith('idle_timeout');
   });
 
-  it('reinitialise le timer sur activite utilisateur', () => {
+  it('resets the timer on user activity', () => {
     renderHook(() => useSessionTimeout(true));
 
     act(() => {
@@ -78,6 +69,6 @@ describe('useSessionTimeout()', () => {
     });
 
     expect(warnMock).not.toHaveBeenCalled();
-    expect(supabase.auth.signOut).not.toHaveBeenCalled();
+    expect(forceLogoutMock).not.toHaveBeenCalled();
   });
 });

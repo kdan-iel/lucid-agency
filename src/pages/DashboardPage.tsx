@@ -19,6 +19,7 @@ import { validatePassword } from '../utils/security';
 import { Phone as WhatsAppIcon } from 'lucide-react';
 import { useTimeoutRegistry } from '../hooks/useTimeoutRegistry';
 import { toErrorMessage } from '../utils/asyncTools';
+import { toUserSafeMessage } from '../utils/authSession';
 
 function splitFullName(fullName: string | null | undefined) {
   const parts = (fullName ?? '').trim().split(/\s+/).filter(Boolean);
@@ -32,7 +33,7 @@ type SettingsTab = 'main' | 'profile' | 'security' | 'notifications';
 
 export default function DashboardPage() {
   const { t } = useLanguage();
-  const { logout, profile, freelancer, updateProfile, updateFreelancer, updatePassword } =
+  const { forceLogout, profile, freelancer, updateProfile, updateFreelancer, updatePassword } =
     useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -51,12 +52,6 @@ export default function DashboardPage() {
   );
   const [settingsError, setSettingsError] = useState('');
   const { clearAll, schedule } = useTimeoutRegistry();
-
-  useEffect(() => {
-    if (profile?.role === 'freelancer' && freelancer && !freelancer.onboarding_completed) {
-      window.location.href = '/complete-profile';
-    }
-  }, [freelancer, profile?.role]);
 
   useEffect(() => {
     setProfileForm({
@@ -99,9 +94,10 @@ export default function DashboardPage() {
         setActiveSettingsTab('main');
       }, 1500);
     } catch (err) {
-      const message = toErrorMessage(err, t('dashboard.settings.profile.error'));
-      console.error('[DashboardPage] profile save failure', { message });
-      setSettingsError(message);
+      console.error('[DashboardPage] profile save failure', {
+        message: toErrorMessage(err, t('dashboard.settings.profile.error')),
+      });
+      setSettingsError(toUserSafeMessage(err, t('dashboard.settings.profile.error')));
       setSettingsStatus('error');
     }
   };
@@ -138,9 +134,10 @@ export default function DashboardPage() {
         setActiveSettingsTab('main');
       }, 1500);
     } catch (err) {
-      const message = toErrorMessage(err, t('dashboard.settings.security.error'));
-      console.error('[DashboardPage] password update failure', { message });
-      setSettingsError(message);
+      console.error('[DashboardPage] password update failure', {
+        message: toErrorMessage(err, t('dashboard.settings.security.error')),
+      });
+      setSettingsError(toUserSafeMessage(err, t('dashboard.settings.security.error')));
       setSettingsStatus('error');
     }
   };
@@ -570,7 +567,7 @@ export default function DashboardPage() {
             </div>
             <button
               onClick={() => {
-                void logout().catch((error) => {
+                void forceLogout('manual_logout').catch((error) => {
                   console.error('[DashboardPage] logout failure', {
                     message: toErrorMessage(error),
                   });

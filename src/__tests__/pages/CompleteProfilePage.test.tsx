@@ -24,19 +24,11 @@ vi.mock('../../components/Footer', () => ({
   default: () => <div>Footer</div>,
 }));
 
-const mockLocation = {
-  href: 'http://localhost:5173/complete-profile',
-};
-
-Object.defineProperty(window, 'location', {
-  configurable: true,
-  value: mockLocation,
-});
-
 describe('CompleteProfilePage', () => {
   const phoneLabel = 'Numéro de téléphone *';
   const rateLabel = 'Tarif journalier (FCFA) *';
   const submitLabel = 'Compléter mon profil';
+  let replaceStateSpy: ReturnType<typeof vi.spyOn>;
 
   afterEach(() => {
     vi.useRealTimers();
@@ -44,7 +36,7 @@ describe('CompleteProfilePage', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockLocation.href = 'http://localhost:5173/complete-profile';
+    replaceStateSpy = vi.spyOn(window.history, 'replaceState');
     mockUseAuth.mockReturnValue({
       session: { access_token: 'token-123' },
       profile: {
@@ -151,7 +143,7 @@ describe('CompleteProfilePage', () => {
     await screen.findByText(/profil termin/i);
     await new Promise((resolve) => setTimeout(resolve, 1600));
 
-    expect(mockLocation.href).toContain('/dashboard');
+    expect(replaceStateSpy).toHaveBeenCalledWith({}, '', '/dashboard');
   });
 
   it('shows error message on failure', async () => {
@@ -167,7 +159,7 @@ describe('CompleteProfilePage', () => {
     });
     submitForm();
 
-    expect(await screen.findByText(/failed to complete profile/i)).toBeInTheDocument();
+    expect(await screen.findByText(/une erreur est survenue/i)).toBeInTheDocument();
   });
 
   it('is only accessible to logged-in freelancers through ProtectedRoute', () => {
@@ -178,12 +170,11 @@ describe('CompleteProfilePage', () => {
     });
 
     const { container } = renderWithLanguage(
-      <ProtectedRoute requiredRole="freelancer">
+      <ProtectedRoute route="dashboard">
         <CompleteProfilePage />
       </ProtectedRoute>
     );
 
-    expect(container).toHaveTextContent(/redirection en cours/i);
-    expect(mockLocation.href).toContain('/complete-profile');
+    expect(container).toBeEmptyDOMElement();
   });
 });

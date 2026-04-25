@@ -5,11 +5,13 @@ import { useLanguage } from '../context/LanguageContext';
 import { Lock, Mail, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import { checkRateLimit, getRateLimitWait, isValidEmail } from '../utils/security';
-import { supabase } from '../lib/supabaseClient';
-import { runWithAsyncGuard, toErrorMessage } from '../utils/asyncTools';
+import { toErrorMessage } from '../utils/asyncTools';
+import { getDefaultAuthenticatedRoute } from '../utils/accessControl';
+import { navigate } from '../utils/navigation';
+import { toUserSafeMessage } from '../utils/authSession';
 
 export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
-  const { login, resetPassword, clearError, profile, freelancer, loading } = useAuth();
+  const { login, resetPassword, clearError, profile, freelancer, loading, forceLogout } = useAuth();
   const { t } = useLanguage();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -22,36 +24,9 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
 
   const isAdminLogin = role === 'admin';
 
-  const navigateTo = (path: string) => {
-    if (window.location.pathname === path) return;
-    window.history.pushState({}, '', path);
-    window.dispatchEvent(new PopStateEvent('popstate'));
-  };
-
   useEffect(() => {
     if (loading || !profile) return;
-
-    if (profile.role === 'admin') {
-      navigateTo('/admin');
-      return;
-    }
-
-    if (profile.role !== 'freelancer') {
-      navigateTo('/dashboard');
-      return;
-    }
-
-    if (
-      freelancer &&
-      (!freelancer.onboarding_completed || !freelancer.phone_number || !freelancer.tarif_jour)
-    ) {
-      navigateTo('/complete-profile');
-      return;
-    }
-
-    if (freelancer?.statut === 'validated' && freelancer.onboarding_completed) {
-      navigateTo('/dashboard');
-    }
+    navigate(getDefaultAuthenticatedRoute(profile, freelancer), { replace: true });
   }, [freelancer, loading, profile]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -84,62 +59,26 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
       );
 
       if (isAdminLogin && nextProfile.role !== 'admin') {
-        await runWithAsyncGuard('auth.signOutUnauthorizedAdmin', async () => {
-          const { error: signOutError } = await supabase.auth.signOut();
-          if (signOutError) throw signOutError;
-        });
+        await forceLogout('unauthorized_admin');
         setError(t('login.error.adminAccess'));
         return;
       }
 
-      if (nextProfile.role === 'freelancer') {
-        if (!nextFreelancer) {
-          await runWithAsyncGuard('auth.signOutMissingFreelancer', async () => {
-            const { error: signOutError } = await supabase.auth.signOut();
-            if (signOutError) throw signOutError;
-          });
-          setError(t('login.error.noFreelancer'));
-          return;
-        }
-
-        if (nextFreelancer.statut === 'pending') {
-          await runWithAsyncGuard('auth.signOutPendingFreelancer', async () => {
-            const { error: signOutError } = await supabase.auth.signOut();
-            if (signOutError) throw signOutError;
-          });
-          setError(t('login.error.pending'));
-          return;
-        }
-
+      if (nextProfile.role === 'freelancer' && nextFreelancer) {
         if (nextFreelancer.statut === 'rejected') {
-          await runWithAsyncGuard('auth.signOutRejectedFreelancer', async () => {
-            const { error: signOutError } = await supabase.auth.signOut();
-            if (signOutError) throw signOutError;
-          });
+          await forceLogout('rejected_freelancer');
           setError(t('login.error.rejected'));
           return;
         }
 
         if (nextFreelancer.statut === 'suspended') {
-          await runWithAsyncGuard('auth.signOutSuspendedFreelancer', async () => {
-            const { error: signOutError } = await supabase.auth.signOut();
-            if (signOutError) throw signOutError;
-          });
+          await forceLogout('suspended_freelancer');
           setError(t('login.error.suspended'));
-          return;
-        }
-
-        if (
-          !nextFreelancer.onboarding_completed ||
-          !nextFreelancer.phone_number ||
-          !nextFreelancer.tarif_jour
-        ) {
-          navigateTo('/complete-profile');
           return;
         }
       }
 
-      navigateTo(nextProfile.role === 'admin' ? '/admin' : '/dashboard');
+      navigate(getDefaultAuthenticatedRoute(nextProfile, nextFreelancer), { replace: true });
     } catch (err) {
       const message = (err as Error).message;
 
@@ -185,7 +124,7 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
     } catch (err) {
       const message = toErrorMessage(err, t('login.reset.error.sendFailed'));
       console.error('[LoginPage] reset password failure', { message });
-      setError(message);
+      setError(toUserSafeMessage(err, t('login.reset.error.sendFailed')));
     } finally {
       setIsLoading(false);
     }

@@ -7,6 +7,8 @@ import Footer from '../components/Footer';
 import { useTimeoutRegistry } from '../hooks/useTimeoutRegistry';
 import { toErrorMessage } from '../utils/asyncTools';
 import { completeFreelancerProfile } from '../utils/remoteFunctions';
+import { navigate } from '../utils/navigation';
+import { toUserSafeMessage } from '../utils/authSession';
 
 interface FreelancerData {
   phone_number: string;
@@ -15,9 +17,11 @@ interface FreelancerData {
   specialite?: string;
 }
 
+const GENERIC_SAFE_ERROR_MESSAGE = 'Une erreur est survenue. Veuillez réessayer.';
+
 export default function CompleteProfilePage() {
   const { t } = useLanguage();
-  const { freelancer, session, loading, refreshAuthState } = useAuth();
+  const { freelancer, session, loading, refreshAuthState, forceLogout } = useAuth();
   const [form, setForm] = useState<FreelancerData>({
     phone_number: '',
     tarif_jour: 25000,
@@ -40,10 +44,6 @@ export default function CompleteProfilePage() {
       bio: freelancer.bio ?? previous.bio ?? '',
       specialite: freelancer.specialite ?? previous.specialite ?? '',
     }));
-
-    if (freelancer.onboarding_completed && freelancer.phone_number && freelancer.tarif_jour) {
-      window.location.href = '/dashboard';
-    }
   }, [freelancer, loading]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -86,7 +86,10 @@ export default function CompleteProfilePage() {
     }
 
     try {
-      if (!session) throw new Error(t('completeProfile.error.noSession'));
+      if (!session?.access_token) {
+        await forceLogout('invalid_session');
+        return;
+      }
 
       setIsSubmitting(true);
       setStatus('idle');
@@ -102,13 +105,14 @@ export default function CompleteProfilePage() {
 
       setStatus('success');
       schedule(() => {
-        window.location.href = '/dashboard';
+        navigate('/dashboard', { replace: true });
       }, 1500);
     } catch (err) {
-      const message = toErrorMessage(err, t('completeProfile.error.submit'));
-      console.error('[CompleteProfilePage] submit failure', { message });
+      console.error('[CompleteProfilePage] submit failure', {
+        message: toErrorMessage(err, t('completeProfile.error.submit')),
+      });
       setStatus('error');
-      setServerError(message);
+      setServerError(toUserSafeMessage(err, GENERIC_SAFE_ERROR_MESSAGE));
       schedule(() => setStatus('idle'), 5000);
     } finally {
       setIsSubmitting(false);

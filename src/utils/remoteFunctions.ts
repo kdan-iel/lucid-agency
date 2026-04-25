@@ -1,4 +1,5 @@
 import { ensureSerializablePayload, runWithAsyncGuard } from './asyncTools';
+import { createPublicError, emitInvalidSession, isInvalidSessionError } from './authSession';
 import { getOptionalEnv, getRequiredEnv, getRequiredHttpUrlEnv } from './env';
 
 const SUPABASE_URL = getRequiredHttpUrlEnv('VITE_SUPABASE_URL').replace(/\/+$/, '');
@@ -198,13 +199,31 @@ async function invokeRemoteFunction<
       });
 
       if (!response.ok) {
-        throw new Error(await extractResponseError(response));
+        const debugMessage = await extractResponseError(response);
+        const error = createPublicError('Une erreur est survenue. Veuillez réessayer.', {
+          debugMessage,
+          status: response.status,
+        });
+
+        if (isInvalidSessionError(error)) {
+          emitInvalidSession('invalid_session');
+        }
+
+        throw error;
       }
 
       const data = await parseResponse<TResult | FunctionResponse>(response);
 
       if (data && typeof data === 'object' && 'error' in data && data.error) {
-        throw new Error(data.error);
+        const error = createPublicError('Une erreur est survenue. Veuillez réessayer.', {
+          debugMessage: data.error,
+        });
+
+        if (isInvalidSessionError(error)) {
+          emitInvalidSession('invalid_session');
+        }
+
+        throw error;
       }
 
       return data as TResult;
@@ -273,7 +292,11 @@ export async function completeFreelancerProfile(
   }
 ) {
   if (!accessToken.trim()) {
-    throw new Error('Session invalide: token manquant.');
+    emitInvalidSession('invalid_session');
+    throw createPublicError('Votre session a expiré. Veuillez vous reconnecter.', {
+      debugMessage: 'Session invalide: token manquant.',
+      status: 401,
+    });
   }
 
   return invokeRemoteFunction(COMPLETE_PROFILE_FUNCTION_NAME, {
