@@ -3,6 +3,12 @@ import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabaseClient';
 import { getPasswordUpdateRedirectUrl } from '../utils/authRedirect';
 import { runWithAsyncGuard, toErrorMessage } from '../utils/asyncTools';
+import {
+  createPublicError,
+  isInvalidSessionError,
+  subscribeToInvalidSession,
+  toUserSafeMessage,
+} from '../utils/authSession';
 
 const PROFILE_COLUMNS = 'id, user_id, email, full_name, role, avatar_url';
 const FREELANCER_COLUMNS =
@@ -63,6 +69,7 @@ export interface AuthContextType {
   error: string | null;
   login: (email: string, password: string) => Promise<LoginResult>;
   logout: () => Promise<void>;
+  forceLogout: (reason?: string) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   updatePassword: (newPassword: string) => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<void>;
@@ -82,6 +89,95 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const mountedRef = useRef(true);
   const authRequestRef = useRef(0);
+  const logoutInFlightRef = useRef(false);
+
+  const clearAuthState = () => {
+    authRequestRef.current += 1;
+    if (!mountedRef.current) return;
+
+    setSession(null);
+    setUser(null);
+    setProfile(null);
+    setFreelancer(null);
+  };
+
+  const clearPersistedSessionArtifacts = () => {
+    if (typeof window === 'undefined') return;
+
+    try {
+      localStorage.removeItem('supabase.auth.token');
+
+      for (let index = 0; index < localStorage.length; index += 1) {
+        const key = localStorage.key(index);
+        if (!key) continue;
+        if (!key.startsWith('sb-') || !key.endsWith('-auth-token')) continue;
+        localStorage.removeItem(key);
+        index -= 1;
+      }
+
+      sessionStorage.clear();
+    } catch {
+      // Storage access can fail in hardened browser contexts.
+    }
+  };
+
+  const clearAuthStateWithoutRedirect = () => {
+    clearAuthState();
+    if (mountedRef.current) {
+      setError(null);
+    }
+  };
+
+  const forceLogout = async (reason = 'invalid_session') => {
+    clearAuthState();
+    if (mountedRef.current) {
+      setLoading(false);
+      setError(null);
+    }
+
+    if (logoutInFlightRef.current) {
+      window.location.replace('/login');
+      return;
+    }
+
+    logoutInFlightRef.current = true;
+
+    try {
+      const { error: signOutError } = await supabase.auth.signOut();
+      if (signOutError) throw signOutError;
+    } catch (error) {
+      console.error('[Auth] force logout signOut failure', {
+        reason,
+        message: toErrorMessage(error),
+      });
+
+      try {
+        const { error: localSignOutError } = await supabase.auth.signOut({ scope: 'local' });
+        if (localSignOutError) throw localSignOutError;
+      } catch (localError) {
+        console.error('[Auth] force logout local signOut failure', {
+          reason,
+          message: toErrorMessage(localError),
+        });
+      }
+    } finally {
+      logoutInFlightRef.current = false;
+      clearPersistedSessionArtifacts();
+      window.location.replace('/login');
+    }
+  };
+
+  const handleInvalidSession = async (operation: string, candidate: unknown) => {
+    if (!isInvalidSessionError(candidate)) {
+      return false;
+    }
+
+    console.error(`[Auth] invalid session detected during ${operation}`, {
+      message: toErrorMessage(candidate),
+    });
+    await forceLogout('invalid_session');
+    return true;
+  };
 
   const getProfileByUserId = async (userId: string): Promise<Profile | null> => {
     const { data, error: profileError } = await supabase
@@ -153,6 +249,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       return { profile: nextProfile, freelancer: nextFreelancer };
     } catch (err) {
+      if (await handleInvalidSession('syncAuthState', err)) {
+        return { profile: null, freelancer: null };
+      }
       if (mountedRef.current && requestId === authRequestRef.current) {
         setProfile(null);
         setFreelancer(null);
@@ -204,9 +303,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         setSession(nextSession);
         setUser(nextSession?.user ?? null);
-        await syncAuthState(nextSession?.user?.id ?? null);
 
-        if (nextSession || !shouldDelayInitialHydration()) {
+        let verifiedSession = nextSession;
+
+        if (nextSession) {
+          try {
+            const {
+              data: { user: verifiedUser },
+              error: getUserError,
+            } = await runWithAsyncGuard('auth.getUser', () => supabase.auth.getUser(), {
+              fallbackMessage: 'Impossible de valider votre session.',
+            });
+
+            if (getUserError) {
+              throw getUserError;
+            }
+
+            if (!verifiedUser) {
+              throw new Error('Utilisateur de session introuvable.');
+            }
+          } catch (validationError) {
+            console.error('[Auth] init session validation failure', {
+              message: toErrorMessage(validationError),
+            });
+
+            try {
+              const { error: localSignOutError } = await supabase.auth.signOut({ scope: 'local' });
+              if (localSignOutError) throw localSignOutError;
+            } catch (localError) {
+              console.error('[Auth] init local signOut failure', {
+                message: toErrorMessage(localError),
+              });
+            }
+
+            clearPersistedSessionArtifacts();
+            clearAuthStateWithoutRedirect();
+            verifiedSession = null;
+          }
+        }
+
+        if (!mountedRef.current) return;
+
+        setSession(verifiedSession);
+        setUser(verifiedSession?.user ?? null);
+        await syncAuthState(verifiedSession?.user?.id ?? null);
+
+        if (verifiedSession || !shouldDelayInitialHydration()) {
           settleInitialHydration();
           return;
         }
@@ -214,21 +356,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         hydrationTimer = setTimeout(() => {
           if (!mountedRef.current) return;
 
-          setSession(null);
-          setUser(null);
-          setProfile(null);
-          setFreelancer(null);
+          clearAuthState();
           settleInitialHydration();
         }, AUTH_HYDRATION_GRACE_MS);
       } catch (err) {
+        if (await handleInvalidSession('initAuth', err)) {
+          settleInitialHydration();
+          return;
+        }
+
         const message = toErrorMessage(err, 'Impossible d’initialiser la session.');
         console.error('[Auth] init error', { message });
         if (mountedRef.current) {
-          setError(message);
-          setSession(null);
-          setUser(null);
-          setProfile(null);
-          setFreelancer(null);
+          setError(toUserSafeMessage(err, 'Une erreur est survenue. Veuillez réessayer.'));
+          clearAuthState();
         }
         settleInitialHydration();
       } finally {
@@ -239,6 +380,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     void initAuth();
+    const unsubscribeInvalidSession = subscribeToInvalidSession((reason) => {
+      void forceLogout(reason ?? 'invalid_session');
+    });
 
     let authEventCounter = 0;
 
@@ -253,8 +397,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(nextSession);
       setUser(nextSession?.user ?? null);
 
+      if (!nextSession) {
+        clearAuthStateWithoutRedirect();
+        if (event === 'SIGNED_OUT' || !shouldDelayInitialHydration()) {
+          settleInitialHydration();
+        }
+        return;
+      }
+
       void (async () => {
         try {
+          setError(null);
           const hydrated = await syncAuthState(nextSession?.user?.id ?? null);
           if (!mountedRef.current || eventId !== authEventCounter) return;
 
@@ -271,10 +424,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setFreelancer(hydrated.freelancer);
           settleInitialHydration();
         } catch (err) {
+          if (await handleInvalidSession('onAuthStateChange', err)) {
+            settleInitialHydration();
+            return;
+          }
+
           const message = toErrorMessage(err, 'Impossible de synchroniser la session.');
           console.error('[Auth] state sync failure', { message });
           if (mountedRef.current && eventId === authEventCounter) {
-            setError(message);
+            setError(toUserSafeMessage(err, 'Une erreur est survenue. Veuillez réessayer.'));
             setProfile(null);
             setFreelancer(null);
           }
@@ -283,9 +441,66 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })();
     });
 
+    const sessionCheckInterval = window.setInterval(() => {
+      if (!mountedRef.current || logoutInFlightRef.current) return;
+
+      void (async () => {
+        try {
+          const {
+            data: { session: currentSession },
+            error: currentSessionError,
+          } = await supabase.auth.getSession();
+
+          if (!mountedRef.current || logoutInFlightRef.current) return;
+
+          if (currentSessionError) {
+            throw currentSessionError;
+          }
+
+          if (!currentSession) {
+            clearAuthStateWithoutRedirect();
+            return;
+          }
+
+          const {
+            data: { user: currentUser },
+            error: currentUserError,
+          } = await supabase.auth.getUser();
+
+          if (!mountedRef.current || logoutInFlightRef.current) return;
+
+          if (currentUserError) {
+            throw currentUserError;
+          }
+
+          if (!currentUser) {
+            throw new Error('Utilisateur de session introuvable.');
+          }
+        } catch (sessionCheckError) {
+          console.error('[Auth] periodic session check failure', {
+            message: toErrorMessage(sessionCheckError),
+          });
+
+          try {
+            const { error: localSignOutError } = await supabase.auth.signOut({ scope: 'local' });
+            if (localSignOutError) throw localSignOutError;
+          } catch (localError) {
+            console.error('[Auth] periodic local signOut failure', {
+              message: toErrorMessage(localError),
+            });
+          }
+
+          clearPersistedSessionArtifacts();
+          clearAuthStateWithoutRedirect();
+        }
+      })();
+    }, 60_000);
+
     return () => {
       mountedRef.current = false;
       clearHydrationTimer();
+      clearInterval(sessionCheckInterval);
+      unsubscribeInvalidSession();
       subscription.unsubscribe();
     };
   }, []);
@@ -307,16 +522,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           const nextProfile = await getProfileByUserId(loggedUser.id);
           if (!nextProfile) {
-            await supabase.auth.signOut();
-            throw new Error('Profil introuvable pour ce compte.');
+            throw createPublicError('Impossible de charger votre compte.', {
+              debugMessage: 'Profil introuvable pour ce compte.',
+            });
           }
 
           let nextFreelancer: Freelancer | null = null;
           if (nextProfile.role === 'freelancer') {
             nextFreelancer = await getFreelancerByUserId(loggedUser.id);
             if (!nextFreelancer) {
-              await supabase.auth.signOut();
-              throw new Error('Aucune candidature freelancer associée à ce compte.');
+              throw createPublicError('Impossible de charger votre compte.', {
+                debugMessage: 'Aucune candidature freelancer associée à ce compte.',
+              });
             }
           }
 
@@ -340,27 +557,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       return result;
     } catch (err) {
-      setError(toErrorMessage(err));
+      if (await handleInvalidSession('login', err)) {
+        throw createPublicError('Votre session est invalide. Veuillez vous reconnecter.', {
+          debugMessage: toErrorMessage(err),
+          status: 401,
+        });
+      }
+
+      if (
+        err &&
+        typeof err === 'object' &&
+        'publicMessage' in err &&
+        typeof (err as Error & { publicMessage?: string }).publicMessage === 'string'
+      ) {
+        await forceLogout('invalid_account');
+      }
+
+      setError(toUserSafeMessage(err, 'Une erreur est survenue. Veuillez réessayer.'));
       throw err;
     }
   };
 
   const logout = async () => {
-    try {
-      setError(null);
-      await runWithAsyncGuard('auth.logout', async () => {
-        const { error: signOutError } = await supabase.auth.signOut();
-        if (signOutError) throw signOutError;
-      });
-      setSession(null);
-      setUser(null);
-      setProfile(null);
-      setFreelancer(null);
-      window.location.href = '/';
-    } catch (err) {
-      setError(toErrorMessage(err));
-      throw err;
-    }
+    await forceLogout('manual_logout');
   };
 
   const resetPassword = async (email: string) => {
@@ -380,7 +599,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       );
     } catch (err) {
-      setError(toErrorMessage(err));
+      if (await handleInvalidSession('resetPassword', err)) {
+        throw createPublicError('Votre session est invalide. Veuillez vous reconnecter.', {
+          debugMessage: toErrorMessage(err),
+          status: 401,
+        });
+      }
+      setError(toUserSafeMessage(err, 'Une erreur est survenue. Veuillez réessayer.'));
       throw err;
     }
   };
@@ -399,7 +624,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       );
     } catch (err) {
-      setError(toErrorMessage(err));
+      if (await handleInvalidSession('updatePassword', err)) {
+        throw createPublicError('Votre session est invalide. Veuillez vous reconnecter.', {
+          debugMessage: toErrorMessage(err),
+          status: 401,
+        });
+      }
+      setError(toUserSafeMessage(err, 'Une erreur est survenue. Veuillez réessayer.'));
       throw err;
     }
   };
@@ -437,7 +668,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (updateError) throw updateError;
       setProfile(data as Profile);
     } catch (err) {
-      setError(toErrorMessage(err));
+      if (await handleInvalidSession('updateProfile', err)) {
+        throw createPublicError('Votre session est invalide. Veuillez vous reconnecter.', {
+          debugMessage: toErrorMessage(err),
+          status: 401,
+        });
+      }
+      setError(toUserSafeMessage(err, 'Une erreur est survenue. Veuillez réessayer.'));
       throw err;
     }
   };
@@ -494,7 +731,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (updateError) throw updateError;
       setFreelancer(data as Freelancer);
     } catch (err) {
-      setError(toErrorMessage(err));
+      if (await handleInvalidSession('updateFreelancer', err)) {
+        throw createPublicError('Votre session est invalide. Veuillez vous reconnecter.', {
+          debugMessage: toErrorMessage(err),
+          status: 401,
+        });
+      }
+      setError(toUserSafeMessage(err, 'Une erreur est survenue. Veuillez réessayer.'));
       throw err;
     }
   };
@@ -512,6 +755,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         error,
         login,
         logout,
+        forceLogout,
         resetPassword,
         updatePassword,
         updateProfile,

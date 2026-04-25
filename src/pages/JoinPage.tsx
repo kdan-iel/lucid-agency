@@ -7,6 +7,7 @@ import Footer from '../components/Footer';
 import { freelancerSpecialties, joinFormSchema, JoinFormInput } from '../schemas';
 import { submitJoinApplication } from '../utils/remoteFunctions';
 import { toErrorMessage } from '../utils/asyncTools';
+import { toUserSafeMessage } from '../utils/authSession';
 
 const initialForm: JoinFormInput = {
   firstName: '',
@@ -142,7 +143,7 @@ export default function JoinPage() {
       if (message.includes('already registered')) {
         setServerError(t('join.error.emailInUse'));
       } else {
-        setServerError(message);
+        setServerError(toUserSafeMessage(err, t('join.error.generic')));
       }
     } finally {
       setIsSubmitting(false);

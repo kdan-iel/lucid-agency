@@ -9,7 +9,7 @@ import { toErrorMessage } from '../utils/asyncTools';
 export default function Navbar() {
   const { lang, setLang, t } = useLanguage();
   const { theme, toggleTheme } = useTheme();
-  const { profile, logout } = useAuth();
+  const { profile, forceLogout } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [activeSection, setActiveSection] = useState('');
@@ -48,7 +48,7 @@ export default function Navbar() {
 
   const handleLogout = () => {
     setIsOpen(false);
-    void logout().catch((error) => {
+    void forceLogout('manual_logout').catch((error) => {
       console.error('[Navbar] logout failure', {
         message: toErrorMessage(error),
       });

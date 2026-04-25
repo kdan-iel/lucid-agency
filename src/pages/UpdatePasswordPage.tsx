@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent, type FormEvent } from 'react';
+import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
 import { motion } from 'motion/react';
 import { Eye, EyeOff, Lock, CheckCircle, AlertTriangle } from 'lucide-react';
 import Navbar from '../components/Navbar';
@@ -20,6 +20,13 @@ export default function UpdatePasswordPage() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [serverError, setServerError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (window.location.pathname !== '/update-password') return;
+    if (!window.location.search && !window.location.hash) return;
+
+    window.history.replaceState({}, document.title, '/update-password');
+  }, []);
 
   const translateValidationMessage = (message: string) => {
     const lookup: Record<string, string> = {

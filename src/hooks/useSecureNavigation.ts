@@ -1,3 +1,5 @@
+import { replacePath } from '../utils/navigation';
+
 /**
  * Hook de navigation sécurisée.
  * Valide les URLs avant toute redirection pour éviter les open redirects.
@@ -14,10 +16,10 @@ export function useSecureNavigation() {
     // ✅ Accepte uniquement les chemins internes connus
     if (!ALLOWED_INTERNAL_PATHS.includes(path)) {
       console.warn(`[Security] Redirection vers chemin non autorisé bloquée : ${path}`);
-      window.location.href = '/';
+      replacePath('/');
       return;
     }
-    window.location.href = path;
+    replacePath(path);
   };
 
   /**

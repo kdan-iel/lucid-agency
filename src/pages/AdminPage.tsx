@@ -35,6 +35,7 @@ import {
 } from '../utils/remoteFunctions';
 import { useTimeoutRegistry } from '../hooks/useTimeoutRegistry';
 import { toErrorMessage } from '../utils/asyncTools';
+import { toUserSafeMessage } from '../utils/authSession';
 
 interface TalentRequest {
   id: string;
@@ -147,7 +148,7 @@ function PaginationControls({
 
 export default function AdminPage() {
   const { t, lang } = useLanguage();
-  const { logout, profile, session, updatePassword } = useAuth();
+  const { forceLogout, profile, session, updatePassword } = useAuth();
   const [activeTab, setActiveTab] = useState('talents');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -212,7 +213,8 @@ export default function AdminPage() {
 
     try {
       if (!session?.access_token) {
-        throw new Error(t('admin.error.invalidSession'));
+        await forceLogout('invalid_session');
+        return;
       }
 
       const allTalents: AdminFreelancerRecord[] = [];
@@ -251,9 +253,10 @@ export default function AdminPage() {
 
       setRequests(mapped);
     } catch (err) {
-      const message = toErrorMessage(err, t('admin.error.loadTalents'));
-      console.error('[AdminPage] talents load failure', { message });
-      setTalentsError(message);
+      console.error('[AdminPage] talents load failure', {
+        message: toErrorMessage(err, t('admin.error.loadTalents')),
+      });
+      setTalentsError(toUserSafeMessage(err, t('admin.error.loadTalents')));
     } finally {
       setLoadingTalents(false);
     }
@@ -265,7 +268,8 @@ export default function AdminPage() {
 
     try {
       if (!session?.access_token) {
-        throw new Error(t('admin.error.invalidSession'));
+        await forceLogout('invalid_session');
+        return;
       }
 
       const allContacts: AdminContactRecord[] = [];
@@ -304,9 +308,10 @@ export default function AdminPage() {
 
       setContacts(mapped);
     } catch (err) {
-      const message = toErrorMessage(err, t('admin.error.loadContacts'));
-      console.error('[AdminPage] contacts load failure', { message });
-      setContactsError(message);
+      console.error('[AdminPage] contacts load failure', {
+        message: toErrorMessage(err, t('admin.error.loadContacts')),
+      });
+      setContactsError(toUserSafeMessage(err, t('admin.error.loadContacts')));
     } finally {
       setLoadingContacts(false);
     }
@@ -331,7 +336,8 @@ export default function AdminPage() {
   ) => {
     try {
       if (!session?.access_token) {
-        throw new Error(t('admin.error.invalidSession'));
+        await forceLogout('invalid_session');
+        return;
       }
 
       setUpdatingTalentId(id);
@@ -353,11 +359,15 @@ export default function AdminPage() {
         setRejectionReason('');
       }
     } catch (err) {
-      const message = toErrorMessage(err, t('admin.error.updateStatus'));
-      console.error('[AdminPage] talent status failure', { message, id, newStatus });
-      setTalentsError(message);
+      console.error('[AdminPage] talent status failure', {
+        message: toErrorMessage(err, t('admin.error.updateStatus')),
+        id,
+        newStatus,
+      });
+      const safeMessage = toUserSafeMessage(err, t('admin.error.updateStatus'));
+      setTalentsError(safeMessage);
       if (newStatus === 'rejected') {
-        setRejectionError(message);
+        setRejectionError(safeMessage);
       }
     } finally {
       setUpdatingTalentId(null);
@@ -413,9 +423,10 @@ export default function AdminPage() {
         setActiveSettingsTab('main');
       }, 1500);
     } catch (err) {
-      const message = toErrorMessage(err, t('admin.settings.security.error'));
-      console.error('[AdminPage] password update failure', { message });
-      setSettingsError(message);
+      console.error('[AdminPage] password update failure', {
+        message: toErrorMessage(err, t('admin.settings.security.error')),
+      });
+      setSettingsError(toUserSafeMessage(err, t('admin.settings.security.error')));
       setSettingsStatus('error');
     }
   };
@@ -1034,7 +1045,7 @@ export default function AdminPage() {
             </div>
             <button
               onClick={() => {
-                void logout().catch((error) => {
+                void forceLogout('manual_logout').catch((error) => {
                   console.error('[AdminPage] logout failure', {
                     message: toErrorMessage(error),
                   });

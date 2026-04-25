@@ -1,66 +1,39 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useLanguage } from '../context/LanguageContext';
+import { resolveAccessDecision, type ProtectedAppRoute } from '../utils/accessControl';
+import { Navigate } from './Navigate';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requiredRole: 'admin' | 'freelancer' | 'client';
-  allowIncompleteFreelancer?: boolean;
+  route: ProtectedAppRoute;
 }
 
-function BlockedState({ message }: { message: string }) {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-[var(--bg-primary)]">
-      <p className="text-brand-gray text-sm">{message}</p>
-    </div>
-  );
-}
-
-export function ProtectedRoute({
-  children,
-  requiredRole,
-  allowIncompleteFreelancer = false,
-}: ProtectedRouteProps) {
+export function ProtectedRoute({ children, route }: ProtectedRouteProps) {
   const { session, profile, freelancer, loading } = useAuth();
-  const { t } = useLanguage();
+  const decision = resolveAccessDecision({
+    session,
+    profile,
+    freelancer,
+    route,
+  });
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[var(--bg-primary)]">
         <div className="flex flex-col items-center gap-4">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-mint" />
-          <p className="text-brand-gray text-sm">{t('common.sessionCheck')}</p>
+          <p className="text-brand-gray text-sm">Chargement...</p>
         </div>
       </div>
     );
   }
 
   if (!session) {
-    return <BlockedState message={t('common.redirecting')} />;
+    return <Navigate to="/login" replace />;
   }
 
-  if (!profile || profile.role !== requiredRole) {
-    return <BlockedState message={t('common.redirecting')} />;
-  }
-
-  if (requiredRole !== 'freelancer') {
-    return <>{children}</>;
-  }
-
-  if (!freelancer || freelancer.statut !== 'validated') {
-    return <BlockedState message={t('common.redirecting')} />;
-  }
-
-  if (allowIncompleteFreelancer) {
-    if (freelancer.onboarding_completed) {
-      return <BlockedState message={t('common.redirecting')} />;
-    }
-
-    return <>{children}</>;
-  }
-
-  if (!freelancer.onboarding_completed) {
-    return <BlockedState message={t('common.redirecting')} />;
+  if (!decision.allowed) {
+    return <Navigate to={decision.redirectTo ?? '/login'} replace />;
   }
 
   return <>{children}</>;

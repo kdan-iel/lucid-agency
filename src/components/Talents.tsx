@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useLanguage } from '../context/LanguageContext';
 import { Search, X } from 'lucide-react';
 import { listPublicTalents } from '../utils/remoteFunctions';
+import { toUserSafeMessage } from '../utils/authSession';
+import { toErrorMessage } from '../utils/asyncTools';
 
 type SpecialtyKey =
   | 'graphisme'
@@ -182,11 +184,10 @@ export default function Talents() {
           setTalents(mapped);
         }
       } catch (error) {
-        const message =
-          error instanceof Error ? error.message : 'Impossible de charger les talents.';
+        const message = toErrorMessage(error, 'Impossible de charger les talents.');
         console.error('[Talents] load failure', { message });
         if (!cancelled) {
-          setLoadError(message);
+          setLoadError(toUserSafeMessage(error, 'Impossible de charger les talents.'));
           setTalents([]);
         }
       } finally {
