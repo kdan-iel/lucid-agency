@@ -217,7 +217,7 @@ jobs:
 
       - name: Verify security headers on live site
         run: |
-          URL="${{ needs.deploy.outputs.deployed_url }}"
+          URL="lucidagence.com"
           echo "🔍 Checking security headers on $URL..."
 
           HEADERS=$(curl -s -I "$URL")
