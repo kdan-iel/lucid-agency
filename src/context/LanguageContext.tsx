@@ -231,6 +231,11 @@ const translations: Record<Language, Record<string, string>> = {
     'login.reset.error.missingEmail': 'Veuillez renseigner votre email.',
     'login.reset.error.invalidEmail': 'Veuillez entrer une adresse email valide.',
     'login.reset.error.sendFailed': "Impossible d'envoyer le lien. Vérifiez l'email.",
+    'onboardingModal.title': 'Complétez vos informations',
+    'onboardingModal.body':
+      'Certaines informations manquent encore pour finaliser votre profil freelancer. Vous pouvez continuer à utiliser le dashboard, puis revenir terminer votre profil quand vous êtes prêt.',
+    'onboardingModal.primary': 'Compléter mes informations',
+    'onboardingModal.secondary': 'Plus tard',
     'resetPassword.loading.title': 'Vérification du lien',
     'resetPassword.loading.body': 'Nous préparons votre session de réinitialisation.',
     'resetPassword.title': 'Réinitialiser le mot de passe',
@@ -375,7 +380,7 @@ const translations: Record<Language, Record<string, string>> = {
     'admin.modal.rejected': 'Refusé',
     'completeProfile.title': 'Compléter votre profil',
     'completeProfile.subtitle':
-      'Pour accéder au tableau de bord, renseignez les informations suivantes.',
+      'Renseignez les informations suivantes pour finaliser votre profil.',
     'completeProfile.field.phone': 'Numéro de téléphone',
     'completeProfile.field.phonePlaceholder': '+221770000000',
     'completeProfile.field.rate': 'Tarif journalier (FCFA)',
@@ -686,6 +691,11 @@ const translations: Record<Language, Record<string, string>> = {
     'login.reset.error.missingEmail': 'Please enter your email.',
     'login.reset.error.invalidEmail': 'Please enter a valid email address.',
     'login.reset.error.sendFailed': 'Unable to send the link. Check the email address.',
+    'onboardingModal.title': 'Complete your information',
+    'onboardingModal.body':
+      'Some information is still missing to finalize your freelancer profile. You can keep using the dashboard and come back later to finish it.',
+    'onboardingModal.primary': 'Complete my information',
+    'onboardingModal.secondary': 'Later',
     'resetPassword.loading.title': 'Checking your link',
     'resetPassword.loading.body': 'We are preparing your recovery session.',
     'resetPassword.title': 'Reset your password',
@@ -829,8 +839,7 @@ const translations: Record<Language, Record<string, string>> = {
     'admin.modal.suspended': 'Suspended',
     'admin.modal.rejected': 'Rejected',
     'completeProfile.title': 'Complete your profile',
-    'completeProfile.subtitle':
-      'To access the dashboard, please provide the following information.',
+    'completeProfile.subtitle': 'Fill in the following information to finalize your profile.',
     'completeProfile.field.phone': 'Phone number',
     'completeProfile.field.phonePlaceholder': '+221770000000',
     'completeProfile.field.rate': 'Daily rate (FCFA)',
