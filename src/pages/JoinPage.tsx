@@ -8,6 +8,7 @@ import { freelancerSpecialties, joinFormSchema, JoinFormInput } from '../schemas
 import { submitJoinApplication } from '../utils/remoteFunctions';
 import { toErrorMessage } from '../utils/asyncTools';
 import { toUserSafeMessage } from '../utils/authSession';
+import { handleError } from '../utils/errorFilter';
 
 const initialForm: JoinFormInput = {
   firstName: '',
@@ -139,12 +140,12 @@ export default function JoinPage() {
       const message = toErrorMessage(err, t('join.error.generic'));
       console.error('[JoinPage] submit failure', { message });
       setStatus('error');
-
-      if (message.includes('already registered')) {
-        setServerError(t('join.error.emailInUse'));
-      } else {
-        setServerError(toUserSafeMessage(err, t('join.error.generic')));
-      }
+      const result = handleError(err);
+      setServerError(
+        result.type === 'user'
+          ? result.message
+          : toUserSafeMessage(result.error, t('join.error.generic'))
+      );
     } finally {
       setIsSubmitting(false);
     }

@@ -6,28 +6,138 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { useTimeoutRegistry } from '../hooks/useTimeoutRegistry';
 import { toErrorMessage } from '../utils/asyncTools';
-import { completeFreelancerProfile } from '../utils/remoteFunctions';
 import { navigate } from '../utils/navigation';
 import { toUserSafeMessage } from '../utils/authSession';
+import { handleError } from '../utils/errorFilter';
+import { sanitizeUrl } from '../utils/security';
 
-interface FreelancerData {
+interface OnboardingFormData {
+  first_name: string;
+  last_name: string;
   phone_number: string;
-  tarif_jour: number;
-  bio?: string;
-  specialite?: string;
+  tarif_jour: string;
+  bio: string;
+  specialite: string;
+  portfolio_url: string;
 }
 
 const GENERIC_SAFE_ERROR_MESSAGE = 'Une erreur est survenue. Veuillez réessayer.';
 
+function splitFullName(fullName: string | null | undefined) {
+  const parts = (fullName ?? '').trim().split(/\s+/).filter(Boolean);
+  return {
+    firstName: parts[0] ?? '',
+    lastName: parts.slice(1).join(' '),
+  };
+}
+
+function getMessageCandidature(
+  source: { message_candidature?: unknown } | null | undefined
+): string | null {
+  if (!source || typeof source.message_candidature !== 'string') {
+    return null;
+  }
+
+  const value = source.message_candidature.trim();
+  return value || null;
+}
+
+function buildInitialFormData(
+  fullName: string | null | undefined,
+  freelancer: {
+    phone_number: string | null;
+    tarif_jour: number | null;
+    bio: string | null;
+    specialite: string | null;
+    portfolio_url?: string | null;
+    message_candidature?: unknown;
+  }
+): OnboardingFormData {
+  const { firstName, lastName } = splitFullName(fullName);
+  const fallbackBio = freelancer.bio?.trim() || getMessageCandidature(freelancer) || '';
+
+  return {
+    first_name: firstName,
+    last_name: lastName,
+    phone_number: freelancer.phone_number ?? '',
+    tarif_jour: freelancer.tarif_jour ? String(freelancer.tarif_jour) : '',
+    bio: fallbackBio,
+    specialite: freelancer.specialite ?? '',
+    portfolio_url: freelancer.portfolio_url ?? '',
+  };
+}
+
+function trimFormValues(form: OnboardingFormData) {
+  return {
+    first_name: form.first_name.trim(),
+    last_name: form.last_name.trim(),
+    phone_number: form.phone_number.trim(),
+    tarif_jour: form.tarif_jour.trim(),
+    bio: form.bio.trim(),
+    specialite: form.specialite.trim(),
+    portfolio_url: form.portfolio_url.trim(),
+  };
+}
+
+function validateForm(
+  form: OnboardingFormData,
+  t: (key: string) => string
+): Record<string, string> {
+  const trimmed = trimFormValues(form);
+  const nextErrors: Record<string, string> = {};
+  const parsedRate = Number.parseFloat(trimmed.tarif_jour);
+
+  if (!trimmed.first_name) {
+    nextErrors.first_name = t('completeProfile.error.firstNameRequired');
+  }
+
+  if (!trimmed.last_name) {
+    nextErrors.last_name = t('completeProfile.error.lastNameRequired');
+  }
+
+  if (!trimmed.phone_number) {
+    nextErrors.phone_number = t('completeProfile.error.phoneRequired');
+  } else if (!/^\+?[1-9]\d{7,14}$/.test(trimmed.phone_number)) {
+    nextErrors.phone_number = t('completeProfile.error.phoneInvalid');
+  }
+
+  if (!trimmed.tarif_jour) {
+    nextErrors.tarif_jour = t('completeProfile.error.rateRequired');
+  } else if (!Number.isFinite(parsedRate) || parsedRate < 1000 || parsedRate > 1000000) {
+    nextErrors.tarif_jour = t('completeProfile.error.rateInvalid');
+  }
+
+  if (!trimmed.bio) {
+    nextErrors.bio = t('completeProfile.error.bioRequired');
+  }
+
+  if (!trimmed.specialite) {
+    nextErrors.specialite = t('completeProfile.error.specialityRequired');
+  }
+
+  if (!trimmed.portfolio_url) {
+    nextErrors.portfolio_url = t('completeProfile.error.portfolioRequired');
+  } else if (!sanitizeUrl(trimmed.portfolio_url)) {
+    nextErrors.portfolio_url = t('completeProfile.error.portfolioInvalid');
+  }
+
+  return nextErrors;
+}
+
 export default function CompleteProfilePage() {
   const { t } = useLanguage();
-  const { freelancer, session, loading, refreshAuthState, forceLogout } = useAuth();
-  const [form, setForm] = useState<FreelancerData>({
+  const { freelancer, profile, session, loading, updateProfile, updateFreelancer } = useAuth();
+  const [form, setForm] = useState<OnboardingFormData>({
+    first_name: '',
+    last_name: '',
     phone_number: '',
-    tarif_jour: 25000,
+    tarif_jour: '',
     bio: '',
     specialite: '',
+    portfolio_url: '',
   });
+  const [initialForm, setInitialForm] = useState<OnboardingFormData | null>(null);
+  const [hydratedUserId, setHydratedUserId] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -35,27 +145,38 @@ export default function CompleteProfilePage() {
   const { clearAll, schedule } = useTimeoutRegistry();
 
   useEffect(() => {
-    if (loading || !freelancer) return;
+    if (loading || !freelancer || !profile) return;
+    if (hydratedUserId === freelancer.user_id) return;
 
-    setForm((previous) => ({
-      ...previous,
-      phone_number: freelancer.phone_number ?? previous.phone_number,
-      tarif_jour: freelancer.tarif_jour ?? previous.tarif_jour,
-      bio: freelancer.bio ?? previous.bio ?? '',
-      specialite: freelancer.specialite ?? previous.specialite ?? '',
-    }));
-  }, [freelancer, loading]);
+    const nextForm = buildInitialFormData(
+      profile.full_name,
+      freelancer as typeof freelancer & { message_candidature?: unknown }
+    );
+
+    setForm(nextForm);
+    setInitialForm(nextForm);
+    setHydratedUserId(freelancer.user_id);
+    setErrors({});
+    setServerError('');
+    setStatus('idle');
+  }, [freelancer, hydratedUserId, loading, profile]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
 
-    setForm((previous) => ({
-      ...previous,
-      [name]: name === 'tarif_jour' ? Number.parseFloat(value) || 0 : value,
-    }));
+    const nextForm = {
+      ...form,
+      [name]: value,
+    } as OnboardingFormData;
 
-    if (errors[name]) {
-      setErrors((previous) => ({ ...previous, [name]: '' }));
+    setForm(nextForm);
+
+    if (Object.keys(errors).length > 0) {
+      setErrors(validateForm(nextForm, t));
+    }
+
+    if (status === 'error') {
+      setStatus('idle');
     }
 
     if (serverError) {
@@ -67,41 +188,74 @@ export default function CompleteProfilePage() {
     e.preventDefault();
     clearAll();
     setServerError('');
+    setStatus('idle');
 
-    const nextErrors: Record<string, string> = {};
-
-    if (!form.phone_number.trim()) {
-      nextErrors.phone_number = t('completeProfile.error.phoneRequired');
-    } else if (!/^\+?[1-9]\d{7,14}$/.test(form.phone_number.trim())) {
-      nextErrors.phone_number = t('completeProfile.error.phoneInvalid');
-    }
-
-    if (!form.tarif_jour || form.tarif_jour < 1000 || form.tarif_jour > 1000000) {
-      nextErrors.tarif_jour = t('completeProfile.error.rateInvalid');
-    }
-
+    const nextErrors = validateForm(form, t);
     if (Object.keys(nextErrors).length > 0) {
       setErrors(nextErrors);
       return;
     }
 
+    if (!initialForm || !freelancer || !profile) {
+      setServerError(GENERIC_SAFE_ERROR_MESSAGE);
+      return;
+    }
+
+    const trimmedCurrent = trimFormValues(form);
+    const trimmedInitial = trimFormValues(initialForm);
+    const parsedRate = Number.parseFloat(trimmedCurrent.tarif_jour);
+    const normalizedPortfolioUrl = sanitizeUrl(trimmedCurrent.portfolio_url);
+
+    if (!normalizedPortfolioUrl) {
+      setErrors((previous) => ({
+        ...previous,
+        portfolio_url: t('completeProfile.error.portfolioInvalid'),
+      }));
+      return;
+    }
+
     try {
-      if (!session?.access_token) {
-        await forceLogout('invalid_session');
-        return;
+      setIsSubmitting(true);
+      const profileUpdates: Parameters<typeof updateProfile>[0] = {};
+      const freelancerUpdates: Parameters<typeof updateFreelancer>[0] = {};
+      const nextFullName = `${trimmedCurrent.first_name} ${trimmedCurrent.last_name}`.trim();
+      const initialFullName = `${trimmedInitial.first_name} ${trimmedInitial.last_name}`.trim();
+
+      if (nextFullName !== initialFullName) {
+        profileUpdates.full_name = nextFullName;
       }
 
-      setIsSubmitting(true);
-      setStatus('idle');
+      if (trimmedCurrent.phone_number !== trimmedInitial.phone_number) {
+        freelancerUpdates.phone_number = trimmedCurrent.phone_number;
+      }
 
-      await completeFreelancerProfile(session.access_token, {
-        phoneNumber: form.phone_number.trim(),
-        tarifJour: form.tarif_jour,
-        bio: form.bio?.trim() || null,
-        specialite: form.specialite?.trim() || null,
-      });
+      if (parsedRate !== Number.parseFloat(trimmedInitial.tarif_jour || '0')) {
+        freelancerUpdates.tarif_jour = parsedRate;
+      }
 
-      await refreshAuthState();
+      if (trimmedCurrent.bio !== trimmedInitial.bio) {
+        freelancerUpdates.bio = trimmedCurrent.bio;
+      }
+
+      if (trimmedCurrent.specialite !== trimmedInitial.specialite) {
+        freelancerUpdates.specialite = trimmedCurrent.specialite;
+      }
+
+      if (trimmedCurrent.portfolio_url !== trimmedInitial.portfolio_url) {
+        freelancerUpdates.portfolio_url = normalizedPortfolioUrl;
+      }
+
+      if (!freelancer.onboarding_completed) {
+        freelancerUpdates.onboarding_completed = true;
+      }
+
+      if (Object.keys(profileUpdates).length > 0) {
+        await updateProfile(profileUpdates);
+      }
+
+      if (Object.keys(freelancerUpdates).length > 0) {
+        await updateFreelancer(freelancerUpdates);
+      }
 
       setStatus('success');
       schedule(() => {
@@ -112,7 +266,12 @@ export default function CompleteProfilePage() {
         message: toErrorMessage(err, t('completeProfile.error.submit')),
       });
       setStatus('error');
-      setServerError(toUserSafeMessage(err, GENERIC_SAFE_ERROR_MESSAGE));
+      const result = handleError(err);
+      setServerError(
+        result.type === 'user'
+          ? result.message
+          : toUserSafeMessage(result.error, GENERIC_SAFE_ERROR_MESSAGE)
+      );
       schedule(() => setStatus('idle'), 5000);
     } finally {
       setIsSubmitting(false);
@@ -189,6 +348,52 @@ export default function CompleteProfilePage() {
 
           <div className="bg-brand-darkblue p-8 md:p-12 rounded-3xl border border-white/5">
             <form onSubmit={handleSubmit} className="space-y-8">
+              <div className="grid gap-6 md:grid-cols-2">
+                <div className="space-y-2">
+                  <label
+                    htmlFor="complete-profile-first-name"
+                    className="text-xs font-bold uppercase tracking-widest text-brand-gray"
+                  >
+                    {t('completeProfile.field.firstName')} <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    id="complete-profile-first-name"
+                    type="text"
+                    name="first_name"
+                    value={form.first_name}
+                    onChange={handleChange}
+                    placeholder={t('completeProfile.field.firstNamePlaceholder')}
+                    required
+                    className={`w-full bg-brand-anthracite border rounded-xl px-4 py-4 text-white focus:border-brand-mint outline-none transition-colors ${
+                      errors.first_name ? 'border-red-400' : 'border-white/10'
+                    }`}
+                  />
+                  {errors.first_name && <p className="text-red-400 text-xs">{errors.first_name}</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <label
+                    htmlFor="complete-profile-last-name"
+                    className="text-xs font-bold uppercase tracking-widest text-brand-gray"
+                  >
+                    {t('completeProfile.field.lastName')} <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    id="complete-profile-last-name"
+                    type="text"
+                    name="last_name"
+                    value={form.last_name}
+                    onChange={handleChange}
+                    placeholder={t('completeProfile.field.lastNamePlaceholder')}
+                    required
+                    className={`w-full bg-brand-anthracite border rounded-xl px-4 py-4 text-white focus:border-brand-mint outline-none transition-colors ${
+                      errors.last_name ? 'border-red-400' : 'border-white/10'
+                    }`}
+                  />
+                  {errors.last_name && <p className="text-red-400 text-xs">{errors.last_name}</p>}
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <label
                   htmlFor="complete-profile-phone"
@@ -203,6 +408,7 @@ export default function CompleteProfilePage() {
                   value={form.phone_number}
                   onChange={handleChange}
                   placeholder={t('completeProfile.field.phonePlaceholder')}
+                  required
                   className={`w-full bg-brand-anthracite border rounded-xl px-4 py-4 text-white focus:border-brand-mint outline-none transition-colors ${
                     errors.phone_number ? 'border-red-400' : 'border-white/10'
                   }`}
@@ -229,6 +435,7 @@ export default function CompleteProfilePage() {
                     min="1000"
                     max="1000000"
                     placeholder="25000"
+                    required
                     className={`flex-1 bg-brand-anthracite border rounded-xl px-4 py-4 text-white focus:border-brand-mint outline-none transition-colors ${
                       errors.tarif_jour ? 'border-red-400' : 'border-white/10'
                     }`}
@@ -245,17 +452,21 @@ export default function CompleteProfilePage() {
                   htmlFor="complete-profile-bio"
                   className="text-xs font-bold uppercase tracking-widest text-brand-gray"
                 >
-                  {t('completeProfile.field.bio')}
+                  {t('completeProfile.field.bio')} <span className="text-red-400">*</span>
                 </label>
                 <textarea
                   id="complete-profile-bio"
                   name="bio"
-                  value={form.bio || ''}
+                  value={form.bio}
                   onChange={handleChange}
                   rows={3}
                   placeholder={t('completeProfile.field.bioPlaceholder')}
-                  className="w-full bg-brand-anthracite border border-white/10 rounded-xl px-4 py-4 text-white focus:border-brand-mint outline-none transition-colors resize-none"
+                  required
+                  className={`w-full bg-brand-anthracite border rounded-xl px-4 py-4 text-white focus:border-brand-mint outline-none transition-colors resize-none ${
+                    errors.bio ? 'border-red-400' : 'border-white/10'
+                  }`}
                 />
+                {errors.bio && <p className="text-red-400 text-xs">{errors.bio}</p>}
               </div>
 
               <div className="space-y-2">
@@ -263,17 +474,45 @@ export default function CompleteProfilePage() {
                   htmlFor="complete-profile-specialite"
                   className="text-xs font-bold uppercase tracking-widest text-brand-gray"
                 >
-                  {t('completeProfile.field.speciality')}
+                  {t('completeProfile.field.speciality')} <span className="text-red-400">*</span>
                 </label>
                 <input
                   id="complete-profile-specialite"
                   type="text"
                   name="specialite"
-                  value={form.specialite || ''}
+                  value={form.specialite}
                   onChange={handleChange}
                   placeholder={t('completeProfile.field.specialityPlaceholder')}
-                  className="w-full bg-brand-anthracite border border-white/10 rounded-xl px-4 py-4 text-white focus:border-brand-mint outline-none transition-colors"
+                  required
+                  className={`w-full bg-brand-anthracite border rounded-xl px-4 py-4 text-white focus:border-brand-mint outline-none transition-colors ${
+                    errors.specialite ? 'border-red-400' : 'border-white/10'
+                  }`}
                 />
+                {errors.specialite && <p className="text-red-400 text-xs">{errors.specialite}</p>}
+              </div>
+
+              <div className="space-y-2">
+                <label
+                  htmlFor="complete-profile-portfolio"
+                  className="text-xs font-bold uppercase tracking-widest text-brand-gray"
+                >
+                  {t('completeProfile.field.portfolio')} <span className="text-red-400">*</span>
+                </label>
+                <input
+                  id="complete-profile-portfolio"
+                  type="url"
+                  name="portfolio_url"
+                  value={form.portfolio_url}
+                  onChange={handleChange}
+                  placeholder={t('completeProfile.field.portfolioPlaceholder')}
+                  required
+                  className={`w-full bg-brand-anthracite border rounded-xl px-4 py-4 text-white focus:border-brand-mint outline-none transition-colors ${
+                    errors.portfolio_url ? 'border-red-400' : 'border-white/10'
+                  }`}
+                />
+                {errors.portfolio_url && (
+                  <p className="text-red-400 text-xs">{errors.portfolio_url}</p>
+                )}
               </div>
 
               {serverError && (

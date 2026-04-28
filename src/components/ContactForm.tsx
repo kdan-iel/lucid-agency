@@ -6,6 +6,7 @@ import { submitContact } from '../utils/remoteFunctions';
 import { useTimeoutRegistry } from '../hooks/useTimeoutRegistry';
 import { toErrorMessage } from '../utils/asyncTools';
 import { toUserSafeMessage } from '../utils/authSession';
+import { handleError } from '../utils/errorFilter';
 import {
   checkRateLimit,
   generateCsrfToken,
@@ -170,7 +171,12 @@ export default function ContactForm() {
       const message = toErrorMessage(error, 'Une erreur est survenue. Veuillez réessayer.');
       console.error('[ContactForm] submit failure', { message });
       setStatus('error');
-      setServerError(toUserSafeMessage(error, 'Une erreur est survenue. Veuillez réessayer.'));
+      const result = handleError(error);
+      setServerError(
+        result.type === 'user'
+          ? result.message
+          : toUserSafeMessage(result.error, 'Une erreur est survenue. Veuillez réessayer.')
+      );
       schedule(() => setStatus('idle'), 5000);
     } finally {
       setIsSubmitting(false);

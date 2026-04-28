@@ -107,7 +107,6 @@ function OnboardingReminderModal({
 function DashboardOnboardingGuard({ path }: { path: string }) {
   const { loading, session, profile, freelancer } = useAuth();
   const [hasSeenOnboardingModal, setHasSeenOnboardingModal] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const userId = session?.user?.id ?? null;
   const shouldPrompt =
     path === '/dashboard' &&
@@ -116,31 +115,18 @@ function DashboardOnboardingGuard({ path }: { path: string }) {
     profile?.role === 'freelancer' &&
     freelancer !== null &&
     !freelancer.onboarding_completed;
+  const isModalOpen = shouldPrompt && !hasSeenOnboardingModal;
 
   useEffect(() => {
     setHasSeenOnboardingModal(false);
-    setIsModalOpen(false);
   }, [userId]);
-
-  useEffect(() => {
-    if (!shouldPrompt) {
-      setIsModalOpen(false);
-      return;
-    }
-
-    if (!hasSeenOnboardingModal) {
-      setIsModalOpen(true);
-    }
-  }, [hasSeenOnboardingModal, shouldPrompt]);
 
   const handleDismiss = () => {
     setHasSeenOnboardingModal(true);
-    setIsModalOpen(false);
   };
 
   const handleComplete = () => {
     setHasSeenOnboardingModal(true);
-    setIsModalOpen(false);
     navigate(ONBOARDING_PATH, { replace: true });
   };
 

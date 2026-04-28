@@ -135,12 +135,12 @@ export default function Footer() {
             <a href="/legal" className="text-xs hover:text-brand-mint transition-colors">
               {t('footer.legal')}
             </a>
-            <a
+            {/* <a
               href={profile?.role === 'admin' ? '/admin' : '/admin/login'}
               className="text-xs hover:text-brand-mint transition-colors"
             >
               Accès admin
-            </a>
+            </a> */}
           </div>
         </div>
       </div>

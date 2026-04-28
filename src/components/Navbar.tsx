@@ -56,7 +56,14 @@ export default function Navbar() {
   };
 
   return (
-    <nav className={`glass-navbar ${scrolled ? 'glass-navbar-scrolled py-4 shadow-xl' : 'py-6'}`}>
+    <nav
+      className={`glass-navbar isolate ${scrolled ? 'glass-navbar-scrolled py-4 shadow-xl' : 'py-6'}`}
+    >
+      <div className="absolute inset-0 -z-10 md:hidden">
+        <div className="absolute inset-0 bg-[var(--bg-primary)]/98" />
+        <div className="absolute inset-x-0 bottom-0 h-px bg-white/6" />
+        <div className="absolute inset-0 bg-gradient-to-b from-white/3 via-transparent to-transparent" />
+      </div>
       <div className="container mx-auto px-6 flex justify-between items-center">
         <a href="/" className="flex items-center gap-3 group">
           <img src="/logo.png" alt="LUCID Agency Logo" className="w-10 h-10" />

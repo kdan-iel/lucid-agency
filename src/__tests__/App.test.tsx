@@ -1,10 +1,13 @@
 import type { ReactNode } from 'react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { AppContent } from '../App';
 
 const mockUseAuth = vi.fn();
 const mockNavigate = vi.fn();
+const scheduleMock = vi.fn();
+const clearAllMock = vi.fn();
+const useSessionTimeoutMock = vi.fn();
 
 vi.mock('../context/AuthContext', () => ({
   useAuth: () => mockUseAuth(),
@@ -39,13 +42,13 @@ vi.mock('../components/ProtectedRoute', () => ({
 }));
 
 vi.mock('../hooks/useSessionTimeout', () => ({
-  useSessionTimeout: vi.fn(),
+  useSessionTimeout: (...args: unknown[]) => useSessionTimeoutMock(...args),
 }));
 
 vi.mock('../hooks/useTimeoutRegistry', () => ({
   useTimeoutRegistry: () => ({
-    schedule: vi.fn(),
-    clearAll: vi.fn(),
+    schedule: scheduleMock,
+    clearAll: clearAllMock,
   }),
 }));
 
@@ -94,7 +97,9 @@ vi.mock('../pages/AdminPage', () => ({
   default: () => <div>Admin Page</div>,
 }));
 vi.mock('../pages/LoginPage', () => ({
-  default: () => <div>Login Page</div>,
+  default: ({ role }: { role: 'admin' | 'freelancer' }) => (
+    <div>{role === 'admin' ? 'Admin Login Page' : 'Freelancer Login Page'}</div>
+  ),
 }));
 vi.mock('../pages/CompleteProfilePage', () => ({
   default: () => <div>Onboarding page</div>,
@@ -126,6 +131,72 @@ describe('AppContent onboarding modal', () => {
   beforeEach(() => {
     mockUseAuth.mockReset();
     mockNavigate.mockReset();
+    scheduleMock.mockReset();
+    clearAllMock.mockReset();
+    useSessionTimeoutMock.mockReset();
+    window.history.replaceState({}, '', '/');
+    vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('renders the landing page on the root route', () => {
+    mockUseAuth.mockReturnValue({
+      loading: false,
+      session: null,
+      profile: null,
+      freelancer: null,
+    });
+
+    render(<AppContent initialPath="/" />);
+
+    expect(screen.getByText('Navbar')).toBeInTheDocument();
+    expect(screen.getByText('Hero')).toBeInTheDocument();
+    expect(screen.getByText('BackToTop')).toBeInTheDocument();
+    expect(useSessionTimeoutMock).toHaveBeenCalledWith(false);
+  });
+
+  it('renders the auth loading screen when loading without a session', () => {
+    mockUseAuth.mockReturnValue({
+      loading: true,
+      session: null,
+      profile: null,
+      freelancer: null,
+    });
+
+    render(<AppContent initialPath="/dashboard" />);
+
+    expect(screen.getByText('Chargement...')).toBeInTheDocument();
+  });
+
+  it('renders secondary routes', () => {
+    mockUseAuth.mockReturnValue({
+      loading: false,
+      session: { user: { id: 'user-1' } },
+      profile: { role: 'freelancer', user_id: 'user-1' },
+      freelancer: { statut: 'validated', onboarding_completed: true },
+    });
+
+    const routeExpectations = [
+      ['/join', 'Join Page'],
+      ['/login', 'Freelancer Login Page'],
+      ['/admin/login', 'Admin Login Page'],
+      ['/update-password', 'Update Password Page'],
+      ['/privacy', 'Privacy Page'],
+      ['/legal', 'Legal Page'],
+      ['/admin', 'Admin Page'],
+      ['/complete-profile', 'Onboarding page'],
+      ['/onboarding', 'Onboarding page'],
+      ['/unknown', 'Not Found Page'],
+    ] as const;
+
+    routeExpectations.forEach(([route, expected]) => {
+      const { unmount } = render(<AppContent initialPath={route} />);
+      expect(screen.getByText(expected)).toBeInTheDocument();
+      unmount();
+    });
   });
 
   it('shows the onboarding modal on the dashboard for incomplete freelancers', async () => {
@@ -166,5 +237,93 @@ describe('AppContent onboarding modal', () => {
 
     expect(screen.getByText('Onboarding page')).toBeInTheDocument();
     expect(screen.queryByText('Complétez vos informations')).not.toBeInTheDocument();
+  });
+
+  it('updates the rendered route when a popstate event occurs', async () => {
+    mockUseAuth.mockReturnValue({
+      loading: false,
+      session: null,
+      profile: null,
+      freelancer: null,
+    });
+
+    render(<AppContent initialPath="/" />);
+    expect(screen.getByText('Hero')).toBeInTheDocument();
+
+    await act(async () => {
+      window.history.pushState({}, '', '/join');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+
+    expect(await screen.findByText('Join Page')).toBeInTheDocument();
+  });
+
+  it('intercepts valid internal links and navigates without full reload', () => {
+    mockUseAuth.mockReturnValue({
+      loading: false,
+      session: null,
+      profile: null,
+      freelancer: null,
+    });
+
+    render(<AppContent initialPath="/" />);
+
+    const link = document.createElement('a');
+    link.href = `${window.location.origin}/join`;
+    link.textContent = 'Join';
+    document.body.appendChild(link);
+
+    fireEvent.click(link);
+
+    expect(mockNavigate).toHaveBeenCalledWith('/join');
+    expect(window.scrollTo).toHaveBeenCalledWith(0, 0);
+
+    link.remove();
+  });
+
+  it('does not intercept same-path hash navigation', () => {
+    mockUseAuth.mockReturnValue({
+      loading: false,
+      session: null,
+      profile: null,
+      freelancer: null,
+    });
+    window.history.replaceState({}, '', '/');
+
+    render(<AppContent initialPath="/" />);
+
+    const link = document.createElement('a');
+    link.href = `${window.location.origin}/#contact`;
+    link.textContent = 'Contact';
+    document.body.appendChild(link);
+
+    fireEvent.click(link);
+
+    expect(mockNavigate).not.toHaveBeenCalled();
+
+    link.remove();
+  });
+
+  it('schedules a scroll to the current hash target on mount', () => {
+    mockUseAuth.mockReturnValue({
+      loading: false,
+      session: null,
+      profile: null,
+      freelancer: null,
+    });
+
+    window.history.replaceState({}, '', '/#contact');
+    const scrollIntoView = vi.fn();
+    const querySelectorSpy = vi.spyOn(document, 'querySelector').mockReturnValue({
+      scrollIntoView,
+    } as unknown as Element);
+
+    render(<AppContent initialPath="/" />);
+
+    expect(scheduleMock).toHaveBeenCalled();
+    const callback = scheduleMock.mock.calls[0][0] as () => void;
+    callback();
+    expect(querySelectorSpy).toHaveBeenCalledWith('#contact');
+    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth' });
   });
 });

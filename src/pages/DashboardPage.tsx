@@ -20,6 +20,7 @@ import { Phone as WhatsAppIcon } from 'lucide-react';
 import { useTimeoutRegistry } from '../hooks/useTimeoutRegistry';
 import { toErrorMessage } from '../utils/asyncTools';
 import { toUserSafeMessage } from '../utils/authSession';
+import { handleError } from '../utils/errorFilter';
 
 function splitFullName(fullName: string | null | undefined) {
   const parts = (fullName ?? '').trim().split(/\s+/).filter(Boolean);
@@ -97,7 +98,12 @@ export default function DashboardPage() {
       console.error('[DashboardPage] profile save failure', {
         message: toErrorMessage(err, t('dashboard.settings.profile.error')),
       });
-      setSettingsError(toUserSafeMessage(err, t('dashboard.settings.profile.error')));
+      const result = handleError(err);
+      setSettingsError(
+        result.type === 'user'
+          ? result.message
+          : toUserSafeMessage(result.error, t('dashboard.settings.profile.error'))
+      );
       setSettingsStatus('error');
     }
   };
@@ -137,7 +143,12 @@ export default function DashboardPage() {
       console.error('[DashboardPage] password update failure', {
         message: toErrorMessage(err, t('dashboard.settings.security.error')),
       });
-      setSettingsError(toUserSafeMessage(err, t('dashboard.settings.security.error')));
+      const result = handleError(err);
+      setSettingsError(
+        result.type === 'user'
+          ? result.message
+          : toUserSafeMessage(result.error, t('dashboard.settings.security.error'))
+      );
       setSettingsStatus('error');
     }
   };
