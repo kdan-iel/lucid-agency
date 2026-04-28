@@ -36,6 +36,7 @@ import {
 import { useTimeoutRegistry } from '../hooks/useTimeoutRegistry';
 import { toErrorMessage } from '../utils/asyncTools';
 import { toUserSafeMessage } from '../utils/authSession';
+import { handleError } from '../utils/errorFilter';
 
 interface TalentRequest {
   id: string;
@@ -364,7 +365,11 @@ export default function AdminPage() {
         id,
         newStatus,
       });
-      const safeMessage = toUserSafeMessage(err, t('admin.error.updateStatus'));
+      const result = handleError(err);
+      const safeMessage =
+        result.type === 'user'
+          ? result.message
+          : toUserSafeMessage(result.error, t('admin.error.updateStatus'));
       setTalentsError(safeMessage);
       if (newStatus === 'rejected') {
         setRejectionError(safeMessage);
@@ -426,7 +431,12 @@ export default function AdminPage() {
       console.error('[AdminPage] password update failure', {
         message: toErrorMessage(err, t('admin.settings.security.error')),
       });
-      setSettingsError(toUserSafeMessage(err, t('admin.settings.security.error')));
+      const result = handleError(err);
+      setSettingsError(
+        result.type === 'user'
+          ? result.message
+          : toUserSafeMessage(result.error, t('admin.settings.security.error'))
+      );
       setSettingsStatus('error');
     }
   };

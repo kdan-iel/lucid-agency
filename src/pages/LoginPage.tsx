@@ -9,6 +9,7 @@ import { toErrorMessage } from '../utils/asyncTools';
 import { getDefaultAuthenticatedRoute } from '../utils/accessControl';
 import { navigate } from '../utils/navigation';
 import { toUserSafeMessage } from '../utils/authSession';
+import { handleError } from '../utils/errorFilter';
 
 export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
   const { login, resetPassword, clearError, profile, freelancer, loading, forceLogout } = useAuth();
@@ -81,8 +82,11 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
       navigate(getDefaultAuthenticatedRoute(nextProfile, nextFreelancer), { replace: true });
     } catch (err) {
       const message = (err as Error).message;
+      const result = handleError(err);
 
-      if (message.includes('Invalid login credentials')) {
+      if (result.type === 'user') {
+        setError(result.message);
+      } else if (message.includes('Invalid login credentials')) {
         setError(t('login.error.invalidCredentials'));
       } else if (message.includes('Email not confirmed')) {
         setError(t('login.error.emailNotConfirmed'));
@@ -124,7 +128,12 @@ export default function LoginPage({ role }: { role: 'admin' | 'freelancer' }) {
     } catch (err) {
       const message = toErrorMessage(err, t('login.reset.error.sendFailed'));
       console.error('[LoginPage] reset password failure', { message });
-      setError(toUserSafeMessage(err, t('login.reset.error.sendFailed')));
+      const result = handleError(err);
+      setError(
+        result.type === 'user'
+          ? result.message
+          : toUserSafeMessage(result.error, t('login.reset.error.sendFailed'))
+      );
     } finally {
       setIsLoading(false);
     }
