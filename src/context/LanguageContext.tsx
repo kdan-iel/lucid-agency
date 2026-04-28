@@ -415,8 +415,7 @@ const translations: Record<Language, Record<string, string>> = {
     'completeProfile.error.bioRequired': 'La bio est requise',
     'completeProfile.error.specialityRequired': 'La spécialité est requise',
     'completeProfile.error.portfolioRequired': 'Le lien portfolio est requis',
-    'completeProfile.error.portfolioInvalid':
-      'URL invalide (ex: https://monportfolio.com)',
+    'completeProfile.error.portfolioInvalid': 'URL invalide (ex: https://monportfolio.com)',
     'completeProfile.error.noSession': 'Session invalide.',
     'completeProfile.error.submit': 'Impossible de compléter le profil.',
     'join.specialty.graphisme': 'Designer graphique',

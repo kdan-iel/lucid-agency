@@ -266,11 +266,7 @@ describe('AppContent onboarding modal', () => {
       freelancer: null,
     });
 
-    render(
-      <AppContent
-        initialPath="/"
-      />
-    );
+    render(<AppContent initialPath="/" />);
 
     const link = document.createElement('a');
     link.href = `${window.location.origin}/join`;

@@ -142,7 +142,9 @@ export default function JoinPage() {
       setStatus('error');
       const result = handleError(err);
       setServerError(
-        result.type === 'user' ? result.message : toUserSafeMessage(result.error, t('join.error.generic'))
+        result.type === 'user'
+          ? result.message
+          : toUserSafeMessage(result.error, t('join.error.generic'))
       );
     } finally {
       setIsSubmitting(false);

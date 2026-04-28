@@ -84,9 +84,7 @@ describe('CompleteProfilePage', () => {
 
     expect(screen.getByLabelText(firstNameLabel)).toHaveValue('Jean');
     expect(screen.getByLabelText(lastNameLabel)).toHaveValue('Dupont');
-    expect(screen.getByLabelText(bioLabel)).toHaveValue(
-      'Freelance React avec 5 ans d’expérience.'
-    );
+    expect(screen.getByLabelText(bioLabel)).toHaveValue('Freelance React avec 5 ans d’expérience.');
     expect(screen.getByRole('button', { name: submitLabel })).toBeInTheDocument();
   });
 

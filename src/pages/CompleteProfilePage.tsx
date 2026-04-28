@@ -368,9 +368,7 @@ export default function CompleteProfilePage() {
                       errors.first_name ? 'border-red-400' : 'border-white/10'
                     }`}
                   />
-                  {errors.first_name && (
-                    <p className="text-red-400 text-xs">{errors.first_name}</p>
-                  )}
+                  {errors.first_name && <p className="text-red-400 text-xs">{errors.first_name}</p>}
                 </div>
 
                 <div className="space-y-2">
@@ -392,9 +390,7 @@ export default function CompleteProfilePage() {
                       errors.last_name ? 'border-red-400' : 'border-white/10'
                     }`}
                   />
-                  {errors.last_name && (
-                    <p className="text-red-400 text-xs">{errors.last_name}</p>
-                  )}
+                  {errors.last_name && <p className="text-red-400 text-xs">{errors.last_name}</p>}
                 </div>
               </div>
 
@@ -492,9 +488,7 @@ export default function CompleteProfilePage() {
                     errors.specialite ? 'border-red-400' : 'border-white/10'
                   }`}
                 />
-                {errors.specialite && (
-                  <p className="text-red-400 text-xs">{errors.specialite}</p>
-                )}
+                {errors.specialite && <p className="text-red-400 text-xs">{errors.specialite}</p>}
               </div>
 
               <div className="space-y-2">
